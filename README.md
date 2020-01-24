@@ -11,24 +11,25 @@ A message needs to be declared by using the DECLARE_MESSAGE() macro.
 
 A very basic message requires a name and an identifier value:
 
-DECLARE_MESSAGE(
-    class_name,
-    identifier
-)
+    DECLARE_MESSAGE(
+        class_name,
+        identifier
+    )
 
 *class_name*: it's the message C++ class name
+
 *identifier*: it's used to assign the message unique ID base value
-            the *identifier* can be:
-            - an unit64_t number (which is used as is for the ID base value)
-            - a string (whose 64bit hash code is used for the ID base value)
+          the *identifier* can be:
+          - an unit64_t number (which is used as is for the ID base value)
+          - a string (whose 64bit hash code is used for the ID base value)
 
 A message can have core parameters:
 
-DECLARE_MESSAGE (
-    class_name,
-    identifier,
-    parameters
-)
+    DECLARE_MESSAGE (
+        class_name,
+        identifier,
+        parameters
+    )
 
 *parameters*: a list of core parameter definitions
 
@@ -38,10 +39,21 @@ DECLARE_MESSAGE (
     (filed_n_type, field_n_name [, field_n_default_value])
 
 *field_#_type*         : [mandatory] it's the field's C++ variable type
+
 *field_#_name*         : [mandatory] it's the field's C++ varible name
+
 *field_#_default_value*: [optional] it's the field's C++ variable default value
 
 The core parameters are used to calculate the message unique ID:
+
+A message can also have extra parameters:
+
+    DECLARE_MESSAGE (
+        class_name,
+        identifier,
+        core_parameters,
+        extra_parameters
+    )
 
 
 # A simple example
