@@ -203,7 +203,34 @@ public:
             return false;
         }
 
-        return _is->ignore(_sz).good();
+        if (!_is->ignore(_sz).good())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool rewind() const
+    {
+        if (_sz < 1)
+        {
+            return true;
+        }
+
+        if (NULL == _is)
+        {
+            return false;
+        }
+
+        _is->clear();
+
+        if (!_is->seekg(_sz, _is->end).good())
+        {
+            return false;
+        }
+
+        return true;
     }
 
 protected:
@@ -1072,6 +1099,7 @@ private:
 #define WRITE_FIELD(t, n, ...)   && Message::_w(os, n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
+#define UPDATE_NP(t, n, ...)     id("");
 #define UPDATE_ID(t, n, ...)     HUPDATE(STR(name_)); \
                                  HUPDATE(STR(t    )); \
                                  HUPDATE(STR(n    ));
@@ -1126,6 +1154,9 @@ public:                                                                        \
                                                                                \
         /* ID is evaluated on mandatory fields only */                         \
         SCAN_FIELDS(UPDATE_ID, FIRST(__VA_ARGS__))                             \
+                                                                               \
+        /* Extra fields update parameters count */                             \
+        SCAN_FIELDS(UPDATE_NP, REMAIN(__VA_ARGS__))                            \
                                                                                \
         id((const char *)NULL); /* finalize message ID */                      \
     }                                                                          \

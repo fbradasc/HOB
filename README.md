@@ -1,15 +1,55 @@
-# message
+# Message
 
-**message** is a single header implementation C preprocessor macro to define C++
+**Message** is a single header implementation C preprocessor macro to define C++
 message classes binary and JSON serializable over a std::iostream.
 
 JSON data is only serialized, binary data are deserialized as well.
+
+# The DECLARE_MESSAGE macro
+
+A message needs to be declared by using the DECLARE_MESSAGE() macro.
+
+A very basic message requires a name and an identifier value:
+
+DECLARE_MESSAGE(
+    class_name,
+    identifier
+)
+
+*class_name*: it's the message C++ class name
+*identifier*: it's used to assign the message unique ID base value
+            the *identifier* can be:
+            - an unit64_t number (which is used as is for the ID base value)
+            - a string (whose 64bit hash code is used for the ID base value)
+
+A message can have core parameters:
+
+DECLARE_MESSAGE (
+    class_name,
+    identifier,
+    parameters
+)
+
+*parameters*: a list of core parameter definitions
+
+    (filed_1_type, field_1_name [, field_1_default_value])
+    (filed_2_type, field_2_name [, field_2_default_value])
+    ...                   
+    (filed_n_type, field_n_name [, field_n_default_value])
+
+*field_#_type*         : [mandatory] it's the field's C++ variable type
+*field_#_name*         : [mandatory] it's the field's C++ varible name
+*field_#_default_value*: [optional] it's the field's C++ variable default value
+
+The core parameters are used to calculate the message unique ID:
+
 
 # A simple example
 
 Its usage is simple as declaring and using a C/C++ structure:
 
-`#include "message.hpp"
+```
+#include "message.hpp"
 
 DECLARE_MESSAGE
 (
@@ -63,4 +103,4 @@ int main(int argc, char *argv[])
         handle_message(m_in);
     }
 }
-`
+```

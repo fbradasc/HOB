@@ -187,15 +187,23 @@ DECLARE_MESSAGE(NumericMessage, 42,
      (vector<MyStruct>  , structs)
 )
 
-MyStruct              m_MyStruct             ;
-AnotherStruct         m_AnotherStruct        ;
-NoParamMessage        m_NoParamMessage       ;
-NumericNoParamMessage m_NumericNoParamMessage;
-NumericMessage        m_NumericMessage       ;
-ComplexStruct         m_ComplexStruct        ;
+DECLARE_MESSAGE(NumericExtraParameters, 43,
+     ,
+     (bool, extra, true)
+)
 
-void handle_message(const Message &m)
+MyStruct               m_MyStruct              ;
+AnotherStruct          m_AnotherStruct         ;
+NoParamMessage         m_NoParamMessage        ;
+NumericNoParamMessage  m_NumericNoParamMessage ;
+NumericMessage         m_NumericMessage        ;
+NumericExtraParameters m_NumericExtraParameters;
+ComplexStruct          m_ComplexStruct         ;
+
+bool handle_message(const Message &m)
 {
+    bool handled = true;
+
     if ((m == m_MyStruct             ) ||
         (m == m_AnotherStruct        ) ||
         (m == m_NoParamMessage       ) ||
@@ -254,7 +262,11 @@ void handle_message(const Message &m)
     {
         printf("Unknown message\n");
         LOG(m, Message);
+
+        handled = false;
     }
+
+    return handled;
 }
 
 int main(int argc, char *argv[])
@@ -305,7 +317,7 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING MESSAGES ]------------------\n\n");
 
-        { MyStruct              m; m >> ofs; LOG(m, MyStruct             ); }
+        { MyStruct               m; m >> ofs; LOG(m, MyStruct             ); }
         {
             AnotherStruct m;
 
@@ -328,8 +340,9 @@ int main(int argc, char *argv[])
 
             LOG(m, AnotherStruct);
         }
-        { NoParamMessage        m; m >> ofs; LOG(m, NoParamMessage       ); }
-        { NumericNoParamMessage m; m >> ofs; LOG(m, NumericNoParamMessage); }
+        { NoParamMessage         m; m >> ofs; LOG(m, NoParamMessage        ); }
+        { NumericNoParamMessage  m; m >> ofs; LOG(m, NumericNoParamMessage ); }
+        { NumericExtraParameters m; m >> ofs; LOG(m, NumericExtraParameters); }
         {
             NumericMessage m;
 
@@ -440,7 +453,10 @@ int main(int argc, char *argv[])
 
         while (m << ifs)
         {
-            handle_message(m);
+            if (!handle_message(m))
+            {
+                m.skip();
+            }
         }
 
 #if defined(OUTPUT_ON_FILE)
