@@ -169,6 +169,13 @@ public:
         return rv;
     }
 
+    bool operator!=(const Message &ref) const
+    {
+        bool rv = (_id != ref._id);
+
+        return rv;
+    }
+
     string json(int indent = 0) const
     {
 #if !defined(BINARY_ONLY)
