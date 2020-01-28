@@ -323,11 +323,15 @@ the message parameters serialization.
 
 The identifier of a message without parameters is an even integer numeric value.
 
+| Identifier (even value) |
+|         :---:           |
+|         VARINT          |
+
 The identifier of a message with parameters is an odd integer numeric value.
 
-| Identifier |  Size  |     Parameters     |
-|   :---:    | :---:  |       :---:        |
-|   VARINT   | VARINT | char[message size] |
+| Identifier (odd value) |  Size  |     Parameters     |
+|         :---:          | :---:  |       :---:        |
+|         VARINT         | VARINT | char[message size] |
 
 The *Identifier* and *Size* fields are uint64_t variables, thus they are
 encoded in a VARINT format.
