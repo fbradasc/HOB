@@ -227,45 +227,115 @@ The Message content data types are encoded according to their data types.
 
 #### Data type encoding
 
-##### uint8_t, uint16_t, uint32_t, uint64_t
+##### Unsigned Integer values
+
+```
+uint8_t, uint16_t, uint32_t, uint64_t
+```
 
 Unsigned integer values are encoded in the variable integer format.
 
-Variable integer (VARINT) are packed in 1 to 9 bytes
+Variable integer (VARINT) are packed in 1 to 9 bytes, big endian
 
 The MSb bits in the MSB byte identify how many bytes are required to store the
 numeric value.
 
+```
 x: single bit  
 X: single byte (8 bits)
 
 1 byte  [numeric value encoded in  7 bits]: 0xxxxxxx  
 2 bytes [numeric value encoded in 14 bits]: 10xxxxxx.X  
-3 bytes [numeric value encoded in 21 bits]: 110xxxxx.X.X.  
+3 bytes [numeric value encoded in 21 bits]: 110xxxxx.X.X  
 4 bytes [numeric value encoded in 28 bits]: 1110xxxx.X.X.X  
 5 bytes [numeric value encoded in 35 bits]: 11110xxx.X.X.X.X  
 6 bytes [numeric value encoded in 42 bits]: 111110xx.X.X.X.X.X  
 7 bytes [numeric value encoded in 49 bits]: 1111110x.X.X.X.X.X.X  
 8 bytes [numeric value encoded in 56 bits]: 11111110.X.X.X.X.X.X.X  
 9 bytes [numeric value encoded in 64 bits]: 11111111.X.X.X.X.X.X.X.X
+```
 
-##### int8_t, int16_t, int32_t, int64_t
+##### Signed Integer values
 
-Signed integer values are VARINT encoded after being zigzag encoded by mapping
+```
+int8_t, int16_t, int32_t, int64_t
+```
+
+Signed integer values are ZIGZAG-VARINT encoded by mapping
 negative values to positive values while going back and forth:
 
+```
 (0=0, -1=1, 1=2, -2=3, 2=4, -3=5, 3=6, ...)
+```
 
+##### Boolean values
 
+```
+bool
+```
 
-| Section      |  Presence | Type   |
-| :---         |   :---:   | :---   |
-| Identifier   | Mandatory | VARINT |
-| Payload size | Optional  | VARINT |
-| Payload      | Optional  | ...    |
+*bool* values are packed in 1 byte
 
-The *Identifier* and *Payload size* fields are uint64_t variables, thus they are
-encoded in a VarInt format.
+| bool value | byte value |
+|    :---:   |    :---:   |
+|    true    |      1     |
+|    false   |      0     |
 
-The *Payload size* and *Payload* sections are present when the *Identifier*
+##### Floating point values
+
+```
+float, double
+```
+
+*float* values are packed in 4 bytes, little endian  
+*double* values are packed in 8 bytes, little endian
+
+##### String values
+
+```
+string
+```
+
+String values are encoded by packing the string size and the string data.
+
+| string.size() | string.data() |
+|    :---:      |     :---:     |
+|    VARINT     |  char[size]   |
+
+##### Bitset values
+
+```
+bitset<N>
+```
+
+Bitset values with *N* bits are encoded as a **vector<uint8_t>** having
+**(N + 7) / 8** items.
+
+##### Message values
+
+```
+Message
+```
+
+Messages are encoded by packing the message identifier optionally followed by 
+the number of bytes required to serialize the message parameters, followed by
+the message parameters serialization.
+
+The identifier of a message without parameters is an even integer numeric value.
+
+The identifier of a message with parameters is an odd integer numeric value.
+
+| Identifier |  Size  |     Parameters     |
+|   :---:    | :---:  |       :---:        |
+|   VARINT   | VARINT | char[message size] |
+
+The *Identifier* and *Size* fields are uint64_t variables, thus they are
+encoded in a VARINT format.
+
+The *Size* is the count of bytes used to serialize the *Parameters*.
+
+The *Parameters* is the serialization of the *Core Parameters* followed by the
+*Extra Parameters*, if any.
+
+The *Size* and *Parameters* sections are present only when the *Identifier*
 field is an odd integer numeric value
