@@ -1,7 +1,7 @@
 # Message
 
 **Message** is a single header implementation C preprocessor macro to define C++
-message classes binary and JSON serializable over a std::iostream.
+message classes which can binary and JSON serializable over a std::iostream.
 
 JSON data is only serialized, binary data are deserialized as well.
 
@@ -19,10 +19,10 @@ A very basic message requires a name and an identifier:
     )
 
 *class_name*: it's the message C++ class name  
-*identifier*: it's used to assign the message unique ID base value
-          the *identifier* can be:
-          - an unit64_t number (which is used as is for the ID base value)
-          - a string (whose 64bit hash code is used for the ID base value)
+*identifier*: it's used to assign the message *UID* base value  
+            the *identifier* can be:
+            - a 63 bit integer number (it's used as is for the *UID* base value)
+            - a string (whose 63 bit hash code is used for the *UID* base value)
 
 ### Core parameters
 
@@ -43,9 +43,9 @@ A message can have core parameters:
 
 *field_#_type*         : [mandatory] it's the field's C++ variable type  
 *field_#_name*         : [mandatory] it's the field's C++ varible name  
-*field_#_default_value*: [optional] it's the field's C++ variable default value  
+*field_#_default_value*: [optional] it's the field's C++ variable default value
 
-The core parameters are used to calculate the message unique ID:
+The core parameters are used to update the message *UID*.
 
 ### Extra parameters
 
@@ -58,32 +58,37 @@ A message can also have extra parameters:
         extra_parameters
     )
 
-Extra parameters are defined in the same way as core parameters but they are
-not involved in the message unique ID calculation.
+Extra parameters are defined in the same way as core parameters.
+
+The extra parameters are **not** used to update the message *UID*.
 
 ### Parameter types
 
 The message parameters are C++ variables by value (references and pointers are
 not supported) and can be any of the following types:
 
-#### C++ atomic types
+#### Base types
 
     int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
     boot, float, double
 
-#### C++ STL types
+#### Complex types
 
     string, bitset<N>
+
+Where N is the number of bits to be stored in the bitset.
 
 #### Another message
 
     Message
 
-#### C++ STL container of any of above types
+#### Collections
 
     vector<T>, map<K,V>
 
-### Optional parameters
+Where T, K and V can be any of the above parameter type.
+
+### Optional type
 
 It can be possible to declare a parameter as optional, when its value can be
 missing.  
@@ -120,9 +125,9 @@ Messages can be retrieved from a C++ STL istream derived object.
 However to make sure that the deserialized data is really what it should be,
 some steps are needed:
 
-1. Deserialization of the message identifier
-2. Optionally match the deserialized identifier with the message type to be read
-3. Deserialization of the message data, it is successful only if the identifier
+1. Deserialization of the message *UID*
+2. Optionally match the deserialized *UID* with the message type to be read
+3. Deserialization of the message data, it is successful only if the *UID*
    matches the message to be read
 
 ```
@@ -130,7 +135,7 @@ some steps are needed:
 
     Message m;  // define a generic message object
 
-    // 1. retrieve the message identifier from the input stream
+    // 1. retrieve the message UID from the input stream
     //
     if (m << stream)
     {
@@ -181,7 +186,7 @@ Dispatch events in the following manner:
 
     Message evt;
 
-    // 1. retrieve the event identifier from the events queue
+    // 1. retrieve the event UID from the events queue
     //
     while (evt << events_queue)
     {
@@ -227,13 +232,15 @@ The Message content data types are encoded according to their data types.
 
 #### Data type encoding
 
-##### Unsigned Integer values
+##### Base types
+
+###### Unsigned Integer types
 
 ```
 uint8_t, uint16_t, uint32_t, uint64_t
 ```
 
-Unsigned integer values are encoded in the variable integer format.
+Unsigned integer types are encoded in the variable integer format.
 
 Variable integer (VARINT) are packed in 1 to 9 bytes, big endian
 
@@ -255,91 +262,148 @@ X: single byte (8 bits)
 9 bytes [numeric value encoded in 64 bits]: 11111111.X.X.X.X.X.X.X.X
 ```
 
-##### Signed Integer values
+###### Signed Integer types
 
 ```
 int8_t, int16_t, int32_t, int64_t
 ```
 
-Signed integer values are ZIGZAG-VARINT encoded by mapping
+Signed integer types are ZIGZAG-VARINT encoded by mapping
 negative values to positive values while going back and forth:
 
 ```
 (0=0, -1=1, 1=2, -2=3, 2=4, -3=5, 3=6, ...)
 ```
 
-##### Boolean values
+###### Boolean types
 
 ```
 bool
 ```
 
-*bool* values are packed in 1 byte
+*bool* types are packed in 1 byte
 
 | bool value | byte value |
 |    :---:   |    :---:   |
 |    true    |      1     |
 |    false   |      0     |
 
-##### Floating point values
+##### Floating point types
 
 ```
 float, double
 ```
 
-*float* values are packed in 4 bytes, little endian  
-*double* values are packed in 8 bytes, little endian
+*float* types are packed in 4 bytes, little endian  
+*double* types are packed in 8 bytes, little endian
 
-##### String values
+##### Complex types
+
+###### String types
 
 ```
 string
 ```
 
-String values are encoded by packing the string size and the string data.
+*string* types are encoded by packing the string size and the string data.
 
 | string.size() | string.data() |
 |    :---:      |     :---:     |
 |    VARINT     |  char[size]   |
 
-##### Bitset values
+###### Bitset types
 
 ```
 bitset<N>
 ```
 
-Bitset values with *N* bits are encoded as a **vector<uint8_t>** having
-**(N + 7) / 8** items.
+*bitset* types with *N* bits are encoded as a **vector<uint8_t>** having
+**(N+7)/8** items.
 
-##### Message values
+###### Message types
 
 ```
 Message
 ```
 
-Messages are encoded by packing the message identifier optionally followed by 
+*Message* are encoded by packing the message *UID* optionally followed by 
 the number of bytes required to serialize the message parameters, followed by
 the message parameters serialization.
 
-The identifier of a message without parameters is an even integer numeric value.
+The *UID* of a message without parameters is an even integer numeric value.
 
-| Identifier (even value) |
-|         :---:           |
-|         VARINT          |
+| UID (even value) |
+|     :---:        |
+|     VARINT       |
 
-The identifier of a message with parameters is an odd integer numeric value.
+The *UID* of a message with parameters is an odd integer numeric value.
 
-| Identifier (odd value) |  Size  |     Parameters     |
-|         :---:          | :---:  |       :---:        |
-|         VARINT         | VARINT | char[message size] |
+| UID (odd value) | Payload Size |      Payload       |
+|     :---:       |    :---:     |       :---:        |
+|     VARINT      |    VARINT    | char[Payload Size] |
 
-The *Identifier* and *Size* fields are uint64_t variables, thus they are
+The *UID* and *Payload Size* fields are uint64_t variables, thus they are
 encoded in a VARINT format.
 
-The *Size* is the count of bytes used to serialize the *Parameters*.
+The *Payload Size* is the count of bytes used to serialize the *Parameters*.
 
-The *Parameters* is the serialization of the *Core Parameters* followed by the
+The *Payload* is the serialization of the *Core Parameters* followed by the
 *Extra Parameters*, if any.
 
-The *Size* and *Parameters* sections are present only when the *Identifier*
-field is an odd integer numeric value
+The *Payload Size* and *Payload* sections are present only when the *UID* is an
+odd integer numeric value.
+
+##### Collections
+
+###### Vector types
+
+```
+vector<T>
+```
+
+*vector* types are encoded by packing the number of the items contained in
+the vector, VARINT encoded, followed by the serialization of each of the
+contained items:
+
+| vector<T>.size() |      vector<T>       |
+|      :---:       |        :---:         |
+|      VARINT      | T[0] | T[1] | T[...] |
+
+A *vector* can store types of any of the above data types.
+
+###### Map types
+
+```
+map<K,V>
+```
+
+*map* types are encoded by packing the number of the key and value pairs 
+contained in the map, VARINT encoded, followed by the serialization of each of 
+the contained pairs:
+
+| map<K,V>.size()  |                    map<K,V>                 |
+|      :---:       |                     :---:                   |
+|      VARINT      | K[0] | V[0] | K[1] | V[1] | K[...] | V[...] |
+
+A *map* can store keys and values of any of the above data types.
+
+###### Optional types
+
+```
+optional<T>
+```
+
+*optional* types are encoded by packing a bool type value optionally followed by 
+the serialization of the given type value.
+
+When no value has been given to the optional<T> data:
+
+| false == (bool)optional<T> |
+|          :---:             |
+|          false             |
+
+When a values has been given to the optional<T> data:
+
+| true == (bool)optional<T> | (T&)*optional<T> |
+|         :---:             |       :---:      |
+|         true              |         T        |
