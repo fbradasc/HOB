@@ -20,9 +20,11 @@ A very basic message requires a name and an identifier:
 
 *class_name*: it's the message C++ class name  
 *identifier*: it's used to assign the message *UID* base value  
-            the *identifier* can be:
-            - a 63 bit integer number (it's used as is for the *UID* base value)
-            - a string (whose 63 bit hash code is used for the *UID* base value)
+
+The *identifier* can be:  
+
+- a 63 bit integer number (it's used as is for the *UID* base value)
+- a string (whose 63 bit hash code is used for the *UID* base value)
 
 ### Core parameters
 
@@ -322,6 +324,12 @@ string
 |    :---:      |     :---:     |
 |    VARINT     | char[size()]  |
 
+Empty string:
+
+| 0 == string.size() |
+|      :---:         |
+|    VARINT(0)       |
+
 ###### Bitset types
 
 ```
@@ -380,6 +388,12 @@ contained items:
 |      :---:        | :---: | :---: |    :---:    |
 |      VARINT       |   T   |  ...  |      T      |
 
+Empty vector:
+
+| 0 == vector\<T>.size() |
+|         :---:          |
+|       VARINT(0)        |
+
 A *vector* can store types of any of the above data types.
 
 ###### Map types
@@ -395,6 +409,12 @@ the contained pairs:
 | map\<K,V>.size() | K[0]  | V[0]  |  ...  | K[size()-1] | V[size()-1] |
 |      :---:       | :---: | :---: | :---: |    :---:    |    :---:    |
 |      VARINT      |   K   |   V   |  ...  |      K      |      V      |
+
+Empty map:
+
+| 0 == map\<K,V>.size() |
+|         :---:         |
+|       VARINT(0)       |
 
 A *map* can store keys and values of any of the above data types.
 
