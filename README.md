@@ -82,6 +82,17 @@ Where N is the number of bits to be stored in the bitset.
 
     Message
 
+Example:
+```
+    DECLARE_MESSAGE(Payload, 42)
+
+    DECLARE_MESSAGE (
+        Envelope,
+        "Encapsulated",
+        ( Payload, payload )
+    )
+```
+
 #### Collections
 
     vector<T>, map<K,V>
@@ -309,7 +320,7 @@ string
 
 | string.size() | string.data() |
 |    :---:      |     :---:     |
-|    VARINT     |  char[size]   |
+|    VARINT     | char[size()]  |
 
 ###### Bitset types
 
@@ -342,10 +353,10 @@ The *UID* of a message with parameters is an odd integer numeric value.
 |     :---:       |    :---:     |       :---:        |
 |     VARINT      |    VARINT    | char[Payload Size] |
 
-The *UID* and *Payload Size* fields are uint64_t variables, thus they are
+The *UID* and *Payload Size* fields are **uint64_t** variables, thus they are
 encoded in a VARINT format.
 
-The *Payload Size* is the count of bytes used to serialize the *Parameters*.
+The *Payload Size* is the count of bytes used to serialize the *Payload*.
 
 The *Payload* is the serialization of the *Core Parameters* followed by the
 *Extra Parameters*, if any.
