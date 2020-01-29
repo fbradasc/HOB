@@ -365,9 +365,9 @@ vector<T>
 the vector, VARINT encoded, followed by the serialization of each of the
 contained items:
 
-| vector\<T>.size() |       vector\<T>       |
+| vector\<T>.size() | T[0]  | T[1]  | T[...] |
 |      :---:        | :---: | :---: | :---:  |
-|      VARINT       | T[0]  | T[1]  | T[...] |
+|      VARINT       |   T   |   T   |   T    |
 
 A *vector* can store types of any of the above data types.
 
@@ -381,9 +381,9 @@ map<K,V>
 contained in the map, VARINT encoded, followed by the serialization of each of 
 the contained pairs:
 
-| map\<K,V>.size() |                    map\<K,V>                    |
+| map\<K,V>.size() | K[0]  | V[0]  | K[1]  | V[1]  | K[...] | V[...] |
 |      :---:       | :---: | :---: | :---: | :---: | :---:  | :---:  |
-|      VARINT      | K[0]  | V[0]  | K[1]  | V[1]  | K[...] | V[...] |
+|      VARINT      |   K   |   V   |   K   |   V   |   K    |   V    |
 
 A *map* can store keys and values of any of the above data types.
 
@@ -405,5 +405,5 @@ When **no** value has been given to the *optional\<T>* data:
 When a value has been given to the *optional\<T>* data:
 
 | true == (bool)optional\<T> | (T&)*optional\<T> |
-|         :---:             |       :---:        |
-|         true              |         T          |
+|         :---:              |       :---:       |
+|         true               |         T         |
