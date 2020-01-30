@@ -78,6 +78,7 @@ public:
         , _sz(        0)
         , _is(     NULL)
         , _np(       -1)
+        , _pm(     NULL)
     { }
 
     Message(const uint64_t &id_)
@@ -85,6 +86,7 @@ public:
         , _sz(   0)
         , _is(NULL)
         , _np(  -1)
+        , _pm(NULL)
     {
         id(id_);
     }
@@ -94,6 +96,7 @@ public:
         , _sz(   0)
         , _is(NULL)
         , _np(  -1)
+        , _pm(NULL)
     {
         id(id_);
     }
@@ -103,6 +106,7 @@ public:
         , _sz(   0)
         , _is(NULL)
         , _np(  -1)
+        , _pm(NULL)
     {
         id(id_);
     }
@@ -121,6 +125,7 @@ public:
         _id = ref._id;
         _is = ref._is;
         _sz = ref._sz;
+        _pm = ref._pm;
 
         return *this;
     }
@@ -130,7 +135,7 @@ public:
         return _r(&is);
     }
 
-    bool operator<<(const Message & ref)
+    bool operator<<(Message & ref)
     {
         return ((_id == ref._id) && _r(ref));
     }
@@ -191,8 +196,6 @@ public:
 #endif
     }
 
-    istream *is() const { return _is; }
-
     size_t size() const
     {
         return _sz;
@@ -218,29 +221,13 @@ public:
         return true;
     }
 
-    bool rewind() const
-    {
-        if (_sz < 1)
-        {
-            return true;
-        }
+    istream *is() const { return _is; }
+    Message *pm() const { return _pm; }
 
-        if (NULL == _is)
-        {
-            return false;
-        }
-
-        _is->clear();
-
-        if (!_is->seekg(_sz, _is->end).good())
-        {
-            return false;
-        }
-
-        return true;
-    }
+    void pm(Message *pm) { _pm = pm; }
 
 protected:
+
     //========================================================================
     //
     // Variable integer (VARINT) are packed in 1 to 9 bytes
@@ -931,7 +918,7 @@ protected:
 #endif
     }
 
-    virtual bool _r(const Message &ref) { return true; }
+    virtual bool _r(Message &ref) { return true; }
 
     virtual bool _r(istream *is_)
     {
@@ -939,11 +926,14 @@ protected:
 
         size_t sz_old = _sz;
 
+        Message *pm_old = _pm;
+
         _sz = INT_MAX;
 
         if (!_r(is_, id_))
         {
             _sz = sz_old;
+            _pm = pm_old;
 
             return false;
         }
@@ -953,6 +943,7 @@ protected:
         if (has_payload(id_) && !_r(is_, sz_))
         {
             _sz = sz_old;
+            _pm = pm_old;
 
             return false;
         }
@@ -960,6 +951,7 @@ protected:
         _is = is_;
         _sz = sz_;
         _id = id_;
+        _pm = NULL;
 
         return true;
     }
@@ -1042,6 +1034,7 @@ private:
     size_t    _sz;
     istream  *_is;
     ssize_t   _np;
+    Message  *_pm;
 
     // ZIGZAG decoding
     //
@@ -1211,21 +1204,29 @@ public:                                                                        \
     }                                                                          \
                                                                                \
 protected:                                                                     \
-                                                                               \
-    bool _r(const Message &ref)                                                \
+    bool _r(Message &ref)                                                      \
     {                                                                          \
-        size_t sz = size();                                                    \
-                                                                               \
-        size(ref.size());                                                      \
-                                                                               \
-        if (!_r(ref.is()))                                                     \
+        if (NULL == ref.pm())                                                  \
         {                                                                      \
-            size(sz);                                                          \
+            size_t sz = size();                                                \
                                                                                \
-            return false;                                                      \
+            size(ref.size());                                                  \
+                                                                               \
+            if (!_r(ref.is()))                                                 \
+            {                                                                  \
+                size(sz);                                                      \
+                                                                               \
+                return false;                                                  \
+            }                                                                  \
+                                                                               \
+            *this = ref;                                                       \
+                                                                               \
+            ref.pm(this);                                                      \
         }                                                                      \
-                                                                               \
-        *this = ref;                                                           \
+        else                                                                   \
+        {                                                                      \
+            *this = *(name_*)ref.pm();                                         \
+        }                                                                      \
                                                                                \
         return true;                                                           \
     }                                                                          \

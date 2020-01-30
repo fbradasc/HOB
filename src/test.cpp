@@ -200,7 +200,7 @@ NumericMessage         m_NumericMessage        ;
 NumericExtraParameters m_NumericExtraParameters;
 ComplexStruct          m_ComplexStruct         ;
 
-bool handle_message(const Message &m)
+bool handle_message(Message &m)
 {
     bool handled = true;
 
@@ -456,6 +456,10 @@ int main(int argc, char *argv[])
             if (!handle_message(m))
             {
                 m.skip();
+            }
+            else
+            {
+                handle_message(m);
             }
         }
 
