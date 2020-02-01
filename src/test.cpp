@@ -192,24 +192,25 @@ DECLARE_MESSAGE(NumericExtraParameters, 43,
      (bool, extra, true)
 )
 
-MyStruct               m_MyStruct              ;
-AnotherStruct          m_AnotherStruct         ;
-NoParamMessage         m_NoParamMessage        ;
-NumericNoParamMessage  m_NumericNoParamMessage ;
-NumericMessage         m_NumericMessage        ;
-NumericExtraParameters m_NumericExtraParameters;
-ComplexStruct          m_ComplexStruct         ;
-
 bool handle_message(Message &m)
 {
+    MyStruct               m_MyStruct              ;
+    AnotherStruct          m_AnotherStruct         ;
+    NoParamMessage         m_NoParamMessage        ;
+    NumericNoParamMessage  m_NumericNoParamMessage ;
+    NumericMessage         m_NumericMessage        ;
+    NumericExtraParameters m_NumericExtraParameters;
+    ComplexStruct          m_ComplexStruct         ;
+
     bool handled = true;
 
-    if ((m == m_MyStruct             ) ||
-        (m == m_AnotherStruct        ) ||
-        (m == m_NoParamMessage       ) ||
-        (m == m_NumericNoParamMessage) ||
-        (m == m_NumericMessage       ) ||
-        (m == m_ComplexStruct        ))
+    if ((m == m_MyStruct              ) ||
+        (m == m_AnotherStruct         ) ||
+        (m == m_NoParamMessage        ) ||
+        (m == m_NumericNoParamMessage ) ||
+        (m == m_NumericMessage        ) ||
+//        (m == m_NumericExtraParameters) ||
+        (m == m_ComplexStruct         ))
     {
         printf("Known message\n");
     }
@@ -258,6 +259,13 @@ bool handle_message(Message &m)
     {
         LOG(m_ComplexStruct, ComplexStruct);
     }
+/*
+    else
+    if (m_NumericExtraParameters << m)
+    {
+        LOG(m_NumericExtraParameters, NumericExtraParameters);
+    }
+*/
     else
     {
         printf("Unknown message\n");
@@ -453,14 +461,8 @@ int main(int argc, char *argv[])
 
         while (m << ifs)
         {
-            if (!handle_message(m))
-            {
-                m.skip();
-            }
-            else
-            {
-                handle_message(m);
-            }
+            handle_message(m);
+            handle_message(m);
         }
 
 #if defined(OUTPUT_ON_FILE)

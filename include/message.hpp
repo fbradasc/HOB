@@ -20,15 +20,13 @@
                               printf("\n");
 
 /*
-#define ASSERT_SREAD(v,s,f)   ((_sz > 0)   && \
-                               (NULL != f) && \
-                               f->good()   && \
-                               f->read((char *)v,s).good() &&
+#define ASSERT_SREAD(v,s,f)   (f.good()                   && \
+                               f.read((char *)v,s).good() && \
                                read(s))
 */
 #define ASSERT_SREAD(v,s,f)   read(v,s,f)
 
-#define ASSERT_SWRITE(v,s,f)  ((NULL != f) && f->write((char *)v,s).good())
+#define ASSERT_SWRITE(v,s,f)  (f.write((char *)v,s).good())
 
 #define INDENT(l)             string((indent + (l)) * 4, ' ')
 
@@ -75,38 +73,26 @@ public:
 
     Message()
         : _id(UNDEFINED)
-        , _sz(        0)
-        , _is(     NULL)
         , _np(       -1)
-        , _pm(     NULL)
     { }
 
     Message(const uint64_t &id_)
         : _id(   0)
-        , _sz(   0)
-        , _is(NULL)
         , _np(  -1)
-        , _pm(NULL)
     {
         id(id_);
     }
 
     Message(const char *id_)
         : _id(   0)
-        , _sz(   0)
-        , _is(NULL)
         , _np(  -1)
-        , _pm(NULL)
     {
         id(id_);
     }
 
     Message(const string &id_)
         : _id(   0)
-        , _sz(   0)
-        , _is(NULL)
         , _np(  -1)
-        , _pm(NULL)
     {
         id(id_);
     }
@@ -123,16 +109,14 @@ public:
     Message & operator=(const Message & ref)
     {
         _id = ref._id;
-        _is = ref._is;
-        _sz = ref._sz;
-        _pm = ref._pm;
+        _is.str(ref._is.str()); // TODO: needed ?
 
         return *this;
     }
 
     bool operator<<(istream &is)
     {
-        return _r(&is);
+        return _r(is);
     }
 
     bool operator<<(Message & ref)
@@ -147,19 +131,19 @@ public:
             return true;
         }
 
-        if (!_w(&os, _id))
+        if (!_w(os, _id))
         {
             return false;
         }
 
         std::ostringstream ss;
 
-        if (!_w((has_payload(_id)) ? &ss : &os))
+        if (!_w((has_payload(_id)) ? ss : os))
         {
             return false;
         }
 
-        if (has_payload(_id) && !_w(&os, ss.str()))
+        if (has_payload(_id) && !_w(os, ss.str()))
         {
             return false;
         }
@@ -198,36 +182,19 @@ public:
 
     size_t size() const
     {
-        return _sz;
+        return _is.str().length();
     }
 
-    bool skip() const
+    bool rewind()
     {
-        if (_sz < 1)
-        {
-            return true;
-        }
+        _is.clear();
 
-        if (NULL == _is)
-        {
-            return false;
-        }
-
-        if (!_is->ignore(_sz).good())
-        {
-            return false;
-        }
-
-        return true;
+        return _is.seekg(0,_is.beg).good();
     }
 
-    istream *is() const { return _is; }
-    Message *pm() const { return _pm; }
-
-    void pm(Message *pm) { _pm = pm; }
+    istream &is() { return _is; }
 
 protected:
-
     //========================================================================
     //
     // Variable integer (VARINT) are packed in 1 to 9 bytes
@@ -255,24 +222,24 @@ protected:
     //
     //========================================================================
 
-    bool _w(ostream *os, const uint8_t &v) const
+    bool _w(ostream &os, const uint8_t &v) const
     {
         return _w(os, (const uint64_t &)v);
     }
 
-    bool _w(ostream *os, const uint16_t &v) const
+    bool _w(ostream &os, const uint16_t &v) const
     {
         return _w(os, (const uint64_t &)v);
     }
 
-    bool _w(ostream *os, const uint32_t &v) const
+    bool _w(ostream &os, const uint32_t &v) const
     {
         return _w(os, (const uint64_t &)v);
     }
 
     // VARINT packing
     //
-    bool _w(ostream *os, const uint64_t &v) const
+    bool _w(ostream &os, const uint64_t &v) const
     {
         if (NULL == os)
         {
@@ -307,44 +274,44 @@ protected:
         return ASSERT_SWRITE(d, b, os);
     }
 
-    bool _w(ostream *os, const int8_t &v) const
+    bool _w(ostream &os, const int8_t &v) const
     {
         return _w(os, (int64_t)v);
     }
 
-    bool _w(ostream *os, const int16_t &v) const
+    bool _w(ostream &os, const int16_t &v) const
     {
         return _w(os, (int64_t)v);
     }
 
-    bool _w(ostream *os, const int32_t &v) const
+    bool _w(ostream &os, const int32_t &v) const
     {
         return _w(os, (int64_t)v);
     }
 
     // ZIGZAG encoding
     //
-    bool _w(ostream *os, const int64_t &v) const
+    bool _w(ostream &os, const int64_t &v) const
     {
         return _w(os, ZIGZAG_ENCODE(v));
     }
 
-    bool _w(ostream *os, const bool &v) const
+    bool _w(ostream &os, const bool &v) const
     {
         return ASSERT_SWRITE(&v, sizeof(v), os);
     }
 
-    bool _w(ostream *os, const float &v) const
+    bool _w(ostream &os, const float &v) const
     {
         return ASSERT_SWRITE(&v, sizeof(v), os);
     }
 
-    bool _w(ostream *os, const double &v) const
+    bool _w(ostream &os, const double &v) const
     {
         return ASSERT_SWRITE(&v, sizeof(v), os);
     }
 
-    bool _w(ostream *os, const string &v) const
+    bool _w(ostream &os, const string &v) const
     {
         if (!_w(os, v.size()))
         {
@@ -354,13 +321,13 @@ protected:
         return ASSERT_SWRITE(v.data(), v.size(), os);
     }
 
-    bool _w(ostream *os, const Message &v) const
+    bool _w(ostream &os, const Message &v) const
     {
-        return (NULL != os) && ( v >> *os );
+        return (v >> os);
     }
 
     template<size_t N>
-    bool _w(ostream *os, const std::bitset<N>& v) const
+    bool _w(ostream &os, const std::bitset<N>& v) const
     {
         vector<uint8_t> bits((N + 7) >> 3);
 
@@ -373,7 +340,7 @@ protected:
     }
 
     template<class T>
-    bool _w(ostream *os, const vector<T> &v) const
+    bool _w(ostream &os, const vector<T> &v) const
     {
         if (!_w(os, v.size()))
         {
@@ -392,7 +359,7 @@ protected:
     }
 
     template<class T>
-    bool _w(ostream *os, const optional<T> &v) const
+    bool _w(ostream &os, const optional<T> &v) const
     {
         if (!_w(os, (bool)v))
         {
@@ -411,7 +378,7 @@ protected:
     }
 
     template<class K, class V>
-    bool _w(ostream *os, const map<K,V> &v) const
+    bool _w(ostream &os, const map<K,V> &v) const
     {
         size_t len = v.size();
 
@@ -440,7 +407,7 @@ protected:
         return true;
     }
 
-    bool _r(istream *is, uint8_t &v)
+    bool _r(istream &is, uint8_t &v)
     {
         uint64_t r;
 
@@ -454,7 +421,7 @@ protected:
         return true;
     }
 
-    bool _r(istream *is, uint16_t &v)
+    bool _r(istream &is, uint16_t &v)
     {
         uint64_t r;
 
@@ -468,7 +435,7 @@ protected:
         return true;
     }
 
-    bool _r(istream *is, uint32_t &v)
+    bool _r(istream &is, uint32_t &v)
     {
         uint64_t r;
 
@@ -484,9 +451,9 @@ protected:
 
     // VARINT unpacking
     //
-    bool _r(istream *is, uint64_t &v)
+    bool _r(istream &is, uint64_t &v)
     {
-        if (NULL == is)
+        if (is.eof())
         {
             return false;
         }
@@ -531,42 +498,42 @@ protected:
         return true;
     }
 
-    bool _r(istream *is, int8_t &v)
+    bool _r(istream &is, int8_t &v)
     {
         return _z<int8_t>(is,v);
     }
 
-    bool _r(istream *is, int16_t &v)
+    bool _r(istream &is, int16_t &v)
     {
         return _z<int16_t>(is,v);
     }
 
-    bool _r(istream *is, int32_t &v)
+    bool _r(istream &is, int32_t &v)
     {
         return _z<int32_t>(is,v);
     }
 
-    bool _r(istream *is, int64_t &v)
+    bool _r(istream &is, int64_t &v)
     {
         return _z<int64_t>(is,v);
     }
 
-    bool _r(istream *is, bool &v)
+    bool _r(istream &is, bool &v)
     {
         return ASSERT_SREAD(&v, sizeof(v), is);
     }
 
-    bool _r(istream *is, float &v)
+    bool _r(istream &is, float &v)
     {
         return ASSERT_SREAD(&v, sizeof(v), is);
     }
 
-    bool _r(istream *is, double &v)
+    bool _r(istream &is, double &v)
     {
         return ASSERT_SREAD(&v, sizeof(v), is);
     }
 
-    bool _r(istream *is, string &v)
+    bool _r(istream &is, string &v)
     {
         uint64_t len;
 
@@ -587,18 +554,17 @@ protected:
         return true;
     }
 
-    bool _r(istream *is, Message &v)
+    bool _r(istream &is, Message &v)
     {
-        if (NULL != is)
+        if (!is.eof())
         {
-
             Message m;
 
-            if (m << *is)
+            if (m << is)
             {
                 v = m;
 
-                return ( v << *is );
+                return ( v << m.is() );
             }
         }
 
@@ -606,7 +572,7 @@ protected:
     }
 
     template<size_t N>
-    bool _r(istream *is, std::bitset<N> &v)
+    bool _r(istream &is, std::bitset<N> &v)
     {
         vector<uint8_t> buf;
 
@@ -629,7 +595,7 @@ protected:
     }
 
     template<class T>
-    bool _r(istream *is, vector<T> &v)
+    bool _r(istream &is, vector<T> &v)
     {
         size_t len;
 
@@ -661,7 +627,7 @@ protected:
     }
 
     template<class T>
-    bool _r(istream *is, optional<T> &v)
+    bool _r(istream &is, optional<T> &v)
     {
         bool has_field;
 
@@ -690,7 +656,7 @@ protected:
     }
 
     template<class K, class V>
-    bool _r(istream *is, map<K,V> &v)
+    bool _r(istream &is, map<K,V> &v)
     {
         size_t len;
 
@@ -920,21 +886,14 @@ protected:
 
     virtual bool _r(Message &ref) { return true; }
 
-    virtual bool _r(istream *is_)
+    virtual bool _r(istream &is_)
     {
         uint64_t id_;
 
-        size_t sz_old = _sz;
-
-        Message *pm_old = _pm;
-
-        _sz = INT_MAX;
+        _is.str("");
 
         if (!_r(is_, id_))
         {
-            _sz = sz_old;
-            _pm = pm_old;
-
             return false;
         }
 
@@ -942,21 +901,40 @@ protected:
 
         if (has_payload(id_) && !_r(is_, sz_))
         {
-            _sz = sz_old;
-            _pm = pm_old;
-
             return false;
         }
 
-        _is = is_;
-        _sz = sz_;
-        _id = id_;
-        _pm = NULL;
+        bool success = true;
 
-        return true;
+        if (sz_ > 0)
+        {
+            success = false;
+
+            char *buffer = new char[sz_];
+
+            if (NULL != buffer)
+            {
+                if (read(buffer,sz_,is_))
+                {
+                    if (_is.write(buffer,sz_).good())
+                    {
+                        success = true;
+                    }
+                }
+
+                delete[] buffer;
+            }
+        }
+
+        if (success)
+        {
+            _id = id_;
+        }
+
+        return success;
     }
 
-    virtual bool _w(ostream *os) const { return (NULL != os); }
+    virtual bool _w(ostream &os) const { return true; }
 
 #if !defined(BINARY_ONLY)
     virtual string _j(int indent = 0) const
@@ -1024,22 +1002,15 @@ protected:
         return ( id & 1 );
     }
 
-    void size(size_t sz)
-    {
-        _sz = sz;
-    }
-
 private:
-    uint64_t  _id;
-    size_t    _sz;
-    istream  *_is;
-    ssize_t   _np;
-    Message  *_pm;
+    uint64_t      _id;
+    stringstream  _is;
+    ssize_t       _np;
 
     // ZIGZAG decoding
     //
     template<class T>
-    bool _z(istream *is, T &v)
+    bool _z(istream &is, T &v)
     {
         uint64_t r;
 
@@ -1053,19 +1024,11 @@ private:
         return true;
     }
 
-    bool read(void *v, size_t s, istream *is)
+    bool read(void *v, size_t s, istream &is)
     {
-        if ((_sz < s)    ||
-            (NULL == is) ||
-            !is->good()  ||
-            !is->read((char *)v,s).good())
-        {
-            return false;
-        }
-
-        _sz -= s;
-
-        return true;
+        return (!is.eof () &&
+                 is.good() &&
+                 is.read((char *)v,s).good());
     }
 };
 
@@ -1206,60 +1169,28 @@ public:                                                                        \
 protected:                                                                     \
     bool _r(Message &ref)                                                      \
     {                                                                          \
-        if (NULL == ref.pm())                                                  \
+        ref.rewind();                                                          \
+                                                                               \
+        if (!_r(ref.is()))                                                     \
         {                                                                      \
-            size_t sz = size();                                                \
-                                                                               \
-            size(ref.size());                                                  \
-                                                                               \
-            if (!_r(ref.is()))                                                 \
-            {                                                                  \
-                size(sz);                                                      \
-                                                                               \
-                return false;                                                  \
-            }                                                                  \
-                                                                               \
-            *this = ref;                                                       \
-                                                                               \
-            ref.pm(this);                                                      \
+            return false;                                                      \
         }                                                                      \
-        else                                                                   \
-        {                                                                      \
-            *this = *(name_*)ref.pm();                                         \
-        }                                                                      \
+                                                                               \
+        *this = ref;                                                           \
                                                                                \
         return true;                                                           \
     }                                                                          \
                                                                                \
-    bool _r(istream *is)                                                       \
+    bool _r(istream &is)                                                       \
     {                                                                          \
-        size_t sz = size();                                                    \
-                                                                               \
-        int opos = is->tellg();                                                \
-                                                                               \
         /* Read mandatory fields : fail on error */                            \
                                                                                \
-        if ((NULL != is)                                                       \
-            SCAN_FIELDS(READ_FIELD, FIRST(__VA_ARGS__)))                       \
+        if (true SCAN_FIELDS(READ_FIELD, FIRST(__VA_ARGS__)))                  \
         {                                                                      \
             /* Read optional fields : ignore errors */                         \
                                                                                \
-            if                                                                 \
-            (                                                                  \
-                (                                                              \
-                    true                                                       \
-                    SCAN_FIELDS(READ_FIELD, REMAIN(__VA_ARGS__))               \
-                )                                                              \
-                ||                                                             \
-                true                                                           \
-            )                                                                  \
+            if ((true SCAN_FIELDS(READ_FIELD, REMAIN(__VA_ARGS__))) || true)   \
             {                                                                  \
-                int npos = is->tellg();                                        \
-                                                                               \
-                size(sz-(npos-opos));                                          \
-                                                                               \
-                skip();                                                        \
-                                                                               \
                 return true;                                                   \
             }                                                                  \
         }                                                                      \
@@ -1267,9 +1198,9 @@ protected:                                                                     \
         return false;                                                          \
     }                                                                          \
                                                                                \
-    bool _w(ostream *os) const                                                 \
+    bool _w(ostream &os) const                                                 \
     {                                                                          \
-        return ((NULL != os)                                                   \
+        return (true                                                           \
                 SCAN_FIELDS(WRITE_FIELD, FIRST(__VA_ARGS__))                   \
                 SCAN_FIELDS(WRITE_FIELD, REMAIN(__VA_ARGS__)));                \
     }                                                                          \
