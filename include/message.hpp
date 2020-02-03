@@ -73,11 +73,17 @@ public:
 
     Message()
         : _id(UNDEFINED)
+        , _is(     NULL)
+        , _sp(        0)
+        , _ep(        0)
         , _np(       -1)
     { }
 
     Message(const uint64_t &id_)
         : _id(   0)
+        , _is(NULL)
+        , _sp(   0)
+        , _ep(   0)
         , _np(  -1)
     {
         id(id_);
@@ -85,6 +91,9 @@ public:
 
     Message(const char *id_)
         : _id(   0)
+        , _is(NULL)
+        , _sp(   0)
+        , _ep(   0)
         , _np(  -1)
     {
         id(id_);
@@ -92,6 +101,9 @@ public:
 
     Message(const string &id_)
         : _id(   0)
+        , _is(NULL)
+        , _sp(   0)
+        , _ep(   0)
         , _np(  -1)
     {
         id(id_);
@@ -109,13 +121,18 @@ public:
     Message & operator=(const Message & ref)
     {
         _id = ref._id;
-        _is.str(ref._is.str()); // TODO: needed ?
+        _ss.str(ref._ss.str()); // TODO: needed ?
+        _is = ref._is;
+        _sp = ref._sp;
+        _ep = ref._ep;
 
         return *this;
     }
 
     bool operator<<(istream &is)
     {
+        flush_pending();
+
         return _r(is);
     }
 
@@ -182,17 +199,27 @@ public:
 
     size_t size() const
     {
-        return _is.str().length();
+        return ( _ep - _sp );
     }
 
-    bool rewind()
+    virtual bool rewind()
     {
-        _is.clear();
+        is().clear();
 
-        return _is.seekg(0,_is.beg).good();
+        return is().seekg(_sp,is().beg).good();
     }
 
-    istream &is() { return _is; }
+    virtual void flush_pending()
+    {
+        streampos cp = is().tellg();
+
+        if ((cp >= 0) && (cp < _ep))
+        {
+            is().ignore(_ep - cp);
+        }
+    }
+
+    istream &is() { return (NULL != _is) ? *_is : _ss; }
 
 protected:
     //========================================================================
@@ -241,11 +268,6 @@ protected:
     //
     bool _w(ostream &os, const uint64_t &v) const
     {
-        if (NULL == os)
-        {
-            return false;
-        }
-
         uint8_t d[9];
 
         uint8_t b = (v <= 0x000000000000007f) ? 1 :
@@ -890,7 +912,10 @@ protected:
     {
         uint64_t id_;
 
-        _is.str("");
+        _ss.str("");
+        _is = NULL;
+        _sp = 0;
+        _ep = 0;
 
         if (!_r(is_, id_))
         {
@@ -906,8 +931,12 @@ protected:
 
         bool success = true;
 
-        if (sz_ > 0)
+        _is = &is_;
+
+        if ((sz_ > 0) && (is().tellg() < 0))
         {
+            M_LOG("Non seekable stream");
+
             success = false;
 
             char *buffer = new char[sz_];
@@ -916,8 +945,9 @@ protected:
             {
                 if (read(buffer,sz_,is_))
                 {
-                    if (_is.write(buffer,sz_).good())
+                    if (_ss.write(buffer,sz_).good())
                     {
+                        _is     = NULL;
                         success = true;
                     }
                 }
@@ -928,6 +958,8 @@ protected:
 
         if (success)
         {
+            _sp = is().tellg();
+            _ep = _sp + (streamoff)sz_;
             _id = id_;
         }
 
@@ -1004,7 +1036,10 @@ protected:
 
 private:
     uint64_t      _id;
-    stringstream  _is;
+    stringstream  _ss;
+    istream      *_is;
+    streampos     _sp;
+    streampos     _ep;
     ssize_t       _np;
 
     // ZIGZAG decoding
@@ -1191,6 +1226,8 @@ protected:                                                                     \
                                                                                \
             if ((true SCAN_FIELDS(READ_FIELD, REMAIN(__VA_ARGS__))) || true)   \
             {                                                                  \
+                Message::flush_pending();                                      \
+                                                                               \
                 return true;                                                   \
             }                                                                  \
         }                                                                      \
@@ -1206,6 +1243,15 @@ protected:                                                                     \
     }                                                                          \
                                                                                \
     JSON_DUMP(name_,value_,__VA_ARGS__)                                        \
+                                                                               \
+    virtual void flush_pending()                                               \
+    {                                                                          \
+    }                                                                          \
+                                                                               \
+    virtual bool rewind()                                                      \
+    {                                                                          \
+        return Message::rewind();                                              \
+    }                                                                          \
 };
 
 #endif // __MESSAGE_DECLARATION__

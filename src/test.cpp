@@ -282,6 +282,7 @@ int main(int argc, char *argv[])
 #if defined(OUTPUT_ON_FILE)
     bool do_read=true;
     bool do_write=true;
+    bool from_file=false;
 
     if (argc>0)
     {
@@ -300,9 +301,15 @@ int main(int argc, char *argv[])
 
         if (argc>1)
         {
+            if (argv[1][0] == '-')
+            {
+                do_read = true;
+            }
+
             if (argv[1][0] == 'r')
             {
                 do_read = true;
+                from_file = true;
             }
 
             if (argv[1][0] == 'w')
@@ -446,27 +453,42 @@ int main(int argc, char *argv[])
 
     if (do_read)
     {
-        std::ifstream ifs("output.dat", std::ios::binary);
+        std::ifstream ifile;
+        std::istream *is = &cin;
+
+        if (from_file)
+        {
+            ifile.open("output.dat", std::ios::binary);
+
+            is = &ifile;
+        }
+
 #else // OUTPUT_ON_FILE
 #if defined(SEPARATE_IN_AND_OUT_STRING_STREAMS)
         std::istringstream ifs(ofs.str());
 #else // SEPARATE_IN_AND_OUT_STRING_STREAMS
         std::stringstream & ifs = ofs;
 #endif // SEPARATE_IN_AND_OUT_STRING_STREAMS
+        std::istream *is = &ifs;
 #endif // OUTPUT_ON_FILE
 
         printf("------------------[ READING MESSAGES ]------------------\n\n");
 
         Message m;
 
-        while (m << ifs)
+        while (m << *is)
         {
             handle_message(m);
             handle_message(m);
         }
 
 #if defined(OUTPUT_ON_FILE)
-        ifs.close();
+        if (from_file)
+        {
+            std::ifstream *ifile = (std::ifstream *)is;
+
+            ifile->close();
+        }
     }
 #endif // OUTPUT_ON_FILE
 }
