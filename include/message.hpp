@@ -1059,11 +1059,17 @@ private:
 
     bool read(void *v, size_t s, istream &is)
     {
-        if (is.fail())
+        // Check whether **only** an internal logic error occurred ...
+        //
+        if (is.fail() && !is.bad() && !is.eof())
         {
+            // ... and ignore it
+            //
             is.clear();
         }
 
+        // Fail in case of any other error
+        //
         return is.good() && is.read((char *)v,s).good();
     }
 };
