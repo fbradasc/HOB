@@ -883,9 +883,9 @@ protected:
         {
             o << INDENT(1) << "{" << endl;
             o << INDENT(2) << "\"k\": " << _t((const K&)(*ci).first , indent+1);
-            o << ", " << endl;
+            o << "," << endl;
             o << INDENT(2) << "\"v\": " << _t((const V&)(*ci).second, indent+1);
-            o << INDENT(1) << endl;
+            o << endl;
             o << INDENT(1) << "}";
 
             if (len > 1)
@@ -935,8 +935,6 @@ protected:
 
         if ((sz_ > 0) && (is().tellg() < 0))
         {
-            M_LOG("Non seekable stream");
-
             success = false;
 
             char *buffer = new char[sz_];
@@ -1061,9 +1059,12 @@ private:
 
     bool read(void *v, size_t s, istream &is)
     {
-        return (!is.eof () &&
-                 is.good() &&
-                 is.read((char *)v,s).good());
+        if (is.fail())
+        {
+            is.clear();
+        }
+
+        return is.good() && is.read((char *)v,s).good();
     }
 };
 
@@ -1103,10 +1104,10 @@ private:
                                  HUPDATE(STR(n    ));
 #define WJSON_FIELD(t, n, ...)                                                 \
         ss << INDENT(2) << "{" << endl                                         \
-           << INDENT(3) << "\"t\": \"" << STR(t) << "\", "      << endl        \
-           << INDENT(3) << "\"n\": \"" << STR(n) << "\", "      << endl        \
+           << INDENT(3) << "\"t\": \"" << STR(t) << "\","       << endl        \
+           << INDENT(3) << "\"n\": \"" << STR(n) << "\","       << endl        \
            << INDENT(3) << "\"v\": "   << _t((t&)n, (indent+3)) << endl        \
-           << INDENT(2) << "}, " << endl;
+           << INDENT(2) << "}," << endl;
 
 #if !defined(BINARY_ONLY)
 #define JSON_DUMP(name_,value_,...)                                            \
@@ -1116,9 +1117,9 @@ private:
                                                                                \
         ss << "{"                                                              \
            << endl                                                             \
-           << INDENT(1) << "\"t\": \"" << STR(name_) << "\", "                 \
+           << INDENT(1) << "\"t\": \"" << STR(name_) << "\","                  \
            << endl                                                             \
-           << INDENT(1) << "\"v\": " << _t(value_, indent+1) << ", "           \
+           << INDENT(1) << "\"v\": " << _t(value_, indent+1) << ","            \
            << endl                                                             \
            << INDENT(1) << "\"f\": ["                                          \
            << endl;                                                            \
