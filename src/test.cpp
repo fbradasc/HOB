@@ -77,7 +77,7 @@ diff3 f.txt i.txt s.txt
 #include <limits.h>
 
 #define LOG(message_,type_) printf("Payload size %ld: %s\n\n", \
-                                   message_.size()           , \
+                                   static_cast<uint64_t>(message_.size()), \
                                    message_.json().c_str())
 
 
@@ -111,7 +111,7 @@ DECLARE_MESSAGE(MyStruct, "MY_STRUCT",
     //
     // mandatory fields
     //
-    (uint32_t, anEnum  , (uint32_t)enTwo)
+    (uint32_t, anEnum  , static_cast<uint32_t>(enTwo))
     (uint8_t , aChar   , 4              )
     (float   , aFloat  , 3.14f          ),
     //
@@ -381,19 +381,19 @@ int main(int argc, char *argv[])
             m.names.push_back("Francesco");
 
             MyStruct s;
-            s.anEnum = (uint32_t)enOne;
+            s.anEnum = static_cast<uint32_t>(enOne);
             s.aChar  = 'Q';
             s.aFloat = 6.28f;
 
             m.structs.push_back(s);
 
-            s.anEnum = (uint32_t)enTwo;
+            s.anEnum = static_cast<uint32_t>(enTwo);
             s.aChar  = 'W';
             s.aFloat = 9.81f;
 
             m.structs.push_back(s);
 
-            s.anEnum   = (uint32_t)enThree;
+            s.anEnum   = static_cast<uint32_t>(enThree);
             s.aChar    = 'R';
             s.aFloat   = 1.21f;
             s.optional = false;
@@ -485,9 +485,9 @@ int main(int argc, char *argv[])
 #if defined(OUTPUT_ON_FILE)
         if (from_file)
         {
-            std::ifstream *ifile = (std::ifstream *)is;
+            std::ifstream *pifs =static_cast<std::ifstream *>(is);
 
-            ifile->close();
+            pifs->close();
         }
     }
 #endif // OUTPUT_ON_FILE

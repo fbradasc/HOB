@@ -277,10 +277,10 @@ private:
     void this_type_does_not_support_comparisons() const {}
 
     template< typename V >
-    void initialize( V const & value )
+    void initialize( V const & _value )
     {
         assert( ! has_value()  );
-        value_ = value;
+        value_ = _value;
         has_value_ = true;
     }
 

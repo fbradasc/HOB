@@ -2,3 +2,5 @@
 .exvim.*
 output.dat
 test_*
+.vscode
+build

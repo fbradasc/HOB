@@ -26,26 +26,59 @@
 */
 #define ASSERT_SREAD(v,s,f)   read(v,s,f)
 
-#define ASSERT_SWRITE(v,s,f)  (f.write((char *)v,s).good())
+#define ASSERT_SWRITE(v,s,f)  (f.write(reinterpret_cast<const char *>(v),s)\
+                                .good())
 
 #define INDENT(l)             string((indent + (l)) * 4, ' ')
 
 #define HSEED                 65599llu
 // #define HSEED                 11400714819323198485llu
 #define HLEN(s)	              ((sizeof(s)/sizeof(s[0])) - 1)
-#define H1(s,i,x)             ((uint64_t)(x)*(((i)<HLEN(s))?HSEED:1) + \
-                               (uint8_t)s[((i)<HLEN(s))?HLEN(s)-1-(i):HLEN(s)])
+#define H1(s,i,x)             (static_cast<uint64_t>(x)*(((i)<HLEN(s))?HSEED:1)\
+                               +                                               \
+                               static_cast<uint8_t>(s[((i)<HLEN(s))            \
+                                                      ?HLEN(s)-1-(i)           \
+                                                      :HLEN(s)]))
 
-#define H4(s,i,x)             H1(s,(i),H1(s,(i)+1,H1(s,(i)+2,H1(s,(i)+3,(x)))))
-#define H16(s,i,x)            H4(s,(i),H4(s,(i)+4,H4(s,(i)+8,H4(s,(i)+12,(x)))))
-#define H64(s,i,x)            H16(s,(i),H16(s,(i)+16,H16(s,(i)+32,H16(s,(i)+48,(x)))))
-#define H256(s,i,x)           H64(s,(i),H64(s,(i)+64,H64(s,(i)+128,H64(s,(i)+192,(x)))))
+#define H4(s,i,x)             H1(s,(i)    , \
+                              H1(s,(i)+  1, \
+                              H1(s,(i)+  2, \
+                              H1(s,(i)+  3, (x)))))
 
-#define HASH(x)               ((uint64_t)((x)^((x)>>32)))
+#define H16(s,i,x)            H4(s,(i)    , \
+                              H4(s,(i)+  4, \
+                              H4(s,(i)+  8, \
+                              H4(s,(i)+ 12, (x)))))
 
-#define ZIGZAG_DECODE(value)  (uint64_t)(((value) >> 1) ^ -((value) & 1))
-#define ZIGZAG_ENCODE(value)  (uint64_t)(((int64_t)(value) << 1) ^ \
-                                         ((int64_t)(value) >> ((sizeof(int64_t)*8)-1)))
+#define H64(s,i,x)            H16(s,(i)    , \
+                              H16(s,(i)+ 16, \
+                              H16(s,(i)+ 32, \
+                              H16(s,(i)+ 48, (x)))))
+
+#define H256(s,i,x)           H64(s,(i)    , \
+                              H64(s,(i)+ 64, \
+                              H64(s,(i)+128, \
+                              H64(s,(i)+192, (x)))))
+
+#define HASH(x)               (static_cast<uint64_t>((x)^((x)>>32)))
+
+#define ZIGZAG_DECODE(value)  static_cast<uint64_t>(              \
+                                  ((value) >> 1) ^ -((value) & 1) \
+                              )
+
+#define ZIGZAG_ENCODE(value)  static_cast<uint64_t>(              \
+                                  (                               \
+                                      static_cast<int64_t>(value) \
+                                      <<                          \
+                                      1                           \
+                                  )                               \
+                                  ^                               \
+                                  (                               \
+                                      static_cast<int64_t>(value) \
+                                      >>                          \
+                                      ((sizeof(int64_t)*8)-1)     \
+                                  )                               \
+                              )
 
 // |--------------------------------|
 // |0..............................31|
@@ -55,9 +88,9 @@
 //
 #if defined(ENABLE_CPP_HASH)
 #if defined(ENABLE_CPP_MAX_SIZE_HASH)
-#define HUPDATE(s)   id((uint64_t)((HLEN(s)>0)?H256(s,0,id()):id()))
+#define HUPDATE(s)   id(static_cast<uint64_t>((HLEN(s)>0)?H256(s,0,id()):id()))
 #else // !ENABLE_CPP_MAX_SIZE_HASH
-#define HUPDATE(s)   id((uint64_t)((HLEN(s)>0)?H64(s,0,id()):id()))
+#define HUPDATE(s)   id(static_cast<uint64_t>((HLEN(s)>0)?H64(s,0,id()):id()))
 #endif // !ENABLE_CPP_MAX_SIZE_HASH
 #else // !ENABLE_CPP_HASH
 #define HUPDATE(s)   id(s)
@@ -129,11 +162,11 @@ public:
         return *this;
     }
 
-    bool operator<<(istream &is)
+    bool operator<<(istream &is_)
     {
         flush_pending();
 
-        return _r(is);
+        return _r(is_);
     }
 
     bool operator<<(Message & ref)
@@ -211,9 +244,9 @@ public:
 
     virtual void flush_pending()
     {
-        streampos cp = is().tellg();
+        size_t cp = is().tellg();
 
-        if ((cp >= 0) && (cp < _ep))
+        if (cp < _ep)
         {
             is().ignore(_ep - cp);
         }
@@ -251,17 +284,17 @@ protected:
 
     bool _w(ostream &os, const uint8_t &v) const
     {
-        return _w(os, (const uint64_t &)v);
+        return _w(os, static_cast<const uint64_t &>(v));
     }
 
     bool _w(ostream &os, const uint16_t &v) const
     {
-        return _w(os, (const uint64_t &)v);
+        return _w(os, static_cast<const uint64_t &>(v));
     }
 
     bool _w(ostream &os, const uint32_t &v) const
     {
-        return _w(os, (const uint64_t &)v);
+        return _w(os, static_cast<const uint64_t &>(v));
     }
 
     // VARINT packing
@@ -270,45 +303,45 @@ protected:
     {
         uint8_t d[9];
 
-        uint8_t b = (v <= 0x000000000000007f) ? 1 :
-                    (v <= 0x0000000000003fff) ? 2 :
-                    (v <= 0x00000000001fffff) ? 3 :
-                    (v <= 0x000000000fffffff) ? 4 :
-                    (v <= 0x00000007ffffffff) ? 5 :
-                    (v <= 0x000003ffffffffff) ? 6 :
-                    (v <= 0x0001ffffffffffff) ? 7 :
-                    (v <= 0x00ffffffffffffff) ? 8 : 9;
+        uint8_t b = (v <= 0x000000000000007fllu) ? 1 :
+                    (v <= 0x0000000000003fffllu) ? 2 :
+                    (v <= 0x00000000001fffffllu) ? 3 :
+                    (v <= 0x000000000fffffffllu) ? 4 :
+                    (v <= 0x00000007ffffffffllu) ? 5 :
+                    (v <= 0x000003ffffffffffllu) ? 6 :
+                    (v <= 0x0001ffffffffffffllu) ? 7 :
+                    (v <= 0x00ffffffffffffffllu) ? 8 : 9;
 
         uint8_t  m = 0xff;
         uint32_t c = 0xfffffe00;
 
         for (uint8_t i=0; i<b; i++)
         {
-            d[b-i-1] = (uint8_t)( ( v >> (8*i) ) & 0xff );
+            d[b-i-1] = static_cast<uint8_t>( ( v >> (8*i) ) & 0xff );
 
             c >>= 1;
             m >>= 1;
         }
 
-        d[0] &= (uint8_t)(m & 0xff);
-        d[0] |= (uint8_t)(c & 0xff);
+        d[0] &= static_cast<uint8_t>(m & 0xff);
+        d[0] |= static_cast<uint8_t>(c & 0xff);
 
         return ASSERT_SWRITE(d, b, os);
     }
 
     bool _w(ostream &os, const int8_t &v) const
     {
-        return _w(os, (int64_t)v);
+        return _w(os, static_cast<int64_t>(v));
     }
 
     bool _w(ostream &os, const int16_t &v) const
     {
-        return _w(os, (int64_t)v);
+        return _w(os, static_cast<int64_t>(v));
     }
 
     bool _w(ostream &os, const int32_t &v) const
     {
-        return _w(os, (int64_t)v);
+        return _w(os, static_cast<int64_t>(v));
     }
 
     // ZIGZAG encoding
@@ -371,7 +404,7 @@ protected:
 
         for (size_t i=0; i<v.size(); i++)
         {
-            if (!_w(os, (const T &)v[i]))
+            if (!_w(os, static_cast<const T &>(v[i])))
             {
                 return false;
             }
@@ -383,14 +416,14 @@ protected:
     template<class T>
     bool _w(ostream &os, const optional<T> &v) const
     {
-        if (!_w(os, (bool)v))
+        if (!_w(os, static_cast<bool>(v)))
         {
             return false;
         }
 
-        if ((bool)v)
+        if (static_cast<bool>(v))
         {
-            if (!_w(os, (const T &)*v))
+            if (!_w(os, static_cast<const T &>(*v)))
             {
                 return false;
             }
@@ -413,12 +446,12 @@ protected:
              (len > 0) && (ci != v.end());
              ++ci)
         {
-            if (!_w(os, (const K &)(*ci).first))
+            if (!_w(os, static_cast<const K &>((*ci).first)))
             {
                 return false;
             }
 
-            if (!_w(os, (const V &)(*ci).second))
+            if (!_w(os, static_cast<const V &>((*ci).second)))
             {
                 return false;
             }
@@ -429,53 +462,53 @@ protected:
         return true;
     }
 
-    bool _r(istream &is, uint8_t &v)
+    bool _r(istream &is_, uint8_t &v)
     {
         uint64_t r;
 
-        if (!_r(is, r))
+        if (!_r(is_, r))
         {
             return false;
         }
 
-        v = (uint8_t)(r & 0xff);
+        v = static_cast<uint8_t>(r & 0xff);
 
         return true;
     }
 
-    bool _r(istream &is, uint16_t &v)
+    bool _r(istream &is_, uint16_t &v)
     {
         uint64_t r;
 
-        if (!_r(is, r))
+        if (!_r(is_, r))
         {
             return false;
         }
 
-        v = (uint16_t)(r & 0xffff);
+        v = static_cast<uint16_t>(r & 0xffff);
 
         return true;
     }
 
-    bool _r(istream &is, uint32_t &v)
+    bool _r(istream &is_, uint32_t &v)
     {
         uint64_t r;
 
-        if (!_r(is, r))
+        if (!_r(is_, r))
         {
             return false;
         }
 
-        v = (uint32_t)(r & 0xffffffff);
+        v = static_cast<uint32_t>(r & 0xffffffff);
 
         return true;
     }
 
     // VARINT unpacking
     //
-    bool _r(istream &is, uint64_t &v)
+    bool _r(istream &is_, uint64_t &v)
     {
-        if (is.eof())
+        if (is_.eof())
         {
             return false;
         }
@@ -485,7 +518,7 @@ protected:
         uint8_t c;
         uint8_t m;
 
-        if (!ASSERT_SREAD(&d[0], sizeof(uint8_t), is))
+        if (!ASSERT_SREAD(&d[0], sizeof(uint8_t), is_))
         {
             return false;
         }
@@ -503,7 +536,7 @@ protected:
 
         if (b > 1)
         {
-            if (!ASSERT_SREAD(&d[1], b-1, is))
+            if (!ASSERT_SREAD(&d[1], b-1, is_))
             {
                 return false;
             }
@@ -514,59 +547,59 @@ protected:
         for (uint8_t i=1; i<b; i++)
         {
             v <<= 8;
-            v |= ((uint64_t)(d[i] & 0xff));
+            v |= static_cast<uint64_t>(d[i] & 0xff);
         }
 
         return true;
     }
 
-    bool _r(istream &is, int8_t &v)
+    bool _r(istream &is_, int8_t &v)
     {
-        return _z<int8_t>(is,v);
+        return _z<int8_t>(is_,v);
     }
 
-    bool _r(istream &is, int16_t &v)
+    bool _r(istream &is_, int16_t &v)
     {
-        return _z<int16_t>(is,v);
+        return _z<int16_t>(is_,v);
     }
 
-    bool _r(istream &is, int32_t &v)
+    bool _r(istream &is_, int32_t &v)
     {
-        return _z<int32_t>(is,v);
+        return _z<int32_t>(is_,v);
     }
 
-    bool _r(istream &is, int64_t &v)
+    bool _r(istream &is_, int64_t &v)
     {
-        return _z<int64_t>(is,v);
+        return _z<int64_t>(is_,v);
     }
 
-    bool _r(istream &is, bool &v)
+    bool _r(istream &is_, bool &v)
     {
-        return ASSERT_SREAD(&v, sizeof(v), is);
+        return ASSERT_SREAD(&v, sizeof(v), is_);
     }
 
-    bool _r(istream &is, float &v)
+    bool _r(istream &is_, float &v)
     {
-        return ASSERT_SREAD(&v, sizeof(v), is);
+        return ASSERT_SREAD(&v, sizeof(v), is_);
     }
 
-    bool _r(istream &is, double &v)
+    bool _r(istream &is_, double &v)
     {
-        return ASSERT_SREAD(&v, sizeof(v), is);
+        return ASSERT_SREAD(&v, sizeof(v), is_);
     }
 
-    bool _r(istream &is, string &v)
+    bool _r(istream &is_, string &v)
     {
         uint64_t len;
 
-        if (!_r(is, len))
+        if (!_r(is_, len))
         {
             return false;
         }
 
         vector<char> tmp(len);
 
-        if (!ASSERT_SREAD(tmp.data(), len, is))
+        if (!ASSERT_SREAD(tmp.data(), len, is_))
         {
             return false;
         }
@@ -576,13 +609,13 @@ protected:
         return true;
     }
 
-    bool _r(istream &is, Message &v)
+    bool _r(istream &is_, Message &v)
     {
-        if (!is.eof())
+        if (!is_.eof())
         {
             Message m;
 
-            if (m << is)
+            if (m << is_)
             {
                 v = m;
 
@@ -594,11 +627,11 @@ protected:
     }
 
     template<size_t N>
-    bool _r(istream &is, std::bitset<N> &v)
+    bool _r(istream &is_, std::bitset<N> &v)
     {
         vector<uint8_t> buf;
 
-        if (!_r(is, buf))
+        if (!_r(is_, buf))
         {
             return false;
         }
@@ -617,11 +650,11 @@ protected:
     }
 
     template<class T>
-    bool _r(istream &is, vector<T> &v)
+    bool _r(istream &is_, vector<T> &v)
     {
         size_t len;
 
-        if (!_r(is, len))
+        if (!_r(is_, len))
         {
             return false;
         }
@@ -632,7 +665,7 @@ protected:
 
             for (size_t i=0; i<len; i++)
             {
-                if (!_r(is, (T&)tmp[i]))
+                if (!_r(is_, static_cast<T&>(tmp[i])))
                 {
                     return false;
                 }
@@ -649,11 +682,11 @@ protected:
     }
 
     template<class T>
-    bool _r(istream &is, optional<T> &v)
+    bool _r(istream &is_, optional<T> &v)
     {
         bool has_field;
 
-        if (!_r(is, has_field))
+        if (!_r(is_, has_field))
         {
             return false;
         }
@@ -662,7 +695,7 @@ protected:
         {
             T tmp;
 
-            if (!_r(is, (T&)tmp))
+            if (!_r(is_, static_cast<T&>(tmp)))
             {
                 return false;
             }
@@ -678,11 +711,11 @@ protected:
     }
 
     template<class K, class V>
-    bool _r(istream &is, map<K,V> &v)
+    bool _r(istream &is_, map<K,V> &v_)
     {
         size_t len;
 
-        if (!_r(is, len))
+        if (!_r(is_, len))
         {
             return false;
         }
@@ -696,12 +729,12 @@ protected:
                 K k;
                 V v;
 
-                if (!_r(is, (K&)k))
+                if (!_r(is_, static_cast<K&>(k)))
                 {
                     return false;
                 }
 
-                if (!_r(is, (V&)v))
+                if (!_r(is_, static_cast<V&>(v)))
                 {
                     return false;
                 }
@@ -709,11 +742,11 @@ protected:
                 tmp[k] = v;
             }
 
-            v = tmp;
+            v_ = tmp;
         }
         else
         {
-            v = map<K,V>();
+            v_ = map<K,V>();
         }
 
         return true;
@@ -722,7 +755,7 @@ protected:
     string _t(const uint8_t &v, int indent = 0) const
     {
         stringstream o;
-        o << (int)v;
+        o << static_cast<int>(v);
         return(o.str());
     }
 
@@ -750,7 +783,7 @@ protected:
     string _t(const int8_t &v, int indent = 0) const
     {
         stringstream o;
-        o << (int)v;
+        o << static_cast<int>(v);
         return(o.str());
     }
 
@@ -833,7 +866,7 @@ protected:
 
         for (size_t i=0; i<len; i++)
         {
-            o << INDENT(1) << _t((const T &)v[i], indent+1);
+            o << INDENT(1) << _t(static_cast<const T &>(v[i]), indent+1);
 
             if (i < (len-1))
             {
@@ -855,11 +888,11 @@ protected:
     string _t(const optional<T> &v, int indent = 0) const
     {
 #if !defined(BINARY_ONLY)
-        if ((bool)v)
+        if (static_cast<bool>(v))
         {
             stringstream o;
 
-            o << _t((const T &)*v, indent+1);
+            o << _t(static_cast<const T &>(*v), indent+1);
 
             return(o.str());
         }
@@ -881,10 +914,15 @@ protected:
              (len > 0) && (ci != v.end());
              ++ci)
         {
-            o << INDENT(1) << "{" << endl;
-            o << INDENT(2) << "\"k\": " << _t((const K&)(*ci).first , indent+1);
-            o << "," << endl;
-            o << INDENT(2) << "\"v\": " << _t((const V&)(*ci).second, indent+1);
+            o << INDENT(1);
+            o << "{";
+            o << endl;
+            o << INDENT(2);
+            o << "\"k\": " << _t(static_cast<const K&>((*ci).first) , indent+1);
+            o << ",";
+            o << endl;
+            o << INDENT(2);
+            o << "\"v\": " << _t(static_cast<const V&>((*ci).second), indent+1);
             o << endl;
             o << INDENT(1) << "}";
 
@@ -922,7 +960,7 @@ protected:
             return false;
         }
 
-        uint64_t sz_ = 0;
+        size_t sz_ = 0;
 
         if (has_payload(id_) && !_r(is_, sz_))
         {
@@ -957,7 +995,7 @@ protected:
         if (success)
         {
             _sp = is().tellg();
-            _ep = _sp + (streamoff)sz_;
+            _ep = _sp + sz_;
             _id = id_;
         }
 
@@ -1036,41 +1074,41 @@ private:
     uint64_t      _id;
     stringstream  _ss;
     istream      *_is;
-    streampos     _sp;
-    streampos     _ep;
+    size_t        _sp;
+    size_t        _ep;
     ssize_t       _np;
 
     // ZIGZAG decoding
     //
     template<class T>
-    bool _z(istream &is, T &v)
+    bool _z(istream &is_, T &v)
     {
         uint64_t r;
 
-        if (!_r(is, r))
+        if (!_r(is_, r))
         {
             return false;
         }
 
-        v = (T)(ZIGZAG_DECODE(r) & ((T)-1));
+        v = static_cast<T>(ZIGZAG_DECODE(r) & (static_cast<const T>(-1)));
 
         return true;
     }
 
-    bool read(void *v, size_t s, istream &is)
+    bool read(void *v, size_t s, istream &is_)
     {
         // Check whether **only** an internal logic error occurred ...
         //
-        if (is.fail() && !is.bad() && !is.eof())
+        if (is_.fail() && !is_.bad() && !is_.eof())
         {
             // ... and ignore it
             //
-            is.clear();
+            is_.clear();
         }
 
         // Fail in case of any other error
         //
-        return is.good() && is.read((char *)v,s).good();
+        return is_.good() && is_.read(static_cast<char *>(v),s).good();
     }
 };
 
@@ -1100,7 +1138,7 @@ private:
 
 #define DECLARE_FIELD(t, n, ...) t n;
 #define INIT_FIELD(t, n, ...)    IF(HAS_ARGS(__VA_ARGS__) )(n = __VA_ARGS__;)
-#define READ_FIELD(t, n, ...)    && Message::_r(is, n)
+#define READ_FIELD(t, n, ...)    && Message::_r(is_, n)
 #define WRITE_FIELD(t, n, ...)   && Message::_w(os, n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
@@ -1109,11 +1147,21 @@ private:
                                  HUPDATE(STR(t    )); \
                                  HUPDATE(STR(n    ));
 #define WJSON_FIELD(t, n, ...)                                                 \
-        ss << INDENT(2) << "{" << endl                                         \
-           << INDENT(3) << "\"t\": \"" << STR(t) << "\","       << endl        \
-           << INDENT(3) << "\"n\": \"" << STR(n) << "\","       << endl        \
-           << INDENT(3) << "\"v\": "   << _t((t&)n, (indent+3)) << endl        \
-           << INDENT(2) << "}," << endl;
+        ss << INDENT(2)                                                        \
+           << "{"                                                              \
+           << endl                                                             \
+           << INDENT(3)                                                        \
+           << "\"t\": \"" << STR(t) << "\","                                   \
+           << endl                                                             \
+           << INDENT(3)                                                        \
+           << "\"n\": \"" << STR(n) << "\","                                   \
+           << endl                                                             \
+           << INDENT(3)                                                        \
+           << "\"v\": "   << _t(static_cast<const t&>(n), (indent+3))          \
+           << endl                                                             \
+           << INDENT(2)                                                        \
+           << "},"                                                             \
+           << endl;
 
 #if !defined(BINARY_ONLY)
 #define JSON_DUMP(name_,value_,...)                                            \
@@ -1163,15 +1211,15 @@ public:                                                                        \
         /* Extra fields update parameters count */                             \
         SCAN_FIELDS(UPDATE_NP, REMAIN(__VA_ARGS__))                            \
                                                                                \
-        id((const char *)NULL); /* finalize message ID */                      \
+        id(static_cast<const char *>(NULL)); /* finalize message ID */         \
     }                                                                          \
                                                                                \
-    name_(const Message & ref)                                                 \
+    name_(const Message & ref): Message(ref)                                   \
     {                                                                          \
         *this = ref;                                                           \
     }                                                                          \
                                                                                \
-    name_(const name_ & ref)                                                   \
+    name_(const name_ & ref): Message(ref)                                     \
     {                                                                          \
         *this = ref;                                                           \
     }                                                                          \
@@ -1182,14 +1230,14 @@ public:                                                                        \
                                                                                \
     name_ & operator=(const Message & ref)                                     \
     {                                                                          \
-        *(Message *)this = (Message &)ref;                                     \
+        *static_cast<Message *>(this) = static_cast<const Message &>(ref);     \
                                                                                \
         return *this;                                                          \
     }                                                                          \
                                                                                \
     name_ & operator=(const name_ & ref)                                       \
     {                                                                          \
-        *(Message *)this = (Message &)ref;                                     \
+        *static_cast<Message *>(this) = static_cast<const Message &>(ref);     \
                                                                                \
         SCAN_FIELDS(CLONE_FIELD, FIRST(__VA_ARGS__))                           \
         SCAN_FIELDS(CLONE_FIELD, REMAIN(__VA_ARGS__))                          \
@@ -1201,7 +1249,8 @@ public:                                                                        \
     {                                                                          \
         bool rv;                                                               \
                                                                                \
-        rv = ((*((Message*)this) == (const Message &)ref)                      \
+        rv = ((*static_cast<const Message*>(this) ==                           \
+                static_cast<const Message &>(ref))                             \
                SCAN_FIELDS(COMPARE_FIELD, FIRST(__VA_ARGS__))                  \
                SCAN_FIELDS(COMPARE_FIELD, REMAIN(__VA_ARGS__)));               \
                                                                                \
@@ -1223,7 +1272,7 @@ protected:                                                                     \
         return true;                                                           \
     }                                                                          \
                                                                                \
-    bool _r(istream &is)                                                       \
+    bool _r(istream &is_)                                                      \
     {                                                                          \
         /* Read mandatory fields : fail on error */                            \
                                                                                \
