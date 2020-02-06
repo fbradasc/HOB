@@ -754,6 +754,8 @@ protected:
 
     string _t(const uint8_t &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << static_cast<int>(v);
         return(o.str());
@@ -761,6 +763,8 @@ protected:
 
     string _t(const uint16_t &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << v;
         return(o.str());
@@ -768,6 +772,8 @@ protected:
 
     string _t(const uint32_t &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << v;
         return(o.str());
@@ -775,6 +781,8 @@ protected:
 
     string _t(const uint64_t &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << v;
         return(o.str());
@@ -782,6 +790,8 @@ protected:
 
     string _t(const int8_t &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << static_cast<int>(v);
         return(o.str());
@@ -789,6 +799,8 @@ protected:
 
     string _t(const int16_t &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << v;
         return(o.str());
@@ -796,6 +808,8 @@ protected:
 
     string _t(const int32_t &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << v;
         return(o.str());
@@ -803,6 +817,8 @@ protected:
 
     string _t(const int64_t &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << v;
         return(o.str());
@@ -810,6 +826,8 @@ protected:
 
     string _t(const float &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << v;
         return(o.str());
@@ -817,6 +835,8 @@ protected:
 
     string _t(const double &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << v;
         return(o.str());
@@ -824,6 +844,8 @@ protected:
 
     string _t(const char *v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << "\"" << v << "\"";
         return(o.str());
@@ -831,6 +853,8 @@ protected:
 
     string _t(const string &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << "\"" << v << "\"";
         return(o.str());
@@ -838,6 +862,8 @@ protected:
 
     string _t(const bool &v, int indent = 0) const
     {
+        (void)indent;
+
         return( v ? "true" : "false");
     }
 
@@ -849,6 +875,8 @@ protected:
     template<size_t N>
     string _t(const bitset<N> &v, int indent = 0) const
     {
+        (void)indent;
+
         stringstream o;
         o << "\"" << v << "\"";
         return(o.str());
@@ -857,6 +885,8 @@ protected:
     template<class T>
     string _t(const vector<T> &v, int indent = 0) const
     {
+        (void)indent;
+
 #if !defined(BINARY_ONLY)
         stringstream o;
 
@@ -887,6 +917,8 @@ protected:
     template<class T>
     string _t(const optional<T> &v, int indent = 0) const
     {
+        (void)indent;
+
 #if !defined(BINARY_ONLY)
         if (static_cast<bool>(v))
         {
@@ -903,6 +935,8 @@ protected:
     template<class K, class V>
     string _t(const map<K,V> &v, int indent = 0) const
     {
+        (void)indent;
+
 #if !defined(BINARY_ONLY)
         stringstream o;
 
@@ -944,7 +978,7 @@ protected:
 #endif
     }
 
-    virtual bool _r(Message &ref) { return true; }
+    virtual bool _r(Message &ref) { (void)ref; return true; }
 
     virtual bool _r(istream &is_)
     {
@@ -1002,11 +1036,13 @@ protected:
         return success;
     }
 
-    virtual bool _w(ostream &os) const { return true; }
+    virtual bool _w(ostream &os) const { (void)os; return true; }
 
 #if !defined(BINARY_ONLY)
     virtual string _j(int indent = 0) const
     {
+        (void)indent;
+
         return("");
     }
 #endif // BINARY_ONLY
@@ -1274,6 +1310,8 @@ protected:                                                                     \
                                                                                \
     bool _r(istream &is_)                                                      \
     {                                                                          \
+        (void)is_;                                                             \
+                                                                               \
         /* Read mandatory fields : fail on error */                            \
                                                                                \
         if (true SCAN_FIELDS(READ_FIELD, FIRST(__VA_ARGS__)))                  \
@@ -1293,6 +1331,8 @@ protected:                                                                     \
                                                                                \
     bool _w(ostream &os) const                                                 \
     {                                                                          \
+        (void)os;                                                              \
+                                                                               \
         return (true                                                           \
                 SCAN_FIELDS(WRITE_FIELD, FIRST(__VA_ARGS__))                   \
                 SCAN_FIELDS(WRITE_FIELD, REMAIN(__VA_ARGS__)));                \

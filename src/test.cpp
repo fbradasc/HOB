@@ -76,8 +76,8 @@ diff3 f.txt i.txt s.txt
 #include <inttypes.h>
 #include <limits.h>
 
-#define LOG(message_,type_) printf("Payload size %ld: %s\n\n", \
-                                   static_cast<uint64_t>(message_.size()), \
+#define LOG(message_,type_) printf("Payload size %zu: %s\n\n", \
+                                   message_.size(), \
                                    message_.json().c_str())
 
 
@@ -279,6 +279,9 @@ bool handle_message(Message &m)
 
 int main(int argc, char *argv[])
 {
+    (void)argc;
+    (void)argv;
+
 #if defined(OUTPUT_ON_FILE)
     bool do_read=true;
     bool do_write=true;

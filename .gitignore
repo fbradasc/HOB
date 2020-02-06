@@ -3,4 +3,4 @@
 output.dat
 test_*
 .vscode
-build
+build*
