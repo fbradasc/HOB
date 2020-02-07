@@ -462,7 +462,7 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, uint8_t &v)
+    bool _r(istream &is_, uint8_t &v, ssize_t field=-1)
     {
         uint64_t r;
 
@@ -471,12 +471,16 @@ protected:
             return false;
         }
 
-        v = static_cast<uint8_t>(r & 0xff);
+        uint8_t rv = static_cast<uint8_t>(r & 0xff);
+
+        changed(field, v != rv);
+
+        v = rv;
 
         return true;
     }
 
-    bool _r(istream &is_, uint16_t &v)
+    bool _r(istream &is_, uint16_t &v, ssize_t field=-1)
     {
         uint64_t r;
 
@@ -485,12 +489,16 @@ protected:
             return false;
         }
 
-        v = static_cast<uint16_t>(r & 0xffff);
+        uint16_t rv = static_cast<uint16_t>(r & 0xffff);
+
+        changed(field, v != rv);
+
+        v = rv;
 
         return true;
     }
 
-    bool _r(istream &is_, uint32_t &v)
+    bool _r(istream &is_, uint32_t &v, ssize_t field=-1)
     {
         uint64_t r;
 
@@ -499,14 +507,18 @@ protected:
             return false;
         }
 
-        v = static_cast<uint32_t>(r & 0xffffffff);
+        uint32_t rv = static_cast<uint32_t>(r & 0xffffffff);
+
+        changed(field, v != rv);
+
+        v = rv;
 
         return true;
     }
 
     // VARINT unpacking
     //
-    bool _r(istream &is_, uint64_t &v)
+    bool _r(istream &is_, uint64_t &v, ssize_t field=-1)
     {
         if (is_.eof())
         {
@@ -542,53 +554,90 @@ protected:
             }
         }
 
-        v = (b < 9) ? d[0] & ~m : 0;
+        uint64_t rv = (b < 9) ? d[0] & ~m : 0;
 
         for (uint8_t i=1; i<b; i++)
         {
-            v <<= 8;
-            v |= static_cast<uint64_t>(d[i] & 0xff);
+            rv <<= 8;
+            rv |= static_cast<uint64_t>(d[i] & 0xff);
         }
+
+        changed(field, v != rv);
+
+        v = rv;
 
         return true;
     }
 
-    bool _r(istream &is_, int8_t &v)
+    bool _r(istream &is_, int8_t &v, ssize_t field=-1)
     {
-        return _z<int8_t>(is_,v);
+        return _z<int8_t>(is_,v,field);
     }
 
-    bool _r(istream &is_, int16_t &v)
+    bool _r(istream &is_, int16_t &v, ssize_t field=-1)
     {
-        return _z<int16_t>(is_,v);
+        return _z<int16_t>(is_,v,field);
     }
 
-    bool _r(istream &is_, int32_t &v)
+    bool _r(istream &is_, int32_t &v, ssize_t field=-1)
     {
-        return _z<int32_t>(is_,v);
+        return _z<int32_t>(is_,v,field);
     }
 
-    bool _r(istream &is_, int64_t &v)
+    bool _r(istream &is_, int64_t &v, ssize_t field=-1)
     {
-        return _z<int64_t>(is_,v);
+        return _z<int64_t>(is_,v,field);
     }
 
-    bool _r(istream &is_, bool &v)
+    bool _r(istream &is_, bool &v, ssize_t field=-1)
     {
-        return ASSERT_SREAD(&v, sizeof(v), is_);
+        bool rv;
+
+        if (!ASSERT_SREAD(&rv, sizeof(v), is_))
+        {
+            return false;
+        }
+
+        changed(field, v != rv);
+
+        v = rv;
+
+        return true;
     }
 
-    bool _r(istream &is_, float &v)
+    bool _r(istream &is_, float &v, ssize_t field=-1)
     {
-        return ASSERT_SREAD(&v, sizeof(v), is_);
+        float rv;
+
+        if (!ASSERT_SREAD(&rv, sizeof(v), is_))
+        {
+            return false;
+        }
+
+        changed(field, v != rv);
+
+        v = rv;
+
+        return true;
     }
 
-    bool _r(istream &is_, double &v)
+    bool _r(istream &is_, double &v, ssize_t field=-1)
     {
-        return ASSERT_SREAD(&v, sizeof(v), is_);
+        double rv;
+
+        if (!ASSERT_SREAD(&rv, sizeof(v), is_))
+        {
+            return false;
+        }
+
+        changed(field, v != rv);
+
+        v = rv;
+
+        return true;
     }
 
-    bool _r(istream &is_, string &v)
+    bool _r(istream &is_, string &v, ssize_t field=-1)
     {
         uint64_t len;
 
@@ -604,12 +653,18 @@ protected:
             return false;
         }
 
-        v.assign(tmp.data(),len);
+        string rv;
+
+        rv.assign(tmp.data(),len);
+
+        changed(field, v != rv);
+
+        v = rv;
 
         return true;
     }
 
-    bool _r(istream &is_, Message &v)
+    bool _r(istream &is_, Message &v, ssize_t field=-1)
     {
         if (!is_.eof())
         {
@@ -619,7 +674,12 @@ protected:
             {
                 v = m;
 
-                return ( v << m.is() );
+                if ( v << m.is() )
+                {
+                    changed(field, v.changed());
+
+                    return true;
+                }
             }
         }
 
@@ -627,7 +687,7 @@ protected:
     }
 
     template<size_t N>
-    bool _r(istream &is_, std::bitset<N> &v)
+    bool _r(istream &is_, bitset<N> &v, ssize_t field=-1)
     {
         vector<uint8_t> buf;
 
@@ -641,16 +701,22 @@ protected:
             return false;
         }
 
+        bitset<N> rv;
+
         for (size_t j=0; j<size_t(N); j++)
         {
-            v[j] = ((buf[j>>3] >> (j & 7)) & 1);
+            rv[j] = ((buf[j>>3] >> (j & 7)) & 1);
         }
+
+        changed(field, v != rv);
+
+        v = rv;
 
         return true;
     }
 
     template<class T>
-    bool _r(istream &is_, vector<T> &v)
+    bool _r(istream &is_, vector<T> &v, ssize_t field=-1)
     {
         size_t len;
 
@@ -671,10 +737,14 @@ protected:
                 }
             }
 
+            changed(field, v != tmp);
+
             v = tmp;
         }
         else
         {
+            changed(field, !v.empty());
+
             v = vector<T>();
         }
 
@@ -682,7 +752,7 @@ protected:
     }
 
     template<class T>
-    bool _r(istream &is_, optional<T> &v)
+    bool _r(istream &is_, optional<T> &v, ssize_t field=-1)
     {
         bool has_field;
 
@@ -700,10 +770,14 @@ protected:
                 return false;
             }
 
+            changed(field, v != tmp);
+
             v = tmp;
         }
         else
         {
+            changed(field, v.has_value());
+
             v = optional<T>();
         }
 
@@ -711,7 +785,7 @@ protected:
     }
 
     template<class K, class V>
-    bool _r(istream &is_, map<K,V> &v_)
+    bool _r(istream &is_, map<K,V> &v_, ssize_t field=-1)
     {
         size_t len;
 
@@ -742,10 +816,14 @@ protected:
                 tmp[k] = v;
             }
 
+            changed(field, v_ != tmp);
+
             v_ = tmp;
         }
         else
         {
+            changed(field, !v_.empty());
+
             v_ = map<K,V>();
         }
 
@@ -1106,6 +1184,18 @@ protected:
         return ( id & 1 );
     }
 
+    virtual bool changed() const
+    {
+        return false;
+    }
+
+protected:
+    virtual void changed(ssize_t f, bool v)
+    {
+        (void)f;
+        (void)v;
+    }
+
 private:
     uint64_t      _id;
     stringstream  _ss;
@@ -1117,7 +1207,7 @@ private:
     // ZIGZAG decoding
     //
     template<class T>
-    bool _z(istream &is_, T &v)
+    bool _z(istream &is_, T &v, ssize_t field=-1)
     {
         uint64_t r;
 
@@ -1126,7 +1216,11 @@ private:
             return false;
         }
 
-        v = static_cast<T>(ZIGZAG_DECODE(r) & (static_cast<const T>(-1)));
+        T rv = static_cast<T>(ZIGZAG_DECODE(r) & (static_cast<const T>(-1)));
+
+        changed(field, v != rv);
+
+        v = rv;
 
         return true;
     }
@@ -1172,9 +1266,10 @@ private:
 
 #define SCAN_FIELDS_INNER_I() SCAN_FIELDS_INNER
 
+#define DECLARE_ENUM(t, n, ...)  _ ## n,
 #define DECLARE_FIELD(t, n, ...) t n;
 #define INIT_FIELD(t, n, ...)    IF(HAS_ARGS(__VA_ARGS__) )(n = __VA_ARGS__;)
-#define READ_FIELD(t, n, ...)    && Message::_r(is_, n)
+#define READ_FIELD(t, n, ...)    && Message::_r(is_, n, _ ## n)
 #define WRITE_FIELD(t, n, ...)   && Message::_w(os, n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
@@ -1228,10 +1323,50 @@ private:
 #define JSON_DUMP(n,v,...)
 #endif
 
+#define CHANGED_FIELDS(n, ...) \
+    IF(HAS_ARGS(__VA_ARGS__))(EVAL(CHANGED_FIELDS_INNER(n, __VA_ARGS__)))
+
+#define CHANGED_FIELDS_INNER(n, ...)                                           \
+    bitset<_FIELDS_COUNT_> __ ## n ## __changed__fields__;                     \
+
+#define RESET_CHANGES(n,f)                                                     \
+        if (f == _FIELDS_COUNT_)                                               \
+        {                                                                      \
+            __ ## n ## __changed__fields__.reset();                            \
+        }                                                                      \
+        else                                                                   \
+        if (f < _FIELDS_COUNT_)                                                \
+        {                                                                      \
+            __ ## n ## __changed__fields__.reset(f);                           \
+        }                                                                      \
+
+#define CHECK_CHANGES(n,f)                                                     \
+        if (f == _FIELDS_COUNT_)                                               \
+        {                                                                      \
+            return __ ## n ## __changed__fields__.any();                       \
+        }                                                                      \
+        else                                                                   \
+        if (f < _FIELDS_COUNT_)                                                \
+        {                                                                      \
+            return __ ## n ## __changed__fields__.test(f);                     \
+        }                                                                      \
+
+#define SET_CHANGED(n,f,v)                                                     \
+        if (f < _FIELDS_COUNT_)                                                \
+        {                                                                      \
+            __ ## n ## __changed__fields__[f] = v;                             \
+        }                                                                      \
+
 #define DECLARE_MESSAGE(name_, value_, ...)                                    \
 class name_ : public Message                                                   \
 {                                                                              \
 public:                                                                        \
+    enum Fields                                                                \
+    {                                                                          \
+        SCAN_FIELDS(DECLARE_ENUM, FIRST(__VA_ARGS__))                          \
+        SCAN_FIELDS(DECLARE_ENUM, REMAIN(__VA_ARGS__))                         \
+        _FIELDS_COUNT_                                                         \
+    };                                                                         \
                                                                                \
     SCAN_FIELDS(DECLARE_FIELD, FIRST(__VA_ARGS__))                             \
     SCAN_FIELDS(DECLARE_FIELD, REMAIN(__VA_ARGS__))                            \
@@ -1293,9 +1428,35 @@ public:                                                                        \
         return rv;                                                             \
     }                                                                          \
                                                                                \
+    void reset_changes(const Fields & f)                                       \
+    {                                                                          \
+        IF(HAS_ARGS(__VA_ARGS__))(RESET_CHANGES(name_,f))                      \
+    }                                                                          \
+                                                                               \
+    void reset_changes()                                                       \
+    {                                                                          \
+        reset_changes(_FIELDS_COUNT_);                                         \
+    }                                                                          \
+                                                                               \
+    bool changed(const Fields &f) const                                        \
+    {                                                                          \
+        (void)f;                                                               \
+                                                                               \
+        IF(HAS_ARGS(__VA_ARGS__))(CHECK_CHANGES(name_,f))                      \
+                                                                               \
+        return false;                                                          \
+    }                                                                          \
+                                                                               \
+    virtual bool changed() const                                                       \
+    {                                                                          \
+        return changed(_FIELDS_COUNT_);                                        \
+    }                                                                          \
+                                                                               \
 protected:                                                                     \
     bool _r(Message &ref)                                                      \
     {                                                                          \
+        reset_changes();                                                       \
+                                                                               \
         ref.rewind();                                                          \
                                                                                \
         if (!_r(ref.is()))                                                     \
@@ -1348,6 +1509,22 @@ protected:                                                                     \
     {                                                                          \
         return Message::rewind();                                              \
     }                                                                          \
+                                                                               \
+    virtual void changed(ssize_t f, bool v)                                    \
+    {                                                                          \
+        (void)f;                                                               \
+        (void)v;                                                               \
+                                                                               \
+        if (f < 0)                                                             \
+        {                                                                      \
+            return;                                                            \
+        }                                                                      \
+                                                                               \
+        IF(HAS_ARGS(__VA_ARGS__))(SET_CHANGED(name_,f,v))                      \
+    }                                                                          \
+                                                                               \
+private:                                                                       \
+    CHANGED_FIELDS(name_, __VA_ARGS__)                                         \
 };
 
 #endif // __MESSAGE_DECLARATION__

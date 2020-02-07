@@ -143,25 +143,25 @@ DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
 )
 #else
 DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
-    (int8_t  , bnil, 0        )
-    (int8_t  , bone, 1        )
-    (int8_t  , bmin           )
-    (int8_t  , bmax           )
-    (int16_t , snil, 0        )
-    (int16_t , sone, 1        )
-    (int16_t , smin           )
-    (int16_t , smax           )
-    (int32_t , inil, 0        )
-    (int32_t , ione, 1        )
-    (int32_t , imin           )
-    (int32_t , imax           )
-    (int64_t , lnil, 0        )
-    (int64_t , lone, 1        )
-    (int64_t , lmin           )
-    (int64_t , lmax           )
-    (double  , bar , 3.1415927)
-    (MyStruct, dat            )
-    (MyMap   , aMap           )
+    (int8_t  , bnil, 0)
+    (int8_t  , bone, 0)
+    (int8_t  , bmin, 0)
+    (int8_t  , bmax, 0)
+    (int16_t , snil, 0)
+    (int16_t , sone, 0)
+    (int16_t , smin, 0)
+    (int16_t , smax, 0)
+    (int32_t , inil, 0)
+    (int32_t , ione, 0)
+    (int32_t , imin, 0)
+    (int32_t , imax, 0)
+    (int64_t , lnil, 0)
+    (int64_t , lone, 0)
+    (int64_t , lmin, 0)
+    (int64_t , lmax, 0)
+    (double  , bar , 0)
+    (MyStruct, dat    )
+    (MyMap   , aMap   )
 )
 #endif
 
@@ -192,15 +192,16 @@ DECLARE_MESSAGE(NumericExtraParameters, 43,
      (bool, extra, true)
 )
 
+MyStruct               m_MyStruct              ;
+AnotherStruct          m_AnotherStruct         ;
+NoParamMessage         m_NoParamMessage        ;
+NumericNoParamMessage  m_NumericNoParamMessage ;
+NumericMessage         m_NumericMessage        ;
+NumericExtraParameters m_NumericExtraParameters;
+ComplexStruct          m_ComplexStruct         ;
+
 bool handle_message(Message &m)
 {
-    MyStruct               m_MyStruct              ;
-    AnotherStruct          m_AnotherStruct         ;
-    NoParamMessage         m_NoParamMessage        ;
-    NumericNoParamMessage  m_NumericNoParamMessage ;
-    NumericMessage         m_NumericMessage        ;
-    NumericExtraParameters m_NumericExtraParameters;
-    ComplexStruct          m_ComplexStruct         ;
 
     bool handled = true;
 
@@ -213,6 +214,11 @@ bool handle_message(Message &m)
         (m == m_ComplexStruct         ))
     {
         printf("Known message\n");
+    }
+
+    if (m == m_AnotherStruct)
+    {
+        LOG(m_AnotherStruct, AnotherStruct);
     }
 
 #if 0
@@ -238,6 +244,108 @@ bool handle_message(Message &m)
     if (m_AnotherStruct << m)
     {
         LOG(m_AnotherStruct, AnotherStruct);
+
+        if (m_AnotherStruct.changed())
+        {
+            if (m_AnotherStruct.changed(AnotherStruct::_bnil))
+            {
+                printf("bnil changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_bone))
+            {
+                printf("bone changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_bmin))
+            {
+                printf("bmin changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_bmax))
+            {
+                printf("bmax changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_snil))
+            {
+                printf("snil changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_sone))
+            {
+                printf("sone changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_smin))
+            {
+                printf("smin changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_smax))
+            {
+                printf("smax changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_inil))
+            {
+                printf("inil changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_ione))
+            {
+                printf("ione changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_imin))
+            {
+                printf("imin changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_imax))
+            {
+                printf("imax changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_lnil))
+            {
+                printf("lnil changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_lone))
+            {
+                printf("lone changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_lmin))
+            {
+                printf("lmin changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_lmax))
+            {
+                printf("lmax changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_bar ))
+            {
+                printf("bar  changed\n");
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_dat ))
+            {
+                printf("dat  changed\n");
+
+                if (m_AnotherStruct.dat.changed())
+                {
+                    if (m_AnotherStruct.dat.changed(MyStruct::_anEnum))
+                    {
+                        printf("dat.anEnum changed\n");
+                    }
+                    if (m_AnotherStruct.dat.changed(MyStruct::_aChar))
+                    {
+                        printf("dat.aChar changed\n");
+                    }
+                    if (m_AnotherStruct.dat.changed(MyStruct::_aFloat))
+                    {
+                        printf("dat.aFloat changed\n");
+                    }
+                    if (m_AnotherStruct.dat.changed(MyStruct::_optional))
+                    {
+                        printf("dat.optional changed\n");
+                    }
+                }
+            }
+            if (m_AnotherStruct.changed(AnotherStruct::_aMap))
+            {
+                printf("aMap changed\n");
+            }
+
+            printf("\n");
+        }
     }
     else
     if (m_NoParamMessage << m)
@@ -339,6 +447,8 @@ int main(int argc, char *argv[])
         {
             AnotherStruct m;
 
+            LOG(m, AnotherStruct);
+
             m.bmin = SCHAR_MIN;
             m.bmax = SCHAR_MAX;
             m.smin = SHRT_MIN;
@@ -353,6 +463,15 @@ int main(int argc, char *argv[])
             m.aMap[2] = "due";
             m.aMap[3] = "tre";
             m.aMap[7] = "sette";
+
+            m >> ofs;
+
+            LOG(m, AnotherStruct);
+
+            m.bnil       = 2;
+            m.bone       = 3;
+            m.bar        = 1.21;
+            m.dat.anEnum = static_cast<uint32_t>(enThree);
 
             m >> ofs;
 
@@ -482,6 +601,15 @@ int main(int argc, char *argv[])
         while (m << *is)
         {
             handle_message(m);
+
+            if (m == m_AnotherStruct)
+            {
+                m_AnotherStruct.bnil         = 1;
+                m_AnotherStruct.bone         = 0;
+                m_AnotherStruct.bar          = 6.28;
+                m_AnotherStruct.dat.optional = false;
+            }
+
             handle_message(m);
         }
 
