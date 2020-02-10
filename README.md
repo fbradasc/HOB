@@ -286,7 +286,7 @@ To send an event just use message serialization:
 ```
 std::stringstream events_queue;
 
-evt >> events_queue;
+almight_evt >> events_queue;
 ```
 
 ##### Dispatching events
@@ -316,7 +316,7 @@ while (evt << events_queue)
 ##### Handling events
 
 ```
-void handle_message(const Message &m)
+void handle_message(Message &m)
 {
     // 2. ensure the event read is of AlmightyEvent type
     //
