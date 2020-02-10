@@ -13,10 +13,12 @@ A message needs to be declared by using the DECLARE_MESSAGE() macro.
 
 A very basic message requires a name and an identifier:
 
-    DECLARE_MESSAGE (
-        class_name,
-        identifier
-    )
+```
+DECLARE_MESSAGE (
+    class_name,
+    identifier
+)
+```
 
 *class_name*: it's the message C++ class name  
 *identifier*: it's used to assign the message *UID* base value  
@@ -30,18 +32,22 @@ The *identifier* can be:
 
 A message can have core parameters:
 
-    DECLARE_MESSAGE (
-        class_name,
-        identifier,
-        parameters
-    )
+```
+DECLARE_MESSAGE (
+    class_name,
+    identifier,
+    parameters
+)
+```
 
 *parameters*: a list of core parameter definitions
 
-    (filed_1_type, field_1_name [, field_1_default_value])
-    (filed_2_type, field_2_name [, field_2_default_value])
-    ...                   
-    (filed_n_type, field_n_name [, field_n_default_value])
+```
+(filed_1_type, field_1_name [, field_1_default_value])
+(filed_2_type, field_2_name [, field_2_default_value])
+...                   
+(filed_n_type, field_n_name [, field_n_default_value])
+```
 
 *field_#_type*         : [mandatory] it's the field's C++ variable type  
 *field_#_name*         : [mandatory] it's the field's C++ varible name  
@@ -53,12 +59,14 @@ The core parameters are used to update the message *UID*.
 
 A message can also have extra parameters:
 
-    DECLARE_MESSAGE (
-        class_name,
-        identifier,
-        core_parameters,
-        extra_parameters
-    )
+```
+DECLARE_MESSAGE (
+    class_name,
+    identifier,
+    core_parameters,
+    extra_parameters
+)
+```
 
 Extra parameters are defined in the same way as core parameters.
 
@@ -71,8 +79,8 @@ not supported) and can be any of the following types:
 
 #### Base types
 
-    int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
-    boot, float, double
+    int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, boot,
+    float, double
 
 #### Complex types
 
@@ -86,13 +94,13 @@ Where N is the number of bits to be stored in the bitset.
 
 Example:
 ```
-    DECLARE_MESSAGE(Payload, 42)
+DECLARE_MESSAGE(Payload, 42)
 
-    DECLARE_MESSAGE (
-        Envelope,
-        "Encapsulated",
-        ( Payload, payload )
-    )
+DECLARE_MESSAGE (
+    Envelope,
+    "Encapsulated",
+    ( Payload, payload )
+)
 ```
 
 #### Collections
@@ -117,9 +125,9 @@ After a message has been declared, by means of the DECLARE_MESSAGE() macro, a
 variable can be defined with the message type:
 
 ```
-    DECLARE_MESSAGE(MyMessageT, ...)
+DECLARE_MESSAGE(MyMessageT, ...)
 
-    MyMessageT myMessage;
+MyMessageT myMessage;
 ```
 
 ### Serialization
@@ -127,9 +135,9 @@ variable can be defined with the message type:
 Messages can be serialized over a C++ STL ostream or iostream derived object:
 
 ```
-    std::stringstream stream;
+std::stringstream stream;
 
-    myMessage >> stream;
+myMessage >> stream;
 ```
 
 ### Deserialization
@@ -144,38 +152,131 @@ some steps are needed:
    matches the message to be read
 
 ```
-    std::ifstream stream("messages.dat", std::ios::binary);
+std::ifstream stream("messages.dat", std::ios::binary);
 
-    Message m;  // define a generic message object
+Message m;  // define a generic message object
 
-    // 1. retrieve the message UID from the input stream
+// 1. retrieve the message UID from the input stream
+//
+if (m << stream)
+{
+    // 2. [optional] ensure the message read is of MyMessageT type
     //
-    if (m << stream)
+    if (m != myMessage)
     {
-        // 2. [optional] ensure the message read is of MyMessageT type
-        //
-        if (m != myMessage)
-        {
-            printf("Unknown message type\n");
-        }
-
-        // 3. deserialize the message content
-        //
-        if (myMessage << m)
-        {
-            // do stuffs with the message
-        }
+        printf("Unknown message type\n");
     }
+
+    // 3. deserialize the message content
+    //
+    if (myMessage << m)
+    {
+        // do stuffs with the message
+    }
+}
 ```
 
+#### Detecting changes due to deserialization
+
+The declared messages have methods to enquire/reset changes in their data:
+
+    operator bool () const;
+
+Can be used to detect the change status in any of the message fileds.
+
+    void operator ~ ();
+
+Can be used to reset the change status in all of the message fileds.
+
+    bool operator & (const Fields &field) const;
+
+Can be used to detect the change status in a given field.
+
+    void operator -= (const Fields &field);
+
+Can be used to reset the change status in a given field.
+
+The **Fields** type is an *enum* containing the id of all the fields:
+
+```
+enum Fields
+{
+    _field_1_name,
+    ...
+    _field_n_name
+};
+```
+
+##### Changes detection example
+
+```
+// declare the specific message class
+//
+DECLARE_MESSAGE (
+    ChemicalReactionM,
+    42,
+    (double, temp, 0.0d)
+    (double, pres, 0.0d)
+)
+
+Message m;  // define a generic message object
+
+ChemicalReactionM chemicalReaction; // define the specific message object
+
+// retrieve the message UID from the input stream
+//
+while (m << stream)
+{
+    // deserialize the message content
+    //
+    // NOTE:
+    // the change status of all the fields is being reset by the deserialization
+    //
+    if (chemicalReaction << m)
+    {
+        if (chemicalReaction)
+        {
+            // something is changed in deserialized data
+
+            if (chemicalReaction & ChemicalReactionM::_temp)
+            {
+                // the temp field is changed
+
+                // you can reset the temp field change status
+                //
+                // Not really needed, see NOTE above
+                //
+                chemicalReaction -= ChemicalReactionM::_temp;
+            }
+
+            if (chemicalReaction & ChemicalReactionM::_pres)
+            {
+                // the pres field is changed
+            }
+
+            // you can reset the pres field change status
+            //
+            // Not really needed, see NOTE above
+            //
+            chemicalReaction -= ChemicalReactionM::_pres;
+
+            // you can reset the change status of all the field
+            //
+            // Not really needed, see NOTE above
+            //
+            ~chemicalReaction;
+        }
+    }
+}
+```
 #### Messages as events
 
 Messages can be used as events in an event oriented application.
 
 ```
-    DECLARE_MESSAGE(AlmightyEvent, 42)
+DECLARE_MESSAGE(AlmightyEvent, 42)
 
-    AlmightyEvent almight_evt;
+AlmightyEvent almight_evt;
 ```
 
 ##### Sending events
@@ -183,9 +284,9 @@ Messages can be used as events in an event oriented application.
 To send an event just use message serialization:
 
 ```
-    std::stringstream events_queue;
+std::stringstream events_queue;
 
-    evt >> events_queue;
+evt >> events_queue;
 ```
 
 ##### Dispatching events
@@ -193,48 +294,48 @@ To send an event just use message serialization:
 Dispatch events in the following manner:
 
 ```
-    typedef void (*EventHandler)(const Message &);
+typedef void (*EventHandler)(const Message &);
 
-    list<EventHandlers> event_handlers;
+list<EventHandlers> event_handlers;
 
-    Message evt;
+Message evt;
 
-    // 1. retrieve the event UID from the events queue
-    //
-    while (evt << events_queue)
+// 1. retrieve the event UID from the events queue
+//
+while (evt << events_queue)
+{
+    for (EventHandlers::Iterator event_handler  = event_handlers.begin();
+                                 event_handler != event_handlers.end();
+                                 event_handler++)
     {
-        for (EventHandlers::Iterator event_handler  = event_handlers.begin();
-                                     event_handler != event_handlers.end();
-                                     event_handler++)
-        {
-            (*event_handler)(evt);
-        }
+        (*event_handler)(evt);
     }
+}
 ```
 
 ##### Handling events
 
 ```
-    void handle_message(const Message &m)
+void handle_message(const Message &m)
+{
+    // 2. ensure the event read is of AlmightyEvent type
+    //
+    if (m == almight_evt)
     {
-        // 2. ensure the event read is of AlmightyEvent type
-        //
-        if (m == almight_evt)
-        {
-            printf("Known event\n");
-        }
-        else
-        {
-            printf("Unknown event\n");
-        }
-
-        // 3. deserialize the event content
-        //
-        if (almight_evt << m)
-        {
-            // do stuffs with the event
-        }
+        printf("Known event\n");
     }
+    else
+    {
+        printf("Unknown event\n");
+    }
+
+    // 3. deserialize the event content
+    //
+    if (almight_evt << m)
+    {
+        // do stuffs with the event
+    }
+}
 ```
 
 ## On the wire

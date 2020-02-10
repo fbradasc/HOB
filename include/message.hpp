@@ -254,6 +254,16 @@ public:
 
     istream &is() { return (NULL != _is) ? *_is : _ss; }
 
+    operator bool() const
+    {
+        return changed();
+    }
+
+    void operator~()
+    {
+        reset_changes();
+    }
+                                                                               \
 protected:
     //========================================================================
     //
@@ -676,7 +686,7 @@ protected:
 
                 if ( v << m.is() )
                 {
-                    changed(field, v.changed());
+                    changed(field, v);
 
                     return true;
                 }
@@ -1184,12 +1194,16 @@ protected:
         return ( id & 1 );
     }
 
+    virtual void reset_changes()
+    {
+        return;
+    }
+
     virtual bool changed() const
     {
         return false;
     }
 
-protected:
     virtual void changed(ssize_t f, bool v)
     {
         (void)f;
@@ -1428,14 +1442,22 @@ public:                                                                        \
         return rv;                                                             \
     }                                                                          \
                                                                                \
-    void reset_changes(const Fields & f)                                       \
+    void operator-=(const Fields & f)                                          \
     {                                                                          \
-        IF(HAS_ARGS(__VA_ARGS__))(RESET_CHANGES(name_,f))                      \
+        reset_changes(f);                                                      \
     }                                                                          \
                                                                                \
-    void reset_changes()                                                       \
+    bool operator&(const Fields &f) const                                      \
     {                                                                          \
-        reset_changes(_FIELDS_COUNT_);                                         \
+        return changed(f);                                                     \
+    }                                                                          \
+                                                                               \
+protected:                                                                     \
+    void reset_changes(const Fields & f)                                       \
+    {                                                                          \
+        (void)f;                                                               \
+                                                                               \
+        IF(HAS_ARGS(__VA_ARGS__))(RESET_CHANGES(name_,f))                      \
     }                                                                          \
                                                                                \
     bool changed(const Fields &f) const                                        \
@@ -1447,12 +1469,16 @@ public:                                                                        \
         return false;                                                          \
     }                                                                          \
                                                                                \
-    virtual bool changed() const                                                       \
+    virtual void reset_changes()                                               \
+    {                                                                          \
+        reset_changes(_FIELDS_COUNT_);                                         \
+    }                                                                          \
+                                                                               \
+    virtual bool changed() const                                               \
     {                                                                          \
         return changed(_FIELDS_COUNT_);                                        \
     }                                                                          \
                                                                                \
-protected:                                                                     \
     bool _r(Message &ref)                                                      \
     {                                                                          \
         reset_changes();                                                       \
