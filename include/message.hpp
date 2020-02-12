@@ -221,13 +221,11 @@ public:
         stringstream ss;
 
         ss << _j(indent);
-        ss << INDENT(1) << "\"ID\": " << _id << endl;
-        ss << INDENT(0) << "}";
 
         return(ss.str());
-#else
+#else // !BINARY_ONLY
         return "{}";
-#endif
+#endif // !BINARY_ONLY
     }
 
     size_t size() const
@@ -263,7 +261,7 @@ public:
     {
         reset_changes();
     }
-                                                                               \
+
 protected:
     //========================================================================
     //
@@ -840,6 +838,7 @@ protected:
         return true;
     }
 
+#if !defined(BINARY_ONLY)
     string _t(const uint8_t &v, int indent = 0) const
     {
         (void)indent;
@@ -975,7 +974,6 @@ protected:
     {
         (void)indent;
 
-#if !defined(BINARY_ONLY)
         stringstream o;
 
         o << "[" << endl;
@@ -997,9 +995,6 @@ protected:
         o << INDENT(0) << "]";
 
         return(o.str());
-#else
-        return "[]";
-#endif
     }
 
     template<class T>
@@ -1007,7 +1002,6 @@ protected:
     {
         (void)indent;
 
-#if !defined(BINARY_ONLY)
         if (static_cast<bool>(v))
         {
             stringstream o;
@@ -1016,7 +1010,7 @@ protected:
 
             return(o.str());
         }
-#endif
+
         return "null";
     }
 
@@ -1025,7 +1019,6 @@ protected:
     {
         (void)indent;
 
-#if !defined(BINARY_ONLY)
         stringstream o;
 
         o << "[" << endl;
@@ -1061,10 +1054,8 @@ protected:
         o << INDENT(0) << "]";
 
         return(o.str());
-#else
-        return "[]";
-#endif
     }
+#endif // !BINARY_ONLY
 
     virtual bool _r(Message &ref) { (void)ref; return true; }
 
@@ -1131,11 +1122,15 @@ protected:
     {
         (void)indent;
 
-        return("");
-    }
-#endif // BINARY_ONLY
+        stringstream ss;
 
-    inline uint64_t& id()
+        ss << "{" << "\"i\": " << id() << "}";
+
+        return ss.str();
+    }
+#endif // !BINARY_ONLY
+
+    inline const uint64_t& id() const
     {
         return _id;
     }
@@ -1294,6 +1289,8 @@ bool operator>>(Message &im, Message &m) { return m << im; }
 #define UPDATE_ID(t, n, ...)     HUPDATE(STR(name_)); \
                                  HUPDATE(STR(t    )); \
                                  HUPDATE(STR(n    ));
+
+#if !defined(BINARY_ONLY)
 #define WJSON_FIELD(t, n, ...)                                                 \
         ss << INDENT(2)                                                        \
            << "{"                                                              \
@@ -1311,7 +1308,6 @@ bool operator>>(Message &im, Message &m) { return m << im; }
            << "},"                                                             \
            << endl;
 
-#if !defined(BINARY_ONLY)
 #define JSON_DUMP(name_,value_,...)                                            \
     string _j(int indent = 0) const                                            \
     {                                                                          \
@@ -1319,9 +1315,11 @@ bool operator>>(Message &im, Message &m) { return m << im; }
                                                                                \
         ss << "{"                                                              \
            << endl                                                             \
+           << INDENT(1) << "\"i\": "   << id()                                 \
+           << endl                                                             \
            << INDENT(1) << "\"t\": \"" << STR(name_) << "\","                  \
            << endl                                                             \
-           << INDENT(1) << "\"v\": " << _t(value_, indent+1) << ","            \
+           << INDENT(1) << "\"v\": "   << _t(value_, indent+1) << ","          \
            << endl                                                             \
            << INDENT(1) << "\"f\": ["                                          \
            << endl;                                                            \
@@ -1331,14 +1329,15 @@ bool operator>>(Message &im, Message &m) { return m << im; }
                                                                                \
         ss << INDENT(2) << "null"                                              \
            << endl                                                             \
-           << INDENT(1) << "],"                                                \
-           << endl;                                                            \
+           << INDENT(1) << "]"                                                 \
+           << endl                                                             \
+           << INDENT(0) << "}";                                                \
                                                                                \
         return ss.str();                                                       \
     }
-#else
+#else // !BINARY_ONLY
 #define JSON_DUMP(n,v,...)
-#endif
+#endif // !BINARY_ONLY
 
 #define CHANGED_FIELDS(n, ...) \
     IF(HAS_ARGS(__VA_ARGS__))(EVAL(CHANGED_FIELDS_INNER(n, __VA_ARGS__)))
