@@ -236,12 +236,12 @@ bool handle_message(Message &m)
     }
 #endif
 
-    if (m_MyStruct << m)
+    if (m >> m_MyStruct)
     {
         LOG(m_MyStruct, MyStruct);
     }
     else
-    if (m_AnotherStruct << m)
+    if (m >> m_AnotherStruct)
     {
         LOG(m_AnotherStruct, AnotherStruct);
 
@@ -375,22 +375,22 @@ bool handle_message(Message &m)
         }
     }
     else
-    if (m_NoParamMessage << m)
+    if (m >> m_NoParamMessage)
     {
         LOG(m_NoParamMessage, NoParamMessage);
     }
     else
-    if (m_NumericNoParamMessage << m)
+    if (m >> m_NumericNoParamMessage)
     {
         LOG(m_NumericNoParamMessage, NumericNoParamMessage);
     }
     else
-    if (m_NumericMessage << m)
+    if (m >> m_NumericMessage)
     {
         LOG(m_NumericMessage, NumericMessage);
     }
     else
-    if (m_ComplexStruct << m)
+    if (m >> m_ComplexStruct)
     {
         LOG(m_ComplexStruct, ComplexStruct);
     }
@@ -625,7 +625,7 @@ int main(int argc, char *argv[])
 
         Message m;
 
-        while (m << *is)
+        while (*is >> m) // same of (m << *is)
         {
             handle_message(m);
 

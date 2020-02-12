@@ -1256,6 +1256,9 @@ private:
     }
 };
 
+bool operator>>(istream &is, Message &m) { return m << is; }
+bool operator>>(Message &im, Message &m) { return m << im; }
+
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
 

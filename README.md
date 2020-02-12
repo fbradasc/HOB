@@ -147,10 +147,28 @@ However to make sure that the deserialized data is really what it should be,
 some steps are needed:
 
 1. Deserialization of the message *UID*
+    
+| equivalent syntaxes           |
+| :---                          |
+| ```std::istream >> message``` |
+| ```message << std::istream``` |
+
 2. Optionally match the deserialized *UID* with the message type to be read
+    
+| syntaxes                    | relation                       |
+| :---                        | :---                           |
+| ```message == my_message``` | message **IS A** my_message    | 
+| ```message != my_message``` | message **IS NOT A** my_message|
+
 3. Deserialization of the message data, it is successful only if the *UID*
    matches the message to be read
 
+| equivalent syntaxes          |
+| :---                         |
+| ```message >> my_message```  |
+| ```my_message << message```  |
+
+Example:
 ```
 std::ifstream stream("messages.dat", std::ios::binary);
 
@@ -158,7 +176,7 @@ Message m;  // define a generic message object
 
 // 1. retrieve the message UID from the input stream
 //
-if (m << stream)
+if (stream >> m)
 {
     // 2. [optional] ensure the message read is of MyMessageT type
     //
@@ -169,12 +187,20 @@ if (m << stream)
 
     // 3. deserialize the message content
     //
-    if (myMessage << m)
+    if (m >> myMessage)
     {
         // do stuffs with the message
     }
 }
 ```
+
+NOTE:  
+The following syntaxes are equivalent:
+    
+| 1. retrieve message *UID*     | 3. retrieve message data    |
+| :---                          | :---                        |
+| ```std::istream >> message``` | ```message >> my_message``` |
+| ```message << std::istream``` | ```my_message << message``` |
 
 #### Detecting changes due to deserialization
 
@@ -225,14 +251,14 @@ ChemicalReactionM chemicalReaction; // define the specific message object
 
 // retrieve the message UID from the input stream
 //
-while (m << stream)
+while (stream >> m)
 {
     // deserialize the message content
     //
     // NOTE:
     // the change status of all the fields is being reset by the deserialization
     //
-    if (chemicalReaction << m)
+    if (m >> chemicalReaction)
     {
         if (chemicalReaction)
         {
@@ -302,7 +328,7 @@ Message evt;
 
 // 1. retrieve the event UID from the events queue
 //
-while (evt << events_queue)
+while (events_queue >> evt)
 {
     for (EventHandlers::Iterator event_handler  = event_handlers.begin();
                                  event_handler != event_handlers.end();
@@ -331,7 +357,7 @@ void handle_message(Message &m)
 
     // 3. deserialize the event content
     //
-    if (almight_evt << m)
+    if (m >> almight_evt)
     {
         // do stuffs with the event
     }
