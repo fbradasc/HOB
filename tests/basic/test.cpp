@@ -173,9 +173,9 @@ DECLARE_MESSAGE(ComplexStruct, "COMPLEX_STRUCT",
 
 DECLARE_MESSAGE(NoParamMessage, "NO_PARAMS")
 
-DECLARE_MESSAGE(NumericNoParamMessage, 42)
+DECLARE_MESSAGE(NumericNoParamMessage, Message::UID(42))
 
-DECLARE_MESSAGE(NumericMessage, 42,
+DECLARE_MESSAGE(NumericMessage, Message::UID(42),
      (bool              , valid, false)
      (string            , text , "1Po'DiMaiuscoleMinuscole&Numeri")
      (vector<int8_t>    , bytes)
@@ -187,7 +187,7 @@ DECLARE_MESSAGE(NumericMessage, 42,
      (vector<MyStruct>  , structs)
 )
 
-DECLARE_MESSAGE(NumericExtraParameters, 43,
+DECLARE_MESSAGE(NumericExtraParameters, Message::UID(43),
      ,
      (bool, extra, true)
 )

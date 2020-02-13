@@ -54,6 +54,10 @@ add_executable(test_server
 add_executable(test_client
                ${SOCKET_CLIENT_SRC})
 
+target_link_libraries(test_server pthread)
+
+target_link_libraries(test_client pthread)
+
 target_compile_definitions(test_message_on_iostream
                            PUBLIC
                            ${BINARY_ONLY})

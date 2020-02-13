@@ -102,7 +102,9 @@ using namespace nonstd;
 class Message
 {
 public:
-    static const uint64_t UNDEFINED = ULLONG_MAX;
+    typedef uint64_t UID;
+
+    static const UID UNDEFINED = ULLONG_MAX;
 
     Message()
         : _id(UNDEFINED)
@@ -112,7 +114,7 @@ public:
         , _np(       -1)
     { }
 
-    Message(const uint64_t &id_)
+    Message(const UID &id_)
         : _id(   0)
         , _is(NULL)
         , _sp(   0)
@@ -1206,7 +1208,7 @@ protected:
     }
 
 private:
-    uint64_t      _id;
+    UID           _id;
     stringstream  _ss;
     istream      *_is;
     size_t        _sp;

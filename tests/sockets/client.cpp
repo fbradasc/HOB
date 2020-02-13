@@ -22,22 +22,22 @@ static void handleServer(std::iostream *io)
     {
         if (m >> m_hi)
         {
-            std::cout << m_hi.json() << std::endl;
+            std::cout << "Received: " << m_hi.json() << std::endl;
         }
         else
         if (m >> m_put)
         {
-            std::cout << m_put.json() << std::endl;
+            std::cout << "Received: " << m_put.json() << std::endl;
         }
         else
         if (m >> m_get)
         {
-            std::cout << m_get.json() << std::endl;
+            std::cout << "Received: " << m_get.json() << std::endl;
         }
         else
         if (m >> m_bye)
         {
-            std::cout << m_bye.json() << std::endl;
+            std::cout << "Received: " << m_bye.json() << std::endl;
             break;
         }
         else
@@ -49,7 +49,7 @@ static void handleServer(std::iostream *io)
 
 int main(int argc, char *argv[])
 {
-    if (argc != 3)
+    if (argc != 2)
     {
         std::cout << "Usage: client server_host" << std::endl;
         exit(1);
@@ -72,11 +72,13 @@ int main(int argc, char *argv[])
 
     m_hi.my_id = m_put.my_id = m_get.my_id = m_bye.my_id = random();
 
-    io << m_hi;
+    io << m_hi; std::cout << "Sending: " << m_hi.json() << std::endl;
 
     while (!io.fail())
     {
         std::string data;
+
+        std::cout << "Type a command (bye|put|get): ";
 
         std::getline(std::cin, data);
 
@@ -93,7 +95,7 @@ int main(int argc, char *argv[])
 
             m_put.data = data;
 
-            io << m_put;
+            io << m_put; std::cout << "Sending: " << m_put.json() << std::endl;
         }
 
         if (data == "get")
@@ -104,11 +106,11 @@ int main(int argc, char *argv[])
 
             m_get.data = data;
 
-            io << m_get;
+            io << m_get; std::cout << "Sending: " << m_get.json() << std::endl;
         }
     }
 
-    io << m_bye;
+    io << m_bye; std::cout << "Sending: " << m_bye.json() << std::endl;
 
     th1.join();
 
