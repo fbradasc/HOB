@@ -1253,7 +1253,8 @@ private:
     }
 };
 
-bool operator>>(istream &is, Message &m) { return m << is; }
+bool operator<<(ostream &is, Message &m) { return m >> is; } 
+bool operator>>(istream &is, Message &m) { return m << is; } 
 bool operator>>(Message &im, Message &m) { return m << im; }
 
 #define SCAN_FIELDS(m, ...) \

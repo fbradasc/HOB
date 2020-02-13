@@ -36,7 +36,7 @@ namespace wl
 
     int fdstreambuf::underflow()
     {
-std::cout << "underflow" << std::endl;
+        // std::cout << "underflow" << std::endl;
         int __c = traits_type::eof();
 
         if (m_fd == -1)
@@ -50,7 +50,7 @@ std::cout << "underflow" << std::endl;
         {
             setg(m_inbuf, m_inbuf + m_inbufsize, m_inbuf + m_inbufsize);
             initial = true;
-std::cout << "initial" << std::endl;
+            // std::cout << "initial" << std::endl;
         }
 
         const size_t unget_sz = initial ? 0 : std::min<size_t>((egptr() - eback()) / 2, 4);
@@ -59,7 +59,7 @@ std::cout << "initial" << std::endl;
         {
             memmove(eback(), egptr() - unget_sz, unget_sz);
             size_t nmemb = static_cast<size_t>(egptr() - eback() - unget_sz);
-std::cout << "before read: " << nmemb << std::endl;
+            // std::cout << "before read: " << nmemb << std::endl;
             ssize_t readed = read(m_fd, eback() + unget_sz, nmemb);
 
             if (readed > 0)
@@ -67,7 +67,7 @@ std::cout << "before read: " << nmemb << std::endl;
                 setg(eback(), eback() + unget_sz, eback() + unget_sz + readed);
                 __c = traits_type::to_int_type(*gptr());
             }
-std::cout << "after read: " << readed << std::endl;
+            // std::cout << "after read: " << readed << std::endl;
         }
         else
         {
@@ -79,7 +79,7 @@ std::cout << "after read: " << readed << std::endl;
 
     int fdstreambuf::overflow(int c)
     {
-std::cout << "overflow: " << c << std::endl;
+        // std::cout << "overflow: " << c << std::endl;
         if (m_fd == -1)
         {
             return traits_type::eof();
@@ -100,9 +100,9 @@ std::cout << "overflow: " << c << std::endl;
             if (pptr() != pbase())
             {
                 ssize_t nmemb = static_cast<ssize_t>(pptr() - pbase());
-std::cout << "before write: " << nmemb << std::endl;
+                // std::cout << "before write: " << nmemb << std::endl;
                 ssize_t written = write(m_fd, pbase(), nmemb);
-std::cout << "after write: " << written << std::endl;
+                // std::cout << "after write: " << written << std::endl;
 
                 if (written != nmemb)
                 {
@@ -117,7 +117,7 @@ std::cout << "after write: " << written << std::endl;
             // バッファなし
             char b = c;
             ssize_t written = write(m_fd, &b, 1);
-std::cout << "after write: " << written << std::endl;
+            // std::cout << "after write: " << written << std::endl;
 
             if (written != 1)
             {
@@ -130,7 +130,7 @@ std::cout << "after write: " << written << std::endl;
 
     std::streambuf* fdstreambuf::setbuf(char *s, std::streamsize n)
     {
-std::cout << "setbuf" << std::endl;
+        // std::cout << "setbuf" << std::endl;
         setg(0, 0, 0);
 
         if (m_owns_inbuf)
@@ -161,7 +161,7 @@ std::cout << "setbuf" << std::endl;
 
     std::streambuf* fdstreambuf::setwbuf(char *s, std::streamsize n)
     {
-std::cout << "setwbuf" << std::endl;
+        // std::cout << "setwbuf" << std::endl;
         if (m_owns_outbuf)
         {
             delete [] m_outbuf;
@@ -202,7 +202,7 @@ std::cout << "setwbuf" << std::endl;
 
     std::streamsize fdstreambuf::xsputn(const char *s, std::streamsize n)
     {
-std::cout << "xsputn: " << s << std::endl;
+        // std::cout << "xsputn: "; for (int i=0; i<n; i++) std::cout << std::hex << s[i] << "(" << s[i] << ")"; std::cout << std::endl;
 
         if (m_fd == -1)
         {
@@ -212,22 +212,22 @@ std::cout << "xsputn: " << s << std::endl;
         if (pbase() == 0)
         {
             // 出力バッファリングなし
-std::cout << "before write: " << n << std::endl;
+            // std::cout << "before write: " << n << std::endl;
             ssize_t written = write(m_fd, s, n);
-std::cout << "after write: " << written << std::endl;
+            // std::cout << "after write: " << written << std::endl;
             return written;
         }
         else
         {
             // 出力バッファリングあり
             std::streamsize result = std::streambuf::xsputn(s, n);
-std::cout << result << std::endl;
+            // std::cout << result << std::endl;
             return result;
         }
     }
     int fdstreambuf::sync()
     {
-std::cout << "sync" << std::endl;
+        // std::cout << "sync" << std::endl;
         int result = 0;
 
         if (pbase())

@@ -20,30 +20,34 @@ static void handleServer(std::iostream *io)
 
     while ((*io) >> m)
     {
+        std::cout << "Received: ";
+
         if (m >> m_hi)
         {
-            std::cout << "Received: " << m_hi.json() << std::endl;
+            std::cout << m_hi.json();
         }
         else
         if (m >> m_put)
         {
-            std::cout << "Received: " << m_put.json() << std::endl;
+            std::cout << m_put.json();
         }
         else
         if (m >> m_get)
         {
-            std::cout << "Received: " << m_get.json() << std::endl;
+            std::cout << m_get.json();
         }
         else
         if (m >> m_bye)
         {
-            std::cout << "Received: " << m_bye.json() << std::endl;
+            std::cout << m_bye.json();
             break;
         }
         else
         {
-            std::cout << "Unknown message: " << m.json() << std::endl;
+            std::cout << "Unknown message: " << m.json();
         }
+
+        std::cout << std::endl;
     }
 }
 
@@ -77,6 +81,8 @@ int main(int argc, char *argv[])
     while (!io.fail())
     {
         std::string data;
+
+        usleep(500000);
 
         std::cout << "Type a command (bye|put|get): ";
 
