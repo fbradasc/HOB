@@ -17,32 +17,32 @@ Bye   m_bye;
 
 static std::list<std::iostream *> streamList;
 
-static void wall(Message &m)
+static void wall(Message &m, ostream *s)
 {
-    for (auto s : streamList)
+    // for (auto s : streamList)
     {
-        if (m == m_hi)
+        if (m >> m_hi)
         {
-            (*s) << m_hi;
+            (*s) << m_hi; std::cout << "Sending: " << m_hi.json() << std::endl;
         }
         else
-        if (m == m_put)
+        if (m >> m_put)
         {
             m_get.data = "recv some data";
 
-            (*s) << m_get;
+            (*s) << m_get; std::cout << "Sending: " << m_get.json() << std::endl;
         }
         else
-        if (m == m_get)
+        if (m >> m_get)
         {
             m_put.data = "sent some data";
 
-            (*s) << m_put;
+            (*s) << m_put; std::cout << "Sending: " << m_put.json() << std::endl;
         }
         else
-        if (m == m_bye)
+        if (m >> m_bye)
         {
-            (*s) << m_bye;
+            (*s) << m_bye; std::cout << "Sending: " << m_bye.json() << std::endl;
         }
     }
 }
@@ -57,31 +57,35 @@ static void handleClient(int fd, std::string remote)
 
     while (io >> m)
     {
+        std::cout << "Received: ";
+
         if (m >> m_hi)
         {
-            std::cout << m_hi.json() << std::endl;
+            std::cout << m_hi.json();
         }
         else
         if (m >> m_put)
         {
-            std::cout << m_put.json() << std::endl;
+            std::cout << m_put.json();
         }
         else
         if (m >> m_get)
         {
-            std::cout << m_get.json() << std::endl;
+            std::cout << m_get.json();
         }
         else
         if (m >> m_bye)
         {
-            std::cout << m_bye.json() << std::endl;
+            std::cout << m_bye.json();
         }
         else
         {
-            std::cout << "Unknown message: " << m.json() << std::endl;
+            std::cout << "Unknown message: " << m.json();
         }
 
-        wall(m);
+        std::cout << std::endl;
+
+        wall(m, &io);
 
         if (m == m_bye)
         {

@@ -40,7 +40,6 @@ static void handleServer(std::iostream *io)
         if (m >> m_bye)
         {
             std::cout << m_bye.json();
-            break;
         }
         else
         {
@@ -48,6 +47,11 @@ static void handleServer(std::iostream *io)
         }
 
         std::cout << std::endl;
+
+        if (m == m_bye)
+        {
+            break;
+        }
     }
 }
 
