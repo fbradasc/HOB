@@ -188,6 +188,7 @@ public:
             return false;
         }
 
+#if 0
         std::ostringstream ss;
 
         if (!_w((has_payload(_id)) ? ss : os))
@@ -199,6 +200,17 @@ public:
         {
             return false;
         }
+#else
+        if (has_payload(_id))
+        {
+            std::ostringstream ss;
+
+            if (!_w(ss) || !_w(os, ss.str()))
+            {
+                return false;
+            }
+        }
+#endif
 
         return true;
     }
