@@ -13,14 +13,22 @@ void parse(istream &is, char t)
 
     string token;
 
-    while (is.get(c).good() && (t != c))
+    while (is.get(c).good() && !skip && (t != c))
     {
         if (kword)
         {
-            token += c;
+            if (!skip && ('\\' == c))
+            {
+                skip = true;
+            }
+            else
+            {
+                skip = false;
+                token += c;
+            }
         }
         else
-        if (!isspace(c) && !skip)
+        if (!isspace(c))
         {
             skip = false;
 
@@ -29,7 +37,6 @@ void parse(istream &is, char t)
                 case '{' : parse(is, '}'); break;
                 case '[' : parse(is, ']'); break;
                 case '"' : parse(is, '"'); break;
-                case '\\': skip = true;    break;
                 default  :                 break;
             }
         }
