@@ -7,6 +7,9 @@ project(Message VERSION 0.1.0)
 set(BASIC_TEST_SRC
     tests/basic/test.cpp)
 
+set(JSON_INPORT_SRC
+    tests/json/inport.cpp)
+
 set(SOCKET_SERVER_SRC
     tests/sockets/fdstreambuf.cpp
     tests/sockets/server.cpp)
@@ -53,6 +56,9 @@ add_executable(test_server
 
 add_executable(test_client
                ${SOCKET_CLIENT_SRC})
+
+add_executable(json_import
+               ${JSON_INPORT_SRC})
 
 target_link_libraries(test_server pthread)
 
