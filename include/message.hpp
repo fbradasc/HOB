@@ -1362,11 +1362,11 @@ bool operator>>(Message &im, Message &m) { return m << im; }
            << endl                                                             \
            << INDENT(1) << "\"t\": \"" << STR(name_) << "\","                  \
            << endl                                                             \
-           << INDENT(1) << "\"i\": "   << id() << ","                          \
+           << INDENT(1) << "\"i\": "   << _t(id()  , indent+1) << ","          \
            << endl                                                             \
-           << INDENT(1) << "\"s\": "   << _t(value_, indent+1) << ","          \
+           << INDENT(1) << "\"s\": \"" << value_ << "\","                      \
            << endl                                                             \
-           << INDENT(1) << "\"b\": " << sz;                                    \
+           << INDENT(1) << "\"b\": "   << _t(sz, indent+1);                    \
                                                                                \
            if (sz > 0)                                                         \
            {                                                                   \
