@@ -2,6 +2,9 @@
 #include <iostream>
 #include <cstring>
 #include <vector>
+#include <stdint.h>
+#include <string>
+#include <climits>
 
 using namespace std;
 
@@ -50,72 +53,65 @@ void parse(istream &is, char t)
         {
             if (':' == c)
             {
-                bool   dump = false;
-                string value = "";
+                bool   dump      = false;
+                string value     = "";
                 bool   has_value = true;
                 size_t count_pos = 0;
 
-                if (("int8_t"  == token) ||
-                    ("int16_t" == token) ||
-                    ("int32_t" == token) ||
-                    ("int64_t" == token))
+                if ("U" == token)
                 {
                     dump = true;
                 }
                 else
-                if (("uint8_t"  == token) ||
-                    ("uint16_t" == token) ||
-                    ("uint32_t" == token) ||
-                    ("uint64_t" == token))
+                if ("S" == token)
                 {
                     dump = true;
                 }
                 else
-                if ("bool" == token)
+                if ("F" == token)
                 {
                     dump = true;
                 }
                 else
-                if ("float" == token)
+                if ("D" == token)
                 {
                     dump = true;
                 }
                 else
-                if ("double" == token)
+                if ("Q" == token)
                 {
                     dump = true;
                 }
                 else
-                if ("string" == token)
+                if ("B" == token)
                 {
                     dump = true;
                 }
                 else
-                if (token.find("vector(") == 0)
+                if ("T" == token)
+                {
+                    dump = true;
+                }
+                else
+                if (token.find("V(") == 0)
                 {
                     dump      = true;
                     has_value = false;
-                    count_pos = strlen("vector(");
+                    count_pos = strlen("V(");
                 }
                 else
-                if (token.find("map(") == 0)
+                if (token.find("M(") == 0)
                 {
                     dump      = true;
                     has_value = false;
-                    count_pos = strlen("map(");
+                    count_pos = strlen("M(");
                 }
                 else
-                if (token.find("bitset(") == 0)
-                {
-                    dump      = true;
-                    count_pos = strlen("bitset(");
-                }
-                else
-                if (token.find("optional(") == 0)
+                if (token.find("O(") == 0)
                 {
                     dump      = true;
                     has_value = false;
-                    count_pos = strlen("optional(");
+                    count_pos = strlen("O(");
                 }
 
                 if (dump)
@@ -157,10 +153,10 @@ void parse(istream &is, char t)
                         }
                     }
 
-                    cout << token;
-
                     if (count_pos > 0)
                     {
+                        cout << token.substr(0,count_pos-1);
+
                         string count = token.substr(count_pos,
                                                     token.size()-count_pos-1);
 
@@ -168,65 +164,87 @@ void parse(istream &is, char t)
 
                         cout << "[" << v_count << "]";
                     }
+                    else
+                    {
+                        cout << token;
+                    }
 
                     if (has_value)
                     {
-                        if (("int8_t"  == token) ||
-                            ("int16_t" == token) ||
-                            ("int32_t" == token) ||
-                            ("int64_t" == token))
-                        {
-                            int64_t v_value = stoll(value);
-
-                            cout << " = " << v_value;
-                        }
-                        else
-                        if (("uint8_t"  == token) ||
-                            ("uint16_t" == token) ||
-                            ("uint32_t" == token) ||
-                            ("uint64_t" == token))
+                        if ("U" == token)
                         {
                             uint64_t v_value = stoull(value);
 
                             cout << " = " << v_value;
                         }
                         else
-                        if ("bool" == token)
+                        if ("S" == token)
                         {
-                            bool v_value = ("true" == value);
+                            int64_t v_value = stoll(value);
 
                             cout << " = " << v_value;
                         }
                         else
-                        if ("float" == token)
+                        if ("F" == token)
                         {
                             float v_value = stof(value);
 
                             cout << " = " << v_value;
                         }
                         else
-                        if ("double" == token)
+                        if ("D" == token)
                         {
                             double v_value = stod(value);
 
                             cout << " = " << v_value;
                         }
                         else
-                        if ("string" == token)
+                        if ("Q" == token)
+                        {
+                            long double v_value = stold(value);
+
+                            cout << " = " << v_value;
+                        }
+                        else
+                        if ("T" == token)
                         {
                             cout << " = " << value;
                         }
                         else
-                        if (token.find("bitset(") == 0)
+                        if ("B" == token)
                         {
-                            vector<bool> v_value;
-
-                            for (size_t i=0; i<value.size(); i++)
+                            if (("true" == value) || ("false" == value))
                             {
-                                v_value.push_back(value[i] == '1');
-                            }
+                                bool v_value = ("true" == value);
 
-                            cout << " = " << value;
+                                cout << " = " << v_value;
+                            }
+                            else
+                            {
+                                vector<bool> v_value;
+
+                                for (size_t i=0; i<value.size(); i++)
+                                {
+                                    if (('1' == value[i]) || ('0' == value[i]))
+                                    {
+                                        v_value.push_back(value[i] == '1');
+                                    }
+                                }
+
+                                if (!value.empty())
+                                {
+                                    uint64_t v_count = v_value.size();
+
+                                    cout << "[" << v_count << "]";
+
+                                    cout << " = ";
+
+                                    for (size_t j=0; j<v_value.size(); j++)
+                                    {
+                                        cout << v_value[j];
+                                    }
+                                }
+                            }
                         }
                     }
 

@@ -388,6 +388,11 @@ protected:
         return ASSERT_SWRITE(&v, sizeof(v), os);
     }
 
+    bool _w(ostream &os, const long double &v) const
+    {
+        return ASSERT_SWRITE(&v, sizeof(v), os);
+    }
+
     bool _w(ostream &os, const string &v) const
     {
         if (!_w(os, v.size()))
@@ -433,6 +438,23 @@ protected:
         }
 
         return true;
+    }
+
+    bool _w(ostream &os, const vector<bool> &v) const
+    {
+        if (!_w(os, v.size()))
+        {
+            return false;
+        }
+
+        vector<uint8_t> bits((v.size() + 7) >> 3);
+
+        for (size_t j=0; j<v.size(); j++)
+        {
+            bits[j>>3] |= (v[j] << (j & 7));
+        }
+
+        return _w(os, bits);
     }
 
     template<class T>
@@ -659,6 +681,22 @@ protected:
         return true;
     }
 
+    bool _r(istream &is_, long double &v, ssize_t field=-1)
+    {
+        long double rv;
+
+        if (!ASSERT_SREAD(&rv, sizeof(v), is_))
+        {
+            return false;
+        }
+
+        changed(field, v != rv);
+
+        v = rv;
+
+        return true;
+    }
+
     bool _r(istream &is_, string &v, ssize_t field=-1)
     {
         uint64_t len;
@@ -773,6 +811,52 @@ protected:
         return true;
     }
 
+    bool _r(istream &is_, vector<bool> &v, ssize_t field=-1)
+    {
+        size_t len;
+
+        if (!_r(is_, len))
+        {
+            return false;
+        }
+
+        if (len > 0)
+        {
+            vector<uint8_t> buf;
+
+            if (!_r(is_, buf))
+            {
+                return false;
+            }
+
+            if (buf.size() != ((len + 7) >> 3))
+            {
+                return false;
+            }
+
+            vector<bool> rv;
+
+            for (size_t j=0; j<len; j++)
+            {
+                rv.push_back((buf[j>>3] >> (j & 7)) & 1);
+            }
+
+            changed(field, v != rv);
+
+            v = rv;
+
+            return true;
+        }
+        else
+        {
+            changed(field, !v.empty());
+
+            v = vector<bool>();
+        }
+
+        return true;
+    }
+
     template<class T>
     bool _r(istream &is_, optional<T> &v, ssize_t field=-1)
     {
@@ -858,7 +942,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"uint8_t\": " << static_cast<int>(v) << " }";
+        o << "{ \"U\": " << static_cast<int>(v) << " }";
         return(o.str());
     }
 
@@ -867,7 +951,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"uint16_t\": " << v << "  }";
+        o << "{ \"U\": " << v << " }";
         return(o.str());
     }
 
@@ -876,7 +960,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"uint32_t\": " << v << " }";
+        o << "{ \"U\": " << v << " }";
         return(o.str());
     }
 
@@ -885,7 +969,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"uint64_t\": " << v << " }";
+        o << "{ \"U\": " << v << " }";
         return(o.str());
     }
 
@@ -894,7 +978,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"int8_t\": " << static_cast<int>(v) << " }";
+        o << "{ \"S\": " << static_cast<int>(v) << " }";
         return(o.str());
     }
 
@@ -903,7 +987,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"int16_t\": " << v << " }";
+        o << "{ \"S\": " << v << " }";
         return(o.str());
     }
 
@@ -912,7 +996,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"int32_t\": " << v << " }";
+        o << "{ \"S\": " << v << " }";
         return(o.str());
     }
 
@@ -921,7 +1005,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"int64_t\": " << v << " }";
+        o << "{ \"S\": " << v << " }";
         return(o.str());
     }
 
@@ -930,7 +1014,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"float\": " << v << " }";
+        o << "{ \"F\": " << v << " }";
         return(o.str());
     }
 
@@ -939,7 +1023,16 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"double\": " << v << " }";
+        o << "{ \"D\": " << v << " }";
+        return(o.str());
+    }
+
+    string _t(const long double &v, int indent = 0) const
+    {
+        (void)indent;
+
+        stringstream o;
+        o << "{ \"Q\": " << v << " }";
         return(o.str());
     }
 
@@ -948,7 +1041,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"string\": \"" << v << "\" }";
+        o << "{ \"T\": \"" << v << "\" }";
         return(o.str());
     }
 
@@ -957,7 +1050,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"string\": \"" << v << "\" }";
+        o << "{ \"T\": \"" << v << "\" }";
         return(o.str());
     }
 
@@ -965,7 +1058,7 @@ protected:
     {
         (void)indent;
 
-        return( v ? "{ \"bool\": true }" : "{ \"bool\": false }");
+        return( v ? "{ \"B\": true }" : "{ \"B\": false }");
     }
 
     string _t(const Message &v, int indent = 0) const
@@ -979,7 +1072,7 @@ protected:
         (void)indent;
 
         stringstream o;
-        o << "{ \"bitset(" << N << ")\": \"" << v << "\" }";
+        o << "{ \"B\": \"" << v << "\" }";
         return(o.str());
     }
 
@@ -994,7 +1087,7 @@ protected:
 
         size_t len = v.size();
 
-        o << INDENT(1) << "\"vector(" << len << ")\": [" << endl;
+        o << INDENT(1) << "\"V(" << len << ")\": [" << endl;
 
         if (len > 0)
         {
@@ -1018,6 +1111,24 @@ protected:
         return(o.str());
     }
 
+    string _t(const vector<bool> &v, int indent = 0) const
+    {
+        (void)indent;
+
+        stringstream o;
+
+        o << "{ \"B\": \"";
+
+        for (size_t i; i<v.size(); i++)
+        {
+            o << v[i];
+        }
+
+        o << "\" }";
+
+        return(o.str());
+    }
+
     template<class T>
     string _t(const optional<T> &v, int indent = 0) const
     {
@@ -1027,7 +1138,7 @@ protected:
 
         o << "{" << endl;
 
-        o << INDENT(1) << "\"optional(" << v.has_value() << ")\": ";
+        o << INDENT(1) << "\"O(" << v.has_value() << ")\": ";
 
         if (v.has_value())
         {
@@ -1054,7 +1165,7 @@ protected:
 
         size_t len = v.size();
 
-        o << INDENT(1) << "\"map(" << len << ")\": [" << endl;
+        o << INDENT(1) << "\"M(" << len << ")\": [" << endl;
 
         if (len > 0)
         {
