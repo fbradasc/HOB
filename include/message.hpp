@@ -29,7 +29,7 @@
 #define ASSERT_SWRITE(v,s,f)  (f.write(reinterpret_cast<const char *>(v),s)\
                                 .good())
 
-#define INDENT(l)             string((indent + (l)) * 4, ' ')
+#define INDENT(l)             string(((indent >= 0) ? (indent + (l)) : 0 ) * 4, ' ')
 
 #define HSEED                 65599llu
 // #define HSEED                 11400714819323198485llu
@@ -105,6 +105,35 @@ public:
     typedef uint64_t UID;
 
     static const UID UNDEFINED = ULLONG_MAX;
+
+    class Text: public string
+    {
+    public:
+        Text(const Message & ref): string(ref._s(-1))
+        {
+        }
+
+        Text(const string & ref): string(ref)
+        {
+        }
+
+        Text(const char * ref): string(ref)
+        {
+        }
+
+    protected:
+        Text(const Message & ref, int level): string(ref._s(level))
+        {
+        }
+    };
+
+    class Json: public Text
+    {
+    public:
+        Json(const Message & ref): Text(ref, 0)
+        {
+        }
+    };
 
     Message()
         : _id(UNDEFINED)
@@ -227,19 +256,6 @@ public:
         bool rv = (_id != ref._id);
 
         return rv;
-    }
-
-    string json(int indent = 0) const
-    {
-#if !defined(BINARY_ONLY)
-        stringstream ss;
-
-        ss << _j(indent);
-
-        return(ss.str());
-#else // !BINARY_ONLY
-        return "{}";
-#endif // !BINARY_ONLY
     }
 
     size_t size() const
@@ -937,216 +953,247 @@ protected:
     }
 
 #if !defined(BINARY_ONLY)
-    string _t(const uint8_t &v, int indent = 0) const
+    string _t(const uint8_t &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"U\": " << static_cast<int>(v) << " }";
+        o << "{\"U\":" << static_cast<int>(v) << "}";
         return(o.str());
     }
 
-    string _t(const uint16_t &v, int indent = 0) const
+    string _t(const uint16_t &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"U\": " << v << " }";
+        o << "{\"U\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const uint32_t &v, int indent = 0) const
+    string _t(const uint32_t &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"U\": " << v << " }";
+        o << "{\"U\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const uint64_t &v, int indent = 0) const
+    string _t(const uint64_t &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"U\": " << v << " }";
+        o << "{\"U\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const int8_t &v, int indent = 0) const
+    string _t(const int8_t &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"S\": " << static_cast<int>(v) << " }";
+        o << "{\"S\":" << static_cast<int>(v) << "}";
         return(o.str());
     }
 
-    string _t(const int16_t &v, int indent = 0) const
+    string _t(const int16_t &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"S\": " << v << " }";
+        o << "{\"S\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const int32_t &v, int indent = 0) const
+    string _t(const int32_t &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"S\": " << v << " }";
+        o << "{\"S\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const int64_t &v, int indent = 0) const
+    string _t(const int64_t &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"S\": " << v << " }";
+        o << "{\"S\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const float &v, int indent = 0) const
+    string _t(const float &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"F\": " << v << " }";
+        o << "{\"F\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const double &v, int indent = 0) const
+    string _t(const double &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"D\": " << v << " }";
+        o << "{\"D\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const long double &v, int indent = 0) const
+    string _t(const long double &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"Q\": " << v << " }";
+        o << "{\"Q\":" << v << "}";
         return(o.str());
     }
 
-    string _t(const char *v, int indent = 0) const
+    string _t(const char *v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"T\": \"" << v << "\" }";
+        o << "{\"T\":\"" << v << "\"}";
         return(o.str());
     }
 
-    string _t(const string &v, int indent = 0) const
+    string _t(const string &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"T\": \"" << v << "\" }";
+        o << "{\"T\":\"" << v << "\"}";
         return(o.str());
     }
 
-    string _t(const bool &v, int indent = 0) const
+    string _t(const bool &v, int indent = -1) const
     {
         (void)indent;
 
-        return( v ? "{ \"B\": true }" : "{ \"B\": false }");
+        return( v ? "{\"B\":true}" : "{\"B\":false}");
     }
 
-    string _t(const Message &v, int indent = 0) const
+    string _t(const Message &v, int indent = -1) const
     {
-        return( v.json(indent) );
+        return v._s(indent);
     }
 
     template<size_t N>
-    string _t(const bitset<N> &v, int indent = 0) const
+    string _t(const bitset<N> &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
-        o << "{ \"B\": \"" << v << "\" }";
+        o << "{\"B\":\"" << v << "\"}";
         return(o.str());
     }
 
     template<class T>
-    string _t(const vector<T> &v, int indent = 0) const
+    string _t(const vector<T> &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
 
-        o << "{" << endl;
+        o << "{";
+
+        if (indent >= 0)
+        {
+            o << endl;
+        }
 
         size_t len = v.size();
 
-        o << INDENT(1) << "\"V(" << len << ")\": [" << endl;
+        o << INDENT(1) << "\"V(" << len << ")\":[";
+
+        if (indent >= 0)
+        {
+            o << endl;
+        }
 
         if (len > 0)
         {
             for (size_t i=0; i<len; i++)
             {
-                o << INDENT(2) << _t(static_cast<const T &>(v[i]), indent+2);
+                o << INDENT(2) << _t(static_cast<const T &>(v[i]),
+                                     (indent >= 0) ? (indent+2) : -1);
 
-                if (i < (len-1))
+                if ((indent >=0) && (i < (len-1)))
                 {
                     o << ",";
                 }
 
-                o << endl;
+                if (indent >= 0)
+                {
+                    o << endl;
+                }
             }
         }
 
-        o << INDENT(1) << "]" << endl;
+        o << INDENT(1) << "]";
+
+        if (indent >= 0)
+        {
+            o << endl;
+        }
 
         o << INDENT(0) << "}";
 
         return(o.str());
     }
 
-    string _t(const vector<bool> &v, int indent = 0) const
+    string _t(const vector<bool> &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
 
-        o << "{ \"B\": \"";
+        o << "{\"B\":\"";
 
         for (size_t i; i<v.size(); i++)
         {
             o << v[i];
         }
 
-        o << "\" }";
+        o << "\"}";
 
         return(o.str());
     }
 
     template<class T>
-    string _t(const optional<T> &v, int indent = 0) const
+    string _t(const optional<T> &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
 
-        o << "{" << endl;
+        o << "{";
 
-        o << INDENT(1) << "\"O(" << v.has_value() << ")\": ";
+        if (indent >= 0)
+        {
+            o << endl;
+        }
+
+        o << INDENT(1) << "\"O(" << v.has_value() << ")\":";
 
         if (v.has_value())
         {
-            o << _t(static_cast<const T &>(*v), indent+1) << endl;
+            o << _t(static_cast<const T &>(*v),
+                    (indent >= 0) ? (indent+1) : -1);
         }
         else
+        if (indent >= 0)
         {
-            o << "null" << endl;
+            o << "null";
+        }
+
+        if (indent >= 0)
+        {
+            o << endl;
         }
 
         o << INDENT(0) << "}";
@@ -1155,17 +1202,27 @@ protected:
     }
 
     template<class K, class V>
-    string _t(const map<K,V> &v, int indent = 0) const
+    string _t(const map<K,V> &v, int indent = -1) const
     {
         (void)indent;
 
         stringstream o;
 
-        o << "{" << endl;
+        o << "{";
+
+        if (indent >= 0)
+        {
+            o << endl;
+        }
 
         size_t len = v.size();
 
-        o << INDENT(1) << "\"M(" << len << ")\": [" << endl;
+        o << INDENT(1) << "\"M(" << len << ")\":[";
+        
+        if (indent >= 0)
+        {
+            o << endl;
+        }
 
         if (len > 0)
         {
@@ -1173,30 +1230,56 @@ protected:
                 (len > 0) && (ci != v.end());
                 ++ci)
             {
-                o << INDENT(2);
-                o << "{";
-                o << endl;
-                o << INDENT(3);
-                o << "\"k\": " << _t(static_cast<const K&>((*ci).first) , indent+1);
-                o << ",";
-                o << endl;
-                o << INDENT(3);
-                o << "\"v\": " << _t(static_cast<const V&>((*ci).second), indent+1);
-                o << endl;
-                o << INDENT(2) << "}";
+                o << INDENT(2) << "{";
 
-                if (len > 1)
+                if (indent >= 0)
                 {
-                    o << ",";
+                    o << endl;
+                    o << INDENT(3) << "\"k\": ";
                 }
 
-                o << endl;
+                o << _t(static_cast<const K&>((*ci).first),
+                        (indent >= 0) ? (indent+1) : -1);
+                o << ",";
+
+                if (indent >= 0)
+                {
+                    o << endl
+                      << INDENT(3)
+                      << "\"v\": ";
+                }
+
+                o << _t(static_cast<const V&>((*ci).second),
+                        (indent >= 0) ? (indent+1) : -1);
+
+                if (indent >= 0)
+                {
+                    o << endl
+                      << INDENT(2);
+                }
+
+                o << "}";
+
+                if (indent >= 0)
+                {
+                    if (len > 1)
+                    {
+                        o << ",";
+                    }
+
+                    o << endl;
+                }
 
                 len--;
             }
         }
 
-        o << INDENT(1) << "]" << endl;
+        o << INDENT(1) << "]";
+
+        if (indent >= 0)
+        {
+            o << endl;
+        }
 
         o << INDENT(0) << "}";
 
@@ -1263,19 +1346,6 @@ protected:
     }
 
     virtual bool _w(ostream &os) const { (void)os; return true; }
-
-#if !defined(BINARY_ONLY)
-    virtual string _j(int indent = 0) const
-    {
-        (void)indent;
-
-        stringstream ss;
-
-        ss << "{" << "\"i\": " << id() << "}";
-
-        return ss.str();
-    }
-#endif // !BINARY_ONLY
 
     inline const uint64_t& id() const
     {
@@ -1350,6 +1420,36 @@ protected:
     {
         (void)f;
         (void)v;
+    }
+
+    virtual const string _s(int indent) const
+    {
+        (void)indent;
+
+#if !defined(BINARY_ONLY)
+        stringstream ss;
+
+        ss << "{";
+
+        if (indent >= 0)
+        {
+            ss << endl
+               << INDENT(1) << "\"i\": ";
+        }
+
+        ss << _t(id(), (indent >= 0) ? (indent+1) : -1);
+
+        if (indent >= 0)
+        {
+            ss << endl;
+        }
+
+        ss << "}";
+
+        return ss.str();
+#else // !BINARY_ONLY
+        return "{}";
+#endif // !BINARY_ONLY
     }
 
 private:
@@ -1439,26 +1539,33 @@ bool operator>>(Message &im, Message &m) { return m << im; }
                                  HUPDATE(STR(n    ));
 
 #if !defined(BINARY_ONLY)
-#define WJSON_FIELD(t, n, ...)                                                 \
-        ss << INDENT(2)                                                        \
-           << "{"                                                              \
-           << endl                                                             \
-/*         << INDENT(3)                                                        \
-           << "\"t\": \"" << STR(t) << "\","                                   \
-           << endl                                                             \
-*/         << INDENT(3)                                                        \
-           << "\"n\": \"" << STR(n) << "\","                                   \
-           << endl                                                             \
-           << INDENT(3)                                                        \
-           << "\"v\": "   << _t(static_cast<const t&>(n), (indent+3))          \
-           << endl                                                             \
-           << INDENT(2)                                                        \
-           << "},"                                                             \
-           << endl;
+#define WTEXT_FIELD(t, n, ...)                                                 \
+        if (indent >=0)                                                        \
+        {                                                                      \
+            ss << INDENT(2)                                                    \
+               << "{"                                                          \
+               << endl                                                         \
+        /*     << INDENT(3)                                                    \
+               << "\"t\": \"" << STR(t) << "\","                               \
+               << endl                                                         \
+        */     << INDENT(3)                                                    \
+               << "\"n\": \"" << STR(n) << "\","                               \
+               << endl                                                         \
+               << INDENT(3)                                                    \
+               << "\"v\": ";                                                   \
+        }                                                                      \
+                                                                               \
+        ss << _t(static_cast<const t&>(n), (indent >= 0) ? (indent+3): -1);    \
+                                                                               \
+        if (indent >=0)                                                        \
+        {                                                                      \
+            ss << endl                                                         \
+               << INDENT(2)                                                    \
+               << "},"                                                         \
+               << endl;                                                        \
+        }
 
-#define JSON_DUMP(name_,value_,...)                                            \
-    string _j(int indent = 0) const                                            \
-    {                                                                          \
+#define ASCII_DUMP(name_,value_,...)                                           \
         stringstream ss;                                                       \
         size_t sz = 0;                                                         \
                                                                                \
@@ -1469,38 +1576,59 @@ bool operator>>(Message &im, Message &m) { return m << im; }
                                                                                \
         ss.str("");                                                            \
                                                                                \
-        ss << "{"                                                              \
-           << endl                                                             \
-           << INDENT(1) << "\"t\": \"" << STR(name_) << "\","                  \
-           << endl                                                             \
-           << INDENT(1) << "\"i\": "   << _t(id()  , indent+1) << ","          \
-           << endl                                                             \
-           << INDENT(1) << "\"s\": \"" << value_ << "\","                      \
-           << endl                                                             \
-           << INDENT(1) << "\"b\": "   << _t(sz, indent+1);                    \
+        ss << "{";                                                             \
                                                                                \
-           if (sz > 0)                                                         \
-           {                                                                   \
+        if (indent >= 0)                                                       \
+        {                                                                      \
+            ss << endl                                                         \
+               << INDENT(1) << "\"t\": \"" << STR(name_) << "\","              \
+               << endl                                                         \
+               << INDENT(1) << "\"i\": ";                                      \
+        }                                                                      \
+                                                                               \
+        ss << _t(id(), (indent >= 0) ? (indent+1) : -1);                       \
+                                                                               \
+        if (indent >= 0)                                                       \
+        {                                                                      \
+            ss << ","                                                          \
+               << endl                                                         \
+               << INDENT(1) << "\"s\": \"" << value_ << "\","                  \
+               << endl                                                         \
+               << INDENT(1) << "\"b\": ";                                      \
+        }                                                                      \
+                                                                               \
+        ss << _t(sz, (indent >= 0) ? (indent+1) : -1);                         \
+                                                                               \
+        if (sz > 0)                                                            \
+        {                                                                      \
+            if (indent >= 0)                                                   \
+            {                                                                  \
                 ss << "," << endl                                              \
                    << INDENT(1) << "\"f\": ["                                  \
                    << endl;                                                    \
+            }                                                                  \
                                                                                \
-                SCAN_FIELDS(WJSON_FIELD, FIRST(__VA_ARGS__))                   \
-                SCAN_FIELDS(WJSON_FIELD, REMAIN(__VA_ARGS__))                  \
+            SCAN_FIELDS(WTEXT_FIELD, FIRST(__VA_ARGS__))                       \
+            SCAN_FIELDS(WTEXT_FIELD, REMAIN(__VA_ARGS__))                      \
                                                                                \
+            if (indent >= 0)                                                   \
+            {                                                                  \
                 ss << INDENT(2) << "null"                                      \
-                   << endl                                                     \
-                   << INDENT(1) << "]";                                        \
-           }                                                                   \
+                   << endl << INDENT(1) << "]";                                \
+            }                                                                  \
+        }                                                                      \
                                                                                \
-           ss << endl                                                          \
-              << INDENT(0) << "}";                                             \
+        if (indent >= 0)                                                       \
+        {                                                                      \
+           ss << endl;                                                         \
+        }                                                                      \
                                                                                \
-        return ss.str();                                                       \
-    }
-
+        ss << INDENT(0) << "}";                                                \
+                                                                               \
+        return ss.str();
 #else // !BINARY_ONLY
-#define JSON_DUMP(n,v,...)
+#define ASCII_DUMP(n,v,...)                                                    \
+        return "{}";
 #endif // !BINARY_ONLY
 
 #define CHANGED_FIELDS(n, ...) \
@@ -1691,8 +1819,6 @@ protected:                                                                     \
                 SCAN_FIELDS(WRITE_FIELD, REMAIN(__VA_ARGS__)));                \
     }                                                                          \
                                                                                \
-    JSON_DUMP(name_,value_,__VA_ARGS__)                                        \
-                                                                               \
     virtual void flush_pending()                                               \
     {                                                                          \
     }                                                                          \
@@ -1713,6 +1839,13 @@ protected:                                                                     \
         }                                                                      \
                                                                                \
         IF(HAS_ARGS(__VA_ARGS__))(SET_CHANGED(name_,f,v))                      \
+    }                                                                          \
+                                                                               \
+    virtual const string _s(int indent) const                                  \
+    {                                                                          \
+        (void)indent;                                                          \
+                                                                               \
+        ASCII_DUMP(name_,value_,__VA_ARGS__)                                   \
     }                                                                          \
                                                                                \
 private:                                                                       \

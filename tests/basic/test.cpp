@@ -76,7 +76,8 @@ diff3 f.txt i.txt s.txt
 #include <inttypes.h>
 #include <limits.h>
 
-#define LOG(message_,type_) printf("%s\n\n", message_.json().c_str())
+// #define LOG(message_,type_) printf("%s\n\n", message_.toString().c_str())
+#define LOG(message_,type_) printf("%s\n\n", Message::Json(message_).c_str())
 
 
 #if defined(MINIMAL)
