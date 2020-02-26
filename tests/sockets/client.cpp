@@ -24,26 +24,26 @@ static void handleServer(std::iostream *io)
 
         if (m >> m_hi)
         {
-            std::cout << Message::Json(m_hi);
+            std::cout << m_hi(Message::JSON);
         }
         else
         if (m >> m_put)
         {
-            std::cout << Message::Json(m_put);
+            std::cout << m_put(Message::JSON);
         }
         else
         if (m >> m_get)
         {
-            std::cout << Message::Json(m_get);
+            std::cout << m_get(Message::JSON);
         }
         else
         if (m >> m_bye)
         {
-            std::cout << Message::Json(m_bye);
+            std::cout << m_bye(Message::JSON);
         }
         else
         {
-            std::cout << "Unknown message: " << Message::Json(m);
+            std::cout << "Unknown message: " << m(Message::JSON);
         }
 
         std::cout << std::endl;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 
     m_hi.my_id = m_put.my_id = m_get.my_id = m_bye.my_id = random();
 
-    io << m_hi; std::cout << "Sending: " << Message::Json(m_hi) << std::endl;
+    io << m_hi; std::cout << "Sending: " << m_hi(Message::JSON) << std::endl;
 
     while (!io.fail())
     {
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
             m_put.data = data;
 
-            io << m_put; std::cout << "Sending: " << Message::Json(m_put) << std::endl;
+            io << m_put; std::cout << "Sending: " << m_put(Message::JSON) << std::endl;
         }
 
         if (data == "get")
@@ -116,11 +116,11 @@ int main(int argc, char *argv[])
 
             m_get.data = data;
 
-            io << m_get; std::cout << "Sending: " << Message::Json(m_get) << std::endl;
+            io << m_get; std::cout << "Sending: " << m_get(Message::JSON) << std::endl;
         }
     }
 
-    io << m_bye; std::cout << "Sending: " << Message::Json(m_bye) << std::endl;
+    io << m_bye; std::cout << "Sending: " << m_bye(Message::JSON) << std::endl;
 
     th1.join();
 

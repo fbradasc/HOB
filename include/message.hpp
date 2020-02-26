@@ -19,17 +19,12 @@
                               printf(__VA_ARGS__);        \
                               printf("\n");
 
-/*
-#define ASSERT_SREAD(v,s,f)   (f.good()                   && \
-                               f.read((char *)v,s).good() && \
-                               read(s))
-*/
-#define ASSERT_SREAD(v,s,f)   read(v,s,f)
+#define ASSERT_SREAD(v,s,f)   deserialize(v,s,f)
 
 #define ASSERT_SWRITE(v,s,f)  (f.write(reinterpret_cast<const char *>(v),s)\
                                 .good())
 
-#define INDENT(l)             string(((indent >= 0) ? (indent + (l)) : 0 ) * 4, ' ')
+#define INDENT(l)             string(((indent >= 0)?(indent + (l)):0)*4,' ')
 
 #define HSEED                 65599llu
 // #define HSEED                 11400714819323198485llu
@@ -88,12 +83,16 @@
 //
 #if defined(ENABLE_CPP_HASH)
 #if defined(ENABLE_CPP_MAX_SIZE_HASH)
-#define HUPDATE(s)   id(static_cast<uint64_t>((HLEN(s)>0)?H256(s,0,id()):id()))
+#define HUPDATE(s)   update_id(static_cast<uint64_t>( \
+                               (HLEN(s)>0) ? H256(s,0,get_id()) \
+                                           : get_id()))
 #else // !ENABLE_CPP_MAX_SIZE_HASH
-#define HUPDATE(s)   id(static_cast<uint64_t>((HLEN(s)>0)?H64(s,0,id()):id()))
+#define HUPDATE(s)   update_id(static_cast<uint64_t>( \
+                               (HLEN(s)>0) ? H64(s,0,get_id()) \
+                                           : get_id()))
 #endif // !ENABLE_CPP_MAX_SIZE_HASH
 #else // !ENABLE_CPP_HASH
-#define HUPDATE(s)   id(s)
+#define HUPDATE(s)   update_id(s)
 #endif // !ENABLE_CPP_HASH
 
 using namespace std;
@@ -106,33 +105,68 @@ public:
 
     static const UID UNDEFINED = ULLONG_MAX;
 
-    class Text: public string
+#if 0
+    class txtstreambuf: public std::streambuf
     {
     public:
-        Text(const Message & ref): string(ref._s(-1))
-        {
-        }
-
-        Text(const string & ref): string(ref)
-        {
-        }
-
-        Text(const char * ref): string(ref)
-        {
-        }
+        txtstreambuf(istream & is);
+        virtual ~txtstreambuf();
 
     protected:
-        Text(const Message & ref, int level): string(ref._s(level))
+        virtual int underflow()
         {
-        }
-    };
+            // std::cout << "underflow" << std::endl;
+            int __c = traits_type::eof();
 
-    class Json: public Text
-    {
-    public:
-        Json(const Message & ref): Text(ref, 0)
-        {
+            if (!_if.good())
+            {
+                return __c;
+            }
+
+            bool initial = false;
+
+            if (eback() == 0)
+            {
+                setg(m_inbuf, m_inbuf + m_inbufsize, m_inbuf + m_inbufsize);
+                initial = true;
+                // std::cout << "initial" << std::endl;
+            }
+
+            const size_t unget_sz = initial ? 0 : std::min<size_t>((egptr() - eback()) / 2, 4);
+
+            if (gptr() == egptr())
+            {
+                memmove(eback(), egptr() - unget_sz, unget_sz);
+                size_t nmemb = static_cast<size_t>(egptr() - eback() - unget_sz);
+                // std::cout << "before read: " << nmemb << std::endl;
+                _is.read(eback() + unget_sz, nmemb);
+
+                ssize_t readed = _is.gcount();
+
+                if (readed > 0)
+                {
+                    setg(eback(), eback() + unget_sz, eback() + unget_sz + readed);
+                    __c = traits_type::to_int_type(*gptr());
+                }
+                // std::cout << "after read: " << readed << std::endl;
+            }
+            else
+            {
+                __c = traits_type::to_int_type(*gptr());
+            }
+
+            return __c;
         }
+
+    private:
+        istream &_is;
+    };
+#endif
+
+    enum Dump
+    {
+        JSON,
+        TEXT,
     };
 
     Message()
@@ -150,7 +184,7 @@ public:
         , _ep(   0)
         , _np(  -1)
     {
-        id(id_);
+        update_id(id_);
     }
 
     Message(const char *id_)
@@ -160,7 +194,7 @@ public:
         , _ep(   0)
         , _np(  -1)
     {
-        id(id_);
+        update_id(id_);
     }
 
     Message(const string &id_)
@@ -170,7 +204,7 @@ public:
         , _ep(   0)
         , _np(  -1)
     {
-        id(id_);
+        update_id(id_);
     }
 
     Message(const Message &ref)
@@ -258,38 +292,35 @@ public:
         return rv;
     }
 
-    size_t size() const
+    operator size_t() const
     {
         return ( _ep - _sp );
     }
 
     virtual bool rewind()
     {
-        is().clear();
+        istream & s_ = static_cast<istream&>(*this);
 
-        return is().seekg(_sp,is().beg).good();
+        s_.clear();
+
+        return s_.seekg(_sp,s_.beg).good();
     }
 
-    virtual void flush_pending()
-    {
-        size_t cp = is().tellg();
-
-        if (cp < _ep)
-        {
-            is().ignore(_ep - cp);
-        }
-    }
-
-    istream &is() { return (NULL != _is) ? *_is : _ss; }
+    operator istream &() { return (NULL != _is) ? *_is : _ss; }
 
     operator bool() const
     {
-        return changed();
+        return is_changed();
     }
 
     void operator~()
     {
         reset_changes();
+    }
+
+    const string operator()(const Dump &dump = TEXT) const
+    {
+        return _s((JSON == dump) ? 0 : -1);
     }
 
 protected:
@@ -320,24 +351,24 @@ protected:
     //
     //========================================================================
 
-    bool _w(ostream &os, const uint8_t &v) const
+    static bool _w(ostream &os, const uint8_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
-    bool _w(ostream &os, const uint16_t &v) const
+    static bool _w(ostream &os, const uint16_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
-    bool _w(ostream &os, const uint32_t &v) const
+    static bool _w(ostream &os, const uint32_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
     // VARINT packing
     //
-    bool _w(ostream &os, const uint64_t &v) const
+    static bool _w(ostream &os, const uint64_t &v)
     {
         uint8_t d[9];
 
@@ -367,49 +398,49 @@ protected:
         return ASSERT_SWRITE(d, b, os);
     }
 
-    bool _w(ostream &os, const int8_t &v) const
+    static bool _w(ostream &os, const int8_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
-    bool _w(ostream &os, const int16_t &v) const
+    static bool _w(ostream &os, const int16_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
-    bool _w(ostream &os, const int32_t &v) const
+    static bool _w(ostream &os, const int32_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
     // ZIGZAG encoding
     //
-    bool _w(ostream &os, const int64_t &v) const
+    static bool _w(ostream &os, const int64_t &v)
     {
         return _w(os, ZIGZAG_ENCODE(v));
     }
 
-    bool _w(ostream &os, const bool &v) const
+    static bool _w(ostream &os, const bool &v)
     {
         return ASSERT_SWRITE(&v, sizeof(v), os);
     }
 
-    bool _w(ostream &os, const float &v) const
+    static bool _w(ostream &os, const float &v)
     {
         return ASSERT_SWRITE(&v, sizeof(v), os);
     }
 
-    bool _w(ostream &os, const double &v) const
+    static bool _w(ostream &os, const double &v)
     {
         return ASSERT_SWRITE(&v, sizeof(v), os);
     }
 
-    bool _w(ostream &os, const long double &v) const
+    static bool _w(ostream &os, const long double &v)
     {
         return ASSERT_SWRITE(&v, sizeof(v), os);
     }
 
-    bool _w(ostream &os, const string &v) const
+    static bool _w(ostream &os, const string &v)
     {
         if (!_w(os, v.size()))
         {
@@ -419,13 +450,13 @@ protected:
         return ASSERT_SWRITE(v.data(), v.size(), os);
     }
 
-    bool _w(ostream &os, const Message &v) const
+    static bool _w(ostream &os, const Message &v)
     {
         return (v >> os);
     }
 
     template<size_t N>
-    bool _w(ostream &os, const std::bitset<N>& v) const
+    static bool _w(ostream &os, const std::bitset<N>& v)
     {
         vector<uint8_t> bits((N + 7) >> 3);
 
@@ -438,7 +469,7 @@ protected:
     }
 
     template<class T>
-    bool _w(ostream &os, const vector<T> &v) const
+    static bool _w(ostream &os, const vector<T> &v)
     {
         if (!_w(os, v.size()))
         {
@@ -456,7 +487,7 @@ protected:
         return true;
     }
 
-    bool _w(ostream &os, const vector<bool> &v) const
+    static bool _w(ostream &os, const vector<bool> &v)
     {
         if (!_w(os, v.size()))
         {
@@ -474,7 +505,7 @@ protected:
     }
 
     template<class T>
-    bool _w(ostream &os, const optional<T> &v) const
+    static bool _w(ostream &os, const optional<T> &v)
     {
         if (!_w(os, static_cast<bool>(v)))
         {
@@ -493,7 +524,7 @@ protected:
     }
 
     template<class K, class V>
-    bool _w(ostream &os, const map<K,V> &v) const
+    static bool _w(ostream &os, const map<K,V> &v)
     {
         size_t len = v.size();
 
@@ -533,7 +564,7 @@ protected:
 
         uint8_t rv = static_cast<uint8_t>(r & 0xff);
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -551,7 +582,7 @@ protected:
 
         uint16_t rv = static_cast<uint16_t>(r & 0xffff);
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -569,7 +600,7 @@ protected:
 
         uint32_t rv = static_cast<uint32_t>(r & 0xffffffff);
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -622,7 +653,7 @@ protected:
             rv |= static_cast<uint64_t>(d[i] & 0xff);
         }
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -658,7 +689,7 @@ protected:
             return false;
         }
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -674,7 +705,7 @@ protected:
             return false;
         }
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -690,7 +721,7 @@ protected:
             return false;
         }
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -706,7 +737,7 @@ protected:
             return false;
         }
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -733,7 +764,7 @@ protected:
 
         rv.assign(tmp.data(),len);
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -750,9 +781,9 @@ protected:
             {
                 v = m;
 
-                if ( v << m.is() )
+                if ( v << static_cast<istream&>(m) )
                 {
-                    changed(field, v);
+                    set_changed(field, v);
 
                     return true;
                 }
@@ -784,7 +815,7 @@ protected:
             rv[j] = ((buf[j>>3] >> (j & 7)) & 1);
         }
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
@@ -813,13 +844,13 @@ protected:
                 }
             }
 
-            changed(field, v != tmp);
+            set_changed(field, v != tmp);
 
             v = tmp;
         }
         else
         {
-            changed(field, !v.empty());
+            set_changed(field, !v.empty());
 
             v = vector<T>();
         }
@@ -857,7 +888,7 @@ protected:
                 rv.push_back((buf[j>>3] >> (j & 7)) & 1);
             }
 
-            changed(field, v != rv);
+            set_changed(field, v != rv);
 
             v = rv;
 
@@ -865,7 +896,7 @@ protected:
         }
         else
         {
-            changed(field, !v.empty());
+            set_changed(field, !v.empty());
 
             v = vector<bool>();
         }
@@ -892,13 +923,13 @@ protected:
                 return false;
             }
 
-            changed(field, v != tmp);
+            set_changed(field, v != tmp);
 
             v = tmp;
         }
         else
         {
-            changed(field, v.has_value());
+            set_changed(field, v.has_value());
 
             v = optional<T>();
         }
@@ -938,13 +969,13 @@ protected:
                 tmp[k] = v;
             }
 
-            changed(field, v_ != tmp);
+            set_changed(field, v_ != tmp);
 
             v_ = tmp;
         }
         else
         {
-            changed(field, !v_.empty());
+            set_changed(field, !v_.empty());
 
             v_ = map<K,V>();
         }
@@ -1314,7 +1345,7 @@ protected:
 
         _is = &is_;
 
-        if ((sz_ > 0) && (is().tellg() < 0))
+        if ((sz_ > 0) && (static_cast<istream&>(*this).tellg() < 0))
         {
             success = false;
 
@@ -1322,7 +1353,7 @@ protected:
 
             if (NULL != buffer)
             {
-                if (read(buffer,sz_,is_))
+                if (deserialize(buffer,sz_,is_))
                 {
                     if (_ss.write(buffer,sz_).good())
                     {
@@ -1337,7 +1368,7 @@ protected:
 
         if (success)
         {
-            _sp = is().tellg();
+            _sp = static_cast<istream&>(*this).tellg();
             _ep = _sp + sz_;
             _id = id_;
         }
@@ -1347,24 +1378,24 @@ protected:
 
     virtual bool _w(ostream &os) const { (void)os; return true; }
 
-    inline const uint64_t& id() const
+    inline const uint64_t& get_id() const
     {
         return _id;
     }
 
-    inline void id(const uint64_t &in)
+    inline void update_id(const uint64_t &in)
     {
         _np++;
 
         _id = in;
     }
 
-    inline void id(const string &in)
+    inline void update_id(const string &in)
     {
-        id(in.c_str());
+        update_id(in.c_str());
     }
 
-    void id(const char *in)
+    void update_id(const char *in)
     {
         //
         // in != NULL -> update ID calculation
@@ -1411,12 +1442,12 @@ protected:
         return;
     }
 
-    virtual bool changed() const
+    virtual bool is_changed() const
     {
         return false;
     }
 
-    virtual void changed(ssize_t f, bool v)
+    virtual void set_changed(ssize_t f, bool v)
     {
         (void)f;
         (void)v;
@@ -1437,7 +1468,7 @@ protected:
                << INDENT(1) << "\"i\": ";
         }
 
-        ss << _t(id(), (indent >= 0) ? (indent+1) : -1);
+        ss << _t(get_id(), (indent >= 0) ? (indent+1) : -1);
 
         if (indent >= 0)
         {
@@ -1450,6 +1481,18 @@ protected:
 #else // !BINARY_ONLY
         return "{}";
 #endif // !BINARY_ONLY
+    }
+
+    virtual void flush_pending()
+    {
+        istream & s_ = static_cast<istream&>(*this);
+
+        size_t cp = s_.tellg();
+
+        if (cp < _ep)
+        {
+            s_.ignore(_ep - cp);
+        }
     }
 
 private:
@@ -1474,14 +1517,14 @@ private:
 
         T rv = static_cast<T>(ZIGZAG_DECODE(r) & (static_cast<const T>(-1)));
 
-        changed(field, v != rv);
+        set_changed(field, v != rv);
 
         v = rv;
 
         return true;
     }
 
-    bool read(void *v, size_t s, istream &is_)
+    bool deserialize(void *v, size_t s, istream &is_)
     {
         // Check whether **only** an internal logic error occurred ...
         //
@@ -1533,7 +1576,7 @@ bool operator>>(Message &im, Message &m) { return m << im; }
 #define WRITE_FIELD(t, n, ...)   && Message::_w(os, n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
-#define UPDATE_NP(t, n, ...)     id("");
+#define UPDATE_NP(t, n, ...)     update_id("");
 #define UPDATE_ID(t, n, ...)     HUPDATE(STR(name_)); \
                                  HUPDATE(STR(t    )); \
                                  HUPDATE(STR(n    ));
@@ -1569,7 +1612,7 @@ bool operator>>(Message &im, Message &m) { return m << im; }
         stringstream ss;                                                       \
         size_t sz = 0;                                                         \
                                                                                \
-        if (has_payload(id()) && _w(ss))                                       \
+        if (has_payload(get_id()) && _w(ss))                                   \
         {                                                                      \
             sz = ss.str().size();                                              \
         }                                                                      \
@@ -1586,7 +1629,7 @@ bool operator>>(Message &im, Message &m) { return m << im; }
                << INDENT(1) << "\"i\": ";                                      \
         }                                                                      \
                                                                                \
-        ss << _t(id(), (indent >= 0) ? (indent+1) : -1);                       \
+        ss << _t(get_id(), (indent >= 0) ? (indent+1) : -1);                   \
                                                                                \
         if (indent >= 0)                                                       \
         {                                                                      \
@@ -1690,7 +1733,7 @@ public:                                                                        \
         /* Extra fields update parameters count */                             \
         SCAN_FIELDS(UPDATE_NP, REMAIN(__VA_ARGS__))                            \
                                                                                \
-        id(static_cast<const char *>(NULL)); /* finalize message ID */         \
+        update_id(static_cast<const char *>(NULL)); /* finalize message ID */  \
     }                                                                          \
                                                                                \
     name_(const Message & ref): Message(ref)                                   \
@@ -1743,7 +1786,7 @@ public:                                                                        \
                                                                                \
     bool operator&(const Fields &f) const                                      \
     {                                                                          \
-        return changed(f);                                                     \
+        return is_changed(f);                                                  \
     }                                                                          \
                                                                                \
 protected:                                                                     \
@@ -1754,7 +1797,7 @@ protected:                                                                     \
         IF(HAS_ARGS(__VA_ARGS__))(RESET_CHANGES(name_,f))                      \
     }                                                                          \
                                                                                \
-    bool changed(const Fields &f) const                                        \
+    bool is_changed(const Fields &f) const                                     \
     {                                                                          \
         (void)f;                                                               \
                                                                                \
@@ -1768,9 +1811,9 @@ protected:                                                                     \
         reset_changes(_FIELDS_COUNT_);                                         \
     }                                                                          \
                                                                                \
-    virtual bool changed() const                                               \
+    virtual bool is_changed() const                                            \
     {                                                                          \
-        return changed(_FIELDS_COUNT_);                                        \
+        return is_changed(_FIELDS_COUNT_);                                     \
     }                                                                          \
                                                                                \
     bool _r(Message &ref)                                                      \
@@ -1779,7 +1822,7 @@ protected:                                                                     \
                                                                                \
         ref.rewind();                                                          \
                                                                                \
-        if (!_r(ref.is()))                                                     \
+        if (!_r(static_cast<istream&>(ref)))                                   \
         {                                                                      \
             return false;                                                      \
         }                                                                      \
@@ -1819,16 +1862,12 @@ protected:                                                                     \
                 SCAN_FIELDS(WRITE_FIELD, REMAIN(__VA_ARGS__)));                \
     }                                                                          \
                                                                                \
-    virtual void flush_pending()                                               \
-    {                                                                          \
-    }                                                                          \
-                                                                               \
     virtual bool rewind()                                                      \
     {                                                                          \
         return Message::rewind();                                              \
     }                                                                          \
                                                                                \
-    virtual void changed(ssize_t f, bool v)                                    \
+    virtual void set_changed(ssize_t f, bool v)                                \
     {                                                                          \
         (void)f;                                                               \
         (void)v;                                                               \
@@ -1846,6 +1885,10 @@ protected:                                                                     \
         (void)indent;                                                          \
                                                                                \
         ASCII_DUMP(name_,value_,__VA_ARGS__)                                   \
+    }                                                                          \
+                                                                               \
+    virtual void flush_pending()                                               \
+    {                                                                          \
     }                                                                          \
                                                                                \
 private:                                                                       \

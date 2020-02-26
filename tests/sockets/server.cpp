@@ -23,26 +23,26 @@ static void wall(Message &m, ostream *s)
     {
         if (m >> m_hi)
         {
-            (*s) << m_hi; std::cout << "Sending: " << Message::Json(m_hi) << std::endl;
+            (*s) << m_hi; std::cout << "Sending: " << m_hi(Message::JSON) << std::endl;
         }
         else
         if (m >> m_put)
         {
             m_get.data = "recv some data";
 
-            (*s) << m_get; std::cout << "Sending: " << Message::Json(m_get) << std::endl;
+            (*s) << m_get; std::cout << "Sending: " << m_get(Message::JSON) << std::endl;
         }
         else
         if (m >> m_get)
         {
             m_put.data = "sent some data";
 
-            (*s) << m_put; std::cout << "Sending: " << Message::Json(m_put) << std::endl;
+            (*s) << m_put; std::cout << "Sending: " << m_put(Message::JSON) << std::endl;
         }
         else
         if (m >> m_bye)
         {
-            (*s) << m_bye; std::cout << "Sending: " << Message::Json(m_bye) << std::endl;
+            (*s) << m_bye; std::cout << "Sending: " << m_bye(Message::JSON) << std::endl;
         }
     }
 }
@@ -61,26 +61,26 @@ static void handleClient(int fd, std::string remote)
 
         if (m >> m_hi)
         {
-            std::cout << Message::Json(m_hi);
+            std::cout << m_hi(Message::JSON);
         }
         else
         if (m >> m_put)
         {
-            std::cout << Message::Json(m_put);
+            std::cout << m_put(Message::JSON);
         }
         else
         if (m >> m_get)
         {
-            std::cout << Message::Json(m_get);
+            std::cout << m_get(Message::JSON);
         }
         else
         if (m >> m_bye)
         {
-            std::cout << Message::Json(m_bye);
+            std::cout << m_bye(Message::JSON);
         }
         else
         {
-            std::cout << "Unknown message: " << Message::Json(m);
+            std::cout << "Unknown message: " << m(Message::JSON);
         }
 
         std::cout << std::endl;
