@@ -9,6 +9,7 @@
 #include <cstring>
 #include <climits>
 #include <iostream>
+#include <iomanip>
 #include "optional.hpp"
 #include "cpp_magic.h"
 
@@ -21,8 +22,12 @@
 
 #define ASSERT_SREAD(v,s,f)   deserialize(v,s,f)
 
+#if defined(DEBUG_WRITE)
+#define ASSERT_SWRITE(v,s,f)  Message::_w(reinterpret_cast<const char *>(v),s,f)
+#else // DEBUG_WRITE
 #define ASSERT_SWRITE(v,s,f)  (f.write(reinterpret_cast<const char *>(v),s)\
                                 .good())
+#endif // DEBUG_WRITE
 
 #define INDENT(l)             string(((indent >= 0)?(indent + (l)):0)*4,' ')
 
@@ -104,64 +109,6 @@ public:
     typedef uint64_t UID;
 
     static const UID UNDEFINED = ULLONG_MAX;
-
-#if 0
-    class txtstreambuf: public std::streambuf
-    {
-    public:
-        txtstreambuf(istream & is);
-        virtual ~txtstreambuf();
-
-    protected:
-        virtual int underflow()
-        {
-            // std::cout << "underflow" << std::endl;
-            int __c = traits_type::eof();
-
-            if (!_if.good())
-            {
-                return __c;
-            }
-
-            bool initial = false;
-
-            if (eback() == 0)
-            {
-                setg(m_inbuf, m_inbuf + m_inbufsize, m_inbuf + m_inbufsize);
-                initial = true;
-                // std::cout << "initial" << std::endl;
-            }
-
-            const size_t unget_sz = initial ? 0 : std::min<size_t>((egptr() - eback()) / 2, 4);
-
-            if (gptr() == egptr())
-            {
-                memmove(eback(), egptr() - unget_sz, unget_sz);
-                size_t nmemb = static_cast<size_t>(egptr() - eback() - unget_sz);
-                // std::cout << "before read: " << nmemb << std::endl;
-                _is.read(eback() + unget_sz, nmemb);
-
-                ssize_t readed = _is.gcount();
-
-                if (readed > 0)
-                {
-                    setg(eback(), eback() + unget_sz, eback() + unget_sz + readed);
-                    __c = traits_type::to_int_type(*gptr());
-                }
-                // std::cout << "after read: " << readed << std::endl;
-            }
-            else
-            {
-                __c = traits_type::to_int_type(*gptr());
-            }
-
-            return __c;
-        }
-
-    private:
-        istream &_is;
-    };
-#endif
 
     enum Dump
     {
@@ -323,6 +270,338 @@ public:
         return _s((JSON == dump) ? 0 : -1);
     }
 
+    class Inporter: public istream
+    {
+    public:
+        Inporter(istream & is)
+            : istream(NULL)
+            , _sb(is)
+        {
+            init(&_sb);
+        }
+
+    private:
+        class Streambuf: public std::streambuf
+        {
+        public:
+            Streambuf(istream & is)
+                : m_is(is)
+            {
+            };
+
+            virtual ~Streambuf() {};
+
+        protected:
+            virtual int underflow()
+            {
+                // If something is left in the get area by chance, return it
+                // (this shouldn't normally happen, as underflow is only supposed
+                // to be called when gptr >= egptr, but it serves as error check)
+                //
+                if (this->gptr() && (this->gptr() < this->egptr()))
+                {
+                    return traits_type::to_int_type(*(this->gptr()));
+                }
+
+                // If the file hasn't been opened for reading, produce error
+                if (!m_is.good())
+                {
+                    return traits_type::eof();
+                }
+
+                m_inbuf.str("");
+
+                parse('\0');
+
+                char* gbeg  = const_cast<char_type*>(m_inbuf.str().data());
+                char* gnext = gbeg;
+                char* gend  = gbeg + m_inbuf.str().size();
+
+                this->setg(gbeg, gnext, gend);
+
+                if (gbeg == gend)
+                {
+                    // Indicates error or EOF
+                    //
+                    return traits_type::eof();
+                }
+
+                // Return next character in get area
+                //
+                return traits_type::to_int_type(*(this->gptr()));
+            }
+
+        private:
+            istream         &m_is;
+            stringstream     m_inbuf;
+
+#define ASSERT_DUMP(...) if (!Message::_w(m_inbuf, __VA_ARGS__)) { return false; }
+
+            bool parse(char t)
+            {
+                char c;
+                bool group = ('}' == t);
+                bool array = (']' == t);
+                bool kword = ('"' == t);
+                bool skip  = false;
+
+                string token;
+
+                while (m_is.get(c).good() && ((t != c) || skip))
+                {
+                    if (kword)
+                    {
+                        if (!skip && ('\\' == c))
+                        {
+                            skip = true;
+                        }
+                        else
+                        {
+                            skip = false;
+                            token += c;
+                        }
+                    }
+                    else
+                    if (!isspace(c))
+                    {
+                        skip = false;
+
+                        switch (c)
+                        {
+                            case '{' : parse('}'); break;
+                            case '[' : parse(']'); break;
+                            case '"' : parse('"'); break;
+                            default  :                 break;
+                        }
+                    }
+                }
+
+                if (!token.empty())
+                {
+                    while (m_is.get(c).good())
+                    {
+                        if (':' == c)
+                        {
+                            bool   dump      = false;
+                            string value     = "";
+                            bool   has_value = true;
+                            size_t count_pos = 0;
+
+                            if ("U" == token)
+                            {
+                                dump = true;
+                            }
+                            else
+                            if ("S" == token)
+                            {
+                                dump = true;
+                            }
+                            else
+                            if ("F" == token)
+                            {
+                                dump = true;
+                            }
+                            else
+                            if ("D" == token)
+                            {
+                                dump = true;
+                            }
+                            else
+                            if ("Q" == token)
+                            {
+                                dump = true;
+                            }
+                            else
+                            if ("B" == token)
+                            {
+                                dump = true;
+                            }
+                            else
+                            if ("T" == token)
+                            {
+                                dump = true;
+                            }
+                            else
+                            if (token.find("V(") == 0)
+                            {
+                                dump      = true;
+                                has_value = false;
+                                count_pos = strlen("V(");
+                            }
+                            else
+                            if (token.find("M(") == 0)
+                            {
+                                dump      = true;
+                                has_value = false;
+                                count_pos = strlen("M(");
+                            }
+                            else
+                            if (token.find("O(") == 0)
+                            {
+                                dump      = true;
+                                has_value = false;
+                                count_pos = strlen("O(");
+                            }
+                            else
+                            if (token.find("B(") == 0)
+                            {
+                                dump      = true;
+                                has_value = true;
+                                count_pos = strlen("B(");
+                            }
+
+                            if (dump)
+                            {
+                                if (has_value)
+                                {
+                                    bool can_be_spaced = false;
+
+                                    skip = false;
+
+                                    while (m_is.get(c).good())
+                                    {
+                                        if (can_be_spaced || !isspace(c))
+                                        {
+                                            if (!skip && ('"' == c))
+                                            {
+                                                can_be_spaced = !can_be_spaced;
+                                            }
+                                            else
+                                            if (!skip && ('\\' == c))
+                                            {
+                                                skip = true;
+                                            }
+                                            else
+                                            {
+                                                skip = false;
+
+                                                if ('}' == c)
+                                                {
+                                                    m_is.unget();
+                                                    break;
+                                                }
+                                                else
+                                                {
+                                                    value += c;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (count_pos > 0)
+                                {
+                                    string count = token.substr(count_pos,
+                                                                token.size()-count_pos-1);
+
+                                    uint64_t v_count = stoull(count);
+
+                                    ASSERT_DUMP(v_count);
+                                }
+
+                                if (has_value)
+                                {
+                                    if ("U" == token)
+                                    {
+                                        uint64_t v_value = stoull(value);
+
+                                        ASSERT_DUMP(v_value);
+                                    }
+                                    else
+                                    if ("S" == token)
+                                    {
+                                        int64_t v_value = stoll(value);
+
+                                        ASSERT_DUMP(v_value);
+                                    }
+                                    else
+                                    if ("F" == token)
+                                    {
+                                        ASSERT_DUMP(hex_to_val<float>(value));
+                                    }
+                                    else
+                                    if ("D" == token)
+                                    {
+                                        ASSERT_DUMP(hex_to_val<double>(value));
+                                    }
+                                    else
+                                    if ("Q" == token)
+                                    {
+                                        ASSERT_DUMP(hex_to_val<long double>(value));
+                                    }
+                                    else
+                                    if ("T" == token)
+                                    {
+                                        ASSERT_DUMP(value);
+                                    }
+                                    else
+                                    if (("B" == token) || (token.find("B(") == 0))
+                                    {
+                                        if (("true" == value) || ("false" == value))
+                                        {
+                                            bool v_value = ("true" == value);
+
+                                            ASSERT_DUMP(v_value);
+                                        }
+                                        else
+                                        {
+                                            vector<bool> v_value;
+
+                                            for (ssize_t i=value.size()-1; i>=0; i--)
+                                            {
+                                                if (('1' == value[i]) || ('0' == value[i]))
+                                                {
+                                                    v_value.push_back(value[i] == '1');
+                                                }
+                                            }
+
+                                            ASSERT_DUMP(v_value, false);
+                                        }
+                                    }
+                                }
+                            }
+
+                            break;
+                        }
+                        else
+                        if (!isspace(c))
+                        {
+                            m_is.unget();
+
+                            break;
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            static inline uint8_t hex_to_int(const char &c)
+            {
+                if (c >= '0' && c <= '9') { return c - '0' +  0; }
+                if (c >= 'A' && c <= 'F') { return c - 'A' + 10; }
+                if (c >= 'a' && c <= 'f') { return c - 'a' + 10; }
+                return 0xff;
+            }
+
+            template<class T>
+            static inline T hex_to_val(const string &s)
+            {
+                union { T n; uint8_t x[sizeof(T)]; } x2n;
+
+                for (size_t i = 0; i < sizeof(T); i++)
+                {
+                    x2n.x[i] = (hex_to_int(s[(2*i)+0]) & 0x0f) << 4 |
+                               (hex_to_int(s[(2*i)+1]) & 0x0f);
+                }
+
+                return x2n.n;
+            }
+        };
+
+        Streambuf _sb;
+    };
+
 protected:
     //========================================================================
     //
@@ -450,6 +729,16 @@ protected:
         return ASSERT_SWRITE(v.data(), v.size(), os);
     }
 
+    static bool _w(ostream &os, uint8_t size_, const void *v)
+    {
+        if (!_w(os, size_))
+        {
+            return false;
+        }
+
+        return ASSERT_SWRITE(v, size_, os);
+    }
+
     static bool _w(ostream &os, const Message &v)
     {
         return (v >> os);
@@ -458,14 +747,16 @@ protected:
     template<size_t N>
     static bool _w(ostream &os, const std::bitset<N>& v)
     {
-        vector<uint8_t> bits((N + 7) >> 3);
+        uint8_t bits[(N+7)>>3];
+
+        memset(bits, 0, ((N+7)>>3));
 
         for (size_t j=0; j<size_t(N); j++)
         {
-            bits[j>>3] |= (v[j] << (j & 7));
+            bits[j>>3] |= (v[j]<<(j&7));
         }
 
-        return _w(os, bits);
+        return _w(os, ((N+7)>>3), bits);
     }
 
     template<class T>
@@ -487,22 +778,24 @@ protected:
         return true;
     }
 
-    static bool _w(ostream &os, const vector<bool> &v)
+    static bool _w(ostream &os, const vector<bool> &v, bool dump_size=true)
     {
-        if (!_w(os, v.size()))
+        if (dump_size && !_w(os, v.size()))
         {
             return false;
         }
 
-        vector<uint8_t> bits((v.size() + 7) >> 3);
+        uint8_t bits[(v.size()+7)>>3];
+
+        memset(bits, 0, ((v.size()+7)>>3));
 
         for (size_t j=0; j<v.size(); j++)
         {
-            bits[j>>3] |= (v[j] << (j & 7));
+            bits[j>>3] |= (v[j]<<(j&7));
         }
 
-        return _w(os, bits);
-    }
+        return _w(os, ((v.size()+7)>>3), bits);
+    } 
 
     template<class T>
     static bool _w(ostream &os, const optional<T> &v)
@@ -796,14 +1089,18 @@ protected:
     template<size_t N>
     bool _r(istream &is_, bitset<N> &v, ssize_t field=-1)
     {
-        vector<uint8_t> buf;
+        size_t len;
 
-        if (!_r(is_, buf))
+        if (!_r(is_, len) || (len != ((N + 7) >> 3)))
         {
             return false;
         }
 
-        if (buf.size() != ((N + 7) >> 3))
+        uint8_t bits[len];
+
+        memset(bits, 0, len);
+
+        if (!ASSERT_SREAD(bits, len, is_))
         {
             return false;
         }
@@ -812,7 +1109,7 @@ protected:
 
         for (size_t j=0; j<size_t(N); j++)
         {
-            rv[j] = ((buf[j>>3] >> (j & 7)) & 1);
+            rv[j] = ((bits[j>>3]>>(j&7)) & 1);
         }
 
         set_changed(field, v != rv);
@@ -860,32 +1157,36 @@ protected:
 
     bool _r(istream &is_, vector<bool> &v, ssize_t field=-1)
     {
-        size_t len;
+        size_t count;
 
-        if (!_r(is_, len))
+        if (!_r(is_, count))
         {
             return false;
         }
 
-        if (len > 0)
+        if (count > 0)
         {
-            vector<uint8_t> buf;
+            size_t len;
 
-            if (!_r(is_, buf))
+            if (!_r(is_, len) || (len != ((count + 7) >> 3)))
             {
                 return false;
             }
 
-            if (buf.size() != ((len + 7) >> 3))
+            uint8_t bits[len];
+
+            memset(bits, 0, len);
+
+            if (!ASSERT_SREAD(bits, len, is_))
             {
                 return false;
             }
 
             vector<bool> rv;
 
-            for (size_t j=0; j<len; j++)
+            for (size_t j=0; j<count; j++)
             {
-                rv.push_back((buf[j>>3] >> (j & 7)) & 1);
+                rv.push_back((bits[j>>3]>>(j&7)) & 1);
             }
 
             set_changed(field, v != rv);
@@ -984,7 +1285,7 @@ protected:
     }
 
 #if !defined(BINARY_ONLY)
-    string _t(const uint8_t &v, int indent = -1) const
+    static string _t(const uint8_t &v, int indent = -1)
     {
         (void)indent;
 
@@ -993,7 +1294,7 @@ protected:
         return(o.str());
     }
 
-    string _t(const uint16_t &v, int indent = -1) const
+    static string _t(const uint16_t &v, int indent = -1)
     {
         (void)indent;
 
@@ -1002,7 +1303,7 @@ protected:
         return(o.str());
     }
 
-    string _t(const uint32_t &v, int indent = -1) const
+    static string _t(const uint32_t &v, int indent = -1)
     {
         (void)indent;
 
@@ -1011,7 +1312,7 @@ protected:
         return(o.str());
     }
 
-    string _t(const uint64_t &v, int indent = -1) const
+    static string _t(const uint64_t &v, int indent = -1)
     {
         (void)indent;
 
@@ -1020,7 +1321,7 @@ protected:
         return(o.str());
     }
 
-    string _t(const int8_t &v, int indent = -1) const
+    static string _t(const int8_t &v, int indent = -1)
     {
         (void)indent;
 
@@ -1029,7 +1330,7 @@ protected:
         return(o.str());
     }
 
-    string _t(const int16_t &v, int indent = -1) const
+    static string _t(const int16_t &v, int indent = -1)
     {
         (void)indent;
 
@@ -1038,7 +1339,7 @@ protected:
         return(o.str());
     }
 
-    string _t(const int32_t &v, int indent = -1) const
+    static string _t(const int32_t &v, int indent = -1)
     {
         (void)indent;
 
@@ -1047,7 +1348,7 @@ protected:
         return(o.str());
     }
 
-    string _t(const int64_t &v, int indent = -1) const
+    static string _t(const int64_t &v, int indent = -1)
     {
         (void)indent;
 
@@ -1056,34 +1357,52 @@ protected:
         return(o.str());
     }
 
-    string _t(const float &v, int indent = -1) const
+    static string _t(const float &v, int indent = -1)
     {
         (void)indent;
 
         stringstream o;
-        o << "{\"F\":" << v << "}";
+
+        o << "{\"F\":\"";
+        
+        _t(reinterpret_cast<const char *>(&v), sizeof(v), o);
+        
+        o << "\"}";
+
         return(o.str());
     }
 
-    string _t(const double &v, int indent = -1) const
+    static string _t(const double &v, int indent = -1)
     {
         (void)indent;
 
         stringstream o;
-        o << "{\"D\":" << v << "}";
+
+        o << "{\"D\":\"";
+        
+        _t(reinterpret_cast<const char *>(&v), sizeof(v), o);
+        
+        o << "\"}";
+
         return(o.str());
     }
 
-    string _t(const long double &v, int indent = -1) const
+    static string _t(const long double &v, int indent = -1)
     {
         (void)indent;
 
         stringstream o;
-        o << "{\"Q\":" << v << "}";
+
+        o << "{\"Q\":\"";
+        
+        _t(reinterpret_cast<const char *>(&v), sizeof(v), o);
+        
+        o << "\"}";
+
         return(o.str());
     }
 
-    string _t(const char *v, int indent = -1) const
+    static string _t(const char *v, int indent = -1)
     {
         (void)indent;
 
@@ -1092,7 +1411,7 @@ protected:
         return(o.str());
     }
 
-    string _t(const string &v, int indent = -1) const
+    static string _t(const string &v, int indent = -1)
     {
         (void)indent;
 
@@ -1101,20 +1420,20 @@ protected:
         return(o.str());
     }
 
-    string _t(const bool &v, int indent = -1) const
+    static string _t(const bool &v, int indent = -1)
     {
         (void)indent;
 
         return( v ? "{\"B\":true}" : "{\"B\":false}");
     }
 
-    string _t(const Message &v, int indent = -1) const
+    static string _t(const Message &v, int indent = -1)
     {
         return v._s(indent);
     }
 
     template<size_t N>
-    string _t(const bitset<N> &v, int indent = -1) const
+    static string _t(const bitset<N> &v, int indent = -1)
     {
         (void)indent;
 
@@ -1124,7 +1443,7 @@ protected:
     }
 
     template<class T>
-    string _t(const vector<T> &v, int indent = -1) const
+    static string _t(const vector<T> &v, int indent = -1)
     {
         (void)indent;
 
@@ -1177,15 +1496,15 @@ protected:
         return(o.str());
     }
 
-    string _t(const vector<bool> &v, int indent = -1) const
+    static string _t(const vector<bool> &v, int indent = -1)
     {
         (void)indent;
 
         stringstream o;
 
-        o << "{\"B\":\"";
+        o << "{\"B(" << v.size() << ")\":\"";
 
-        for (size_t i; i<v.size(); i++)
+        for (size_t i=0; i<v.size(); i++)
         {
             o << v[i];
         }
@@ -1196,7 +1515,7 @@ protected:
     }
 
     template<class T>
-    string _t(const optional<T> &v, int indent = -1) const
+    static string _t(const optional<T> &v, int indent = -1)
     {
         (void)indent;
 
@@ -1233,7 +1552,7 @@ protected:
     }
 
     template<class K, class V>
-    string _t(const map<K,V> &v, int indent = -1) const
+    static string _t(const map<K,V> &v, int indent = -1)
     {
         (void)indent;
 
@@ -1317,6 +1636,17 @@ protected:
         return(o.str());
     }
 #endif // !BINARY_ONLY
+
+    static void _t(const char *v, size_t s, ostream &o)
+    {
+        for (size_t i = 0; i<s; i++)
+        {
+            o << hex
+              << setw(2)
+              << setfill('0')
+              << static_cast<int>(v[i] & 0xff);
+        }
+    }
 
     virtual bool _r(Message &ref) { (void)ref; return true; }
 
@@ -1539,6 +1869,38 @@ private:
         //
         return is_.good() && is_.read(static_cast<char *>(v),s).good();
     }
+
+#if defined(DEBUG_WRITE)
+    static bool _w(const char *v, const size_t s, ostream &os)
+    {
+        if (os.write(v,s).good())
+        {
+#if !defined(DUMP_ALL)
+            if (dynamic_cast<ofstream*>(&os) != NULL)
+#endif // DUMP_ALL
+            {
+                cout << "DEBUG_WRITE:";
+
+                _t(v,s,cout);
+                /*
+                for (size_t i = 0; i<s; i++)
+                {
+                    cout << hex
+                         << setw(2)
+                         << setfill('0')
+                         << static_cast<int>(v[i] & 0xff);
+                }
+                */
+
+                cout << endl;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+#endif // DEBUG_WRITE
 };
 
 bool operator<<(ostream &is, Message &m) { return m >> is; } 
@@ -1636,11 +1998,18 @@ bool operator>>(Message &im, Message &m) { return m << im; }
             ss << ","                                                          \
                << endl                                                         \
                << INDENT(1) << "\"s\": \"" << value_ << "\","                  \
-               << endl                                                         \
-               << INDENT(1) << "\"b\": ";                                      \
+               << endl;                                                        \
         }                                                                      \
                                                                                \
-        ss << _t(sz, (indent >= 0) ? (indent+1) : -1);                         \
+        if (has_payload(get_id()))                                             \
+        {                                                                      \
+            if (indent >= 0)                                                   \
+            {                                                                  \
+                ss << INDENT(1) << "\"b\": ";                                  \
+            }                                                                  \
+                                                                               \
+            ss << _t(sz, (indent >= 0) ? (indent+1) : -1);                     \
+        }                                                                      \
                                                                                \
         if (sz > 0)                                                            \
         {                                                                      \

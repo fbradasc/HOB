@@ -166,6 +166,7 @@ DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
 DECLARE_MESSAGE(ComplexStruct, "COMPLEX_STRUCT",
     (AnotherStruct , root)
     (MegaFlagsT    , bits)
+    (vector<bool>  , var_bits)
     (vector<FlagsT>, iperbits)
 )
 
@@ -175,6 +176,7 @@ DECLARE_MESSAGE(NumericNoParamMessage, Message::UID(42))
 
 DECLARE_MESSAGE(NumericMessage, Message::UID(42),
      (bool              , valid, false)
+     (long double       , bignum, 1.23456789123456789)
      (string            , text , "1Po'DiMaiuscoleMinuscole&Numeri")
      (vector<int8_t>    , bytes)
      (vector<double>    , levels)
@@ -472,7 +474,7 @@ int main(int argc, char *argv[])
         {
             AnotherStruct m;
 
-            LOG(m, AnotherStruct);
+            // LOG(m, AnotherStruct);
 
             m.bmin = SCHAR_MIN;
             m.bmax = SCHAR_MAX;
@@ -559,6 +561,11 @@ int main(int argc, char *argv[])
             for (i=0; i<m.bits.size(); i++)
             {
                 m.bits.set(i, (i % 2));
+            }
+
+            for (i=0; i<17; i++)
+            {
+                m.var_bits.push_back(i % 2);
             }
 
             for (j=0; j<3; j++)
