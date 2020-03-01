@@ -286,8 +286,10 @@ public:
         public:
             Streambuf(istream & is)
                 : m_is(is)
+                , m_buffer(NULL)
             {
-            };
+                load();
+            }
 
             virtual ~Streambuf() {};
 
@@ -309,17 +311,9 @@ public:
                     return traits_type::eof();
                 }
 
-                m_inbuf.str("");
+                load();
 
-                parse('\0');
-
-                char* gbeg  = const_cast<char_type*>(m_inbuf.str().data());
-                char* gnext = gbeg;
-                char* gend  = gbeg + m_inbuf.str().size();
-
-                this->setg(gbeg, gnext, gend);
-
-                if (gbeg == gend)
+                if (this->eback() == this->egptr())
                 {
                     // Indicates error or EOF
                     //
@@ -332,12 +326,42 @@ public:
             }
 
         private:
-            istream         &m_is;
-            stringstream     m_inbuf;
+            istream &m_is;
+            char    *m_buffer;
 
-#define ASSERT_DUMP(...) if (!Message::_w(m_inbuf, __VA_ARGS__)) { return false; }
+#define ASSERT_DUMP(...) if (!Message::_w(os, __VA_ARGS__)) { return false; }
 
-            bool parse(char t)
+            void load()
+            {
+                stringstream os;
+
+                parse(os, '\0');
+
+                if (NULL != m_buffer)
+                {
+                    delete m_buffer;
+                    m_buffer = NULL;
+                }
+
+                char *gbeg  = NULL;
+                char *gnext = NULL;
+                char *gend  = NULL;
+
+                if (!os.str().empty())
+                {
+                    m_buffer = new char[os.str().size()];
+
+                    memcpy(m_buffer,os.str().data(),os.str().size());
+
+                    gbeg  = m_buffer;
+                    gnext = gbeg;
+                    gend  = gbeg + os.str().size();
+                }
+
+                this->setg(gbeg, gnext, gend);
+            }
+
+            bool parse(stringstream &os, char t)
             {
                 char c;
                 bool group = ('}' == t);
@@ -368,9 +392,9 @@ public:
 
                         switch (c)
                         {
-                            case '{' : parse('}'); break;
-                            case '[' : parse(']'); break;
-                            case '"' : parse('"'); break;
+                            case '{' : parse(os, '}'); break;
+                            case '[' : parse(os, ']'); break;
+                            case '"' : parse(os, '"'); break;
                             default  :                 break;
                         }
                     }
@@ -1882,15 +1906,6 @@ private:
                 cout << "DEBUG_WRITE:";
 
                 _t(v,s,cout);
-                /*
-                for (size_t i = 0; i<s; i++)
-                {
-                    cout << hex
-                         << setw(2)
-                         << setfill('0')
-                         << static_cast<int>(v[i] & 0xff);
-                }
-                */
 
                 cout << endl;
             }

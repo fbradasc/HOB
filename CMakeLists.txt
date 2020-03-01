@@ -4,7 +4,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL TRUE)
 
 project(Message VERSION 0.1.0)
 
-set(DEBUG_WRITE DEBUG_WRITE)
+# set(DEBUG_WRITE DEBUG_WRITE)
 
 set(BASIC_TEST_SRC
     tests/basic/test.cpp)
@@ -68,7 +68,6 @@ target_link_libraries(test_client pthread)
 
 target_compile_definitions(json_import
                            PUBLIC
-                           DUMP_ALL
                            ${DEBUG_WRITE})
 
 target_compile_definitions(test_message_on_iostream

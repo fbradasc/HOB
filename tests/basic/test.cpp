@@ -176,7 +176,7 @@ DECLARE_MESSAGE(NumericNoParamMessage, Message::UID(42))
 
 DECLARE_MESSAGE(NumericMessage, Message::UID(42),
      (bool              , valid, false)
-     (long double       , bignum, 1.23456789123456789)
+     /*(long double       , bignum, 1.23456789123456789)*/
      (string            , text , "1Po'DiMaiuscoleMinuscole&Numeri")
      (vector<int8_t>    , bytes)
      (vector<double>    , levels)
