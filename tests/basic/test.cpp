@@ -76,7 +76,7 @@ diff3 f.txt i.txt s.txt
 #include <inttypes.h>
 #include <limits.h>
 
-#define LOG(message_,type_) printf("%s\n\n", message_().c_str())
+#define LOG(message_,type_) printf("%s\n\n", message_(/*Message::JSON*/).c_str())
 
 
 #if defined(MINIMAL)
@@ -418,23 +418,33 @@ int main(int argc, char *argv[])
     (void)argv;
 
 #if defined(OUTPUT_ON_FILE)
-    bool do_read=true;
-    bool do_write=true;
-    bool from_file=false;
+    bool do_read   = true;
+    bool do_write  = true;
+    bool do_inport = false;
+    bool from_file = false;
+
+    int  file_arg  = 0;
 
     if (argc>0)
     {
-        do_read=false;
-        do_write=false;
+        do_read   = false;
+        do_write  = false;
+        do_inport = false;
 
         if (argv[0][0] == 'r')
         {
             do_read = true;
         }
-
+        else
         if (argv[0][0] == 'w')
         {
             do_write = true;
+        }
+        else
+        if (argv[0][0] == 'i')
+        {
+            do_inport = true;
+            file_arg  = 1;
         }
 
         if (argc>1)
@@ -443,16 +453,23 @@ int main(int argc, char *argv[])
             {
                 do_read = true;
             }
-
+            else
             if (argv[1][0] == 'r')
             {
-                do_read = true;
+                do_read   = true;
                 from_file = true;
             }
-
+            else
             if (argv[1][0] == 'w')
             {
                 do_write = true;
+            }
+            else
+            if (argv[1][0] == 'i')
+            {
+                do_inport = true;
+                from_file = true;
+                file_arg  = 2;
             }
         }
     }
@@ -605,16 +622,29 @@ int main(int argc, char *argv[])
         ofs.close();
     }
 
-    if (do_read)
+    if (do_read || do_inport)
     {
         std::ifstream ifile;
         std::istream *is = &cin;
+        std::stringstream os;
 
         if (from_file)
         {
-            ifile.open("output.dat", std::ios::binary);
+            if (do_inport)
+            {
+                ifile.open(argv[file_arg]);
+            }
+            else
+            {
+                ifile.open(argv[file_arg], std::ios::binary);
+            }
 
             is = &ifile;
+        }
+
+        if (do_inport && Message::parse(*is, os))
+        {
+            is = &os;
         }
 
 #else // OUTPUT_ON_FILE
@@ -648,7 +678,8 @@ int main(int argc, char *argv[])
 #if defined(OUTPUT_ON_FILE)
         if (from_file)
         {
-            std::ifstream *pifs =static_cast<std::ifstream *>(is);
+            std::ifstream *pifs = (do_inport) ? &ifile
+                                              : static_cast<std::ifstream *>(is);
 
             pifs->close();
         }

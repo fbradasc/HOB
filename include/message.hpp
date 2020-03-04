@@ -20,12 +20,14 @@
                               printf(__VA_ARGS__);        \
                               printf("\n");
 
-#define ASSERT_SREAD(v,s,f)   deserialize(v,s,f)
+#define ASSERT_DUMP(os, ...)  if (!Message::_w(os, __VA_ARGS__)) { return false; }
+
+#define ASSERT_SREAD(f,v,s)   deserialize(f,v,s)
 
 #if defined(DEBUG_WRITE)
-#define ASSERT_SWRITE(v,s,f)  Message::_w(reinterpret_cast<const char *>(v),s,f)
+#define ASSERT_SWRITE(f,v,s)  Message::_w(f,v,s)
 #else // DEBUG_WRITE
-#define ASSERT_SWRITE(v,s,f)  (f.write(reinterpret_cast<const char *>(v),s)\
+#define ASSERT_SWRITE(f,v,s)  (f.write(reinterpret_cast<const char *>(v),s)\
                                 .good())
 #endif // DEBUG_WRITE
 
@@ -267,364 +269,19 @@ public:
 
     const string operator()(const Dump &dump = TEXT) const
     {
-        return _s((JSON == dump) ? 0 : -1);
+        stringstream ss;
+
+        ss.str(string());
+
+        _s(ss, (JSON == dump) ? 0 : -1);
+
+        return ss.str();
     }
 
-    class Inporter: public istream
+    static bool parse(istream &is, ostream &os)
     {
-    public:
-        Inporter(istream & is)
-            : istream(NULL)
-            , _sb(is)
-        {
-            init(&_sb);
-        }
-
-    private:
-        class Streambuf: public std::streambuf
-        {
-        public:
-            Streambuf(istream & is)
-                : m_is(is)
-                , m_buffer(NULL)
-            {
-                load();
-            }
-
-            virtual ~Streambuf() {};
-
-        protected:
-            virtual int underflow()
-            {
-                // If something is left in the get area by chance, return it
-                // (this shouldn't normally happen, as underflow is only supposed
-                // to be called when gptr >= egptr, but it serves as error check)
-                //
-                if (this->gptr() && (this->gptr() < this->egptr()))
-                {
-                    return traits_type::to_int_type(*(this->gptr()));
-                }
-
-                // If the file hasn't been opened for reading, produce error
-                if (!m_is.good())
-                {
-                    return traits_type::eof();
-                }
-
-                load();
-
-                if (this->eback() == this->egptr())
-                {
-                    // Indicates error or EOF
-                    //
-                    return traits_type::eof();
-                }
-
-                // Return next character in get area
-                //
-                return traits_type::to_int_type(*(this->gptr()));
-            }
-
-        private:
-            istream &m_is;
-            char    *m_buffer;
-
-#define ASSERT_DUMP(...) if (!Message::_w(os, __VA_ARGS__)) { return false; }
-
-            void load()
-            {
-                stringstream os;
-
-                parse(os, '\0');
-
-                if (NULL != m_buffer)
-                {
-                    delete m_buffer;
-                    m_buffer = NULL;
-                }
-
-                char *gbeg  = NULL;
-                char *gnext = NULL;
-                char *gend  = NULL;
-
-                if (!os.str().empty())
-                {
-                    m_buffer = new char[os.str().size()];
-
-                    memcpy(m_buffer,os.str().data(),os.str().size());
-
-                    gbeg  = m_buffer;
-                    gnext = gbeg;
-                    gend  = gbeg + os.str().size();
-                }
-
-                this->setg(gbeg, gnext, gend);
-            }
-
-            bool parse(stringstream &os, char t)
-            {
-                char c;
-                bool group = ('}' == t);
-                bool array = (']' == t);
-                bool kword = ('"' == t);
-                bool skip  = false;
-
-                string token;
-
-                while (m_is.get(c).good() && ((t != c) || skip))
-                {
-                    if (kword)
-                    {
-                        if (!skip && ('\\' == c))
-                        {
-                            skip = true;
-                        }
-                        else
-                        {
-                            skip = false;
-                            token += c;
-                        }
-                    }
-                    else
-                    if (!isspace(c))
-                    {
-                        skip = false;
-
-                        switch (c)
-                        {
-                            case '{' : parse(os, '}'); break;
-                            case '[' : parse(os, ']'); break;
-                            case '"' : parse(os, '"'); break;
-                            default  :                 break;
-                        }
-                    }
-                }
-
-                if (!token.empty())
-                {
-                    while (m_is.get(c).good())
-                    {
-                        if (':' == c)
-                        {
-                            bool   dump      = false;
-                            string value     = "";
-                            bool   has_value = true;
-                            size_t count_pos = 0;
-
-                            if ("U" == token)
-                            {
-                                dump = true;
-                            }
-                            else
-                            if ("S" == token)
-                            {
-                                dump = true;
-                            }
-                            else
-                            if ("F" == token)
-                            {
-                                dump = true;
-                            }
-                            else
-                            if ("D" == token)
-                            {
-                                dump = true;
-                            }
-                            else
-                            if ("Q" == token)
-                            {
-                                dump = true;
-                            }
-                            else
-                            if ("B" == token)
-                            {
-                                dump = true;
-                            }
-                            else
-                            if ("T" == token)
-                            {
-                                dump = true;
-                            }
-                            else
-                            if (token.find("V(") == 0)
-                            {
-                                dump      = true;
-                                has_value = false;
-                                count_pos = strlen("V(");
-                            }
-                            else
-                            if (token.find("M(") == 0)
-                            {
-                                dump      = true;
-                                has_value = false;
-                                count_pos = strlen("M(");
-                            }
-                            else
-                            if (token.find("O(") == 0)
-                            {
-                                dump      = true;
-                                has_value = false;
-                                count_pos = strlen("O(");
-                            }
-                            else
-                            if (token.find("B(") == 0)
-                            {
-                                dump      = true;
-                                has_value = true;
-                                count_pos = strlen("B(");
-                            }
-
-                            if (dump)
-                            {
-                                if (has_value)
-                                {
-                                    bool can_be_spaced = false;
-
-                                    skip = false;
-
-                                    while (m_is.get(c).good())
-                                    {
-                                        if (can_be_spaced || !isspace(c))
-                                        {
-                                            if (!skip && ('"' == c))
-                                            {
-                                                can_be_spaced = !can_be_spaced;
-                                            }
-                                            else
-                                            if (!skip && ('\\' == c))
-                                            {
-                                                skip = true;
-                                            }
-                                            else
-                                            {
-                                                skip = false;
-
-                                                if ('}' == c)
-                                                {
-                                                    m_is.unget();
-                                                    break;
-                                                }
-                                                else
-                                                {
-                                                    value += c;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (count_pos > 0)
-                                {
-                                    string count = token.substr(count_pos,
-                                                                token.size()-count_pos-1);
-
-                                    uint64_t v_count = stoull(count);
-
-                                    ASSERT_DUMP(v_count);
-                                }
-
-                                if (has_value)
-                                {
-                                    if ("U" == token)
-                                    {
-                                        uint64_t v_value = stoull(value);
-
-                                        ASSERT_DUMP(v_value);
-                                    }
-                                    else
-                                    if ("S" == token)
-                                    {
-                                        int64_t v_value = stoll(value);
-
-                                        ASSERT_DUMP(v_value);
-                                    }
-                                    else
-                                    if ("F" == token)
-                                    {
-                                        ASSERT_DUMP(hex_to_val<float>(value));
-                                    }
-                                    else
-                                    if ("D" == token)
-                                    {
-                                        ASSERT_DUMP(hex_to_val<double>(value));
-                                    }
-                                    else
-                                    if ("Q" == token)
-                                    {
-                                        ASSERT_DUMP(hex_to_val<long double>(value));
-                                    }
-                                    else
-                                    if ("T" == token)
-                                    {
-                                        ASSERT_DUMP(value);
-                                    }
-                                    else
-                                    if (("B" == token) || (token.find("B(") == 0))
-                                    {
-                                        if (("true" == value) || ("false" == value))
-                                        {
-                                            bool v_value = ("true" == value);
-
-                                            ASSERT_DUMP(v_value);
-                                        }
-                                        else
-                                        {
-                                            vector<bool> v_value;
-
-                                            for (ssize_t i=value.size()-1; i>=0; i--)
-                                            {
-                                                if (('1' == value[i]) || ('0' == value[i]))
-                                                {
-                                                    v_value.push_back(value[i] == '1');
-                                                }
-                                            }
-
-                                            ASSERT_DUMP(v_value, false);
-                                        }
-                                    }
-                                }
-                            }
-
-                            break;
-                        }
-                        else
-                        if (!isspace(c))
-                        {
-                            m_is.unget();
-
-                            break;
-                        }
-                    }
-                }
-
-                return true;
-            }
-
-            static inline uint8_t hex_to_int(const char &c)
-            {
-                if (c >= '0' && c <= '9') { return c - '0' +  0; }
-                if (c >= 'A' && c <= 'F') { return c - 'A' + 10; }
-                if (c >= 'a' && c <= 'f') { return c - 'a' + 10; }
-                return 0xff;
-            }
-
-            template<class T>
-            static inline T hex_to_val(const string &s)
-            {
-                union { T n; uint8_t x[sizeof(T)]; } x2n;
-
-                for (size_t i = 0; i < sizeof(T); i++)
-                {
-                    x2n.x[i] = (hex_to_int(s[(2*i)+0]) & 0x0f) << 4 |
-                               (hex_to_int(s[(2*i)+1]) & 0x0f);
-                }
-
-                return x2n.n;
-            }
-        };
-
-        Streambuf _sb;
-    };
+        return parse(is,os,'\0');
+    }
 
 protected:
     //========================================================================
@@ -698,7 +355,7 @@ protected:
         d[0] &= static_cast<uint8_t>(m & 0xff);
         d[0] |= static_cast<uint8_t>(c & 0xff);
 
-        return ASSERT_SWRITE(d, b, os);
+        return ASSERT_SWRITE(os, d, b);
     }
 
     static bool _w(ostream &os, const int8_t &v)
@@ -725,22 +382,22 @@ protected:
 
     static bool _w(ostream &os, const bool &v)
     {
-        return ASSERT_SWRITE(&v, sizeof(v), os);
+        return ASSERT_SWRITE(os, &v, sizeof(v));
     }
 
     static bool _w(ostream &os, const float &v)
     {
-        return ASSERT_SWRITE(&v, sizeof(v), os);
+        return ASSERT_SWRITE(os, &v, sizeof(v));
     }
 
     static bool _w(ostream &os, const double &v)
     {
-        return ASSERT_SWRITE(&v, sizeof(v), os);
+        return ASSERT_SWRITE(os, &v, sizeof(v));
     }
 
     static bool _w(ostream &os, const long double &v)
     {
-        return ASSERT_SWRITE(&v, sizeof(v), os);
+        return ASSERT_SWRITE(os, &v, sizeof(v));
     }
 
     static bool _w(ostream &os, const string &v)
@@ -750,7 +407,7 @@ protected:
             return false;
         }
 
-        return ASSERT_SWRITE(v.data(), v.size(), os);
+        return ASSERT_SWRITE(os, v.data(), v.size());
     }
 
     static bool _w(ostream &os, uint8_t size_, const void *v)
@@ -760,7 +417,7 @@ protected:
             return false;
         }
 
-        return ASSERT_SWRITE(v, size_, os);
+        return ASSERT_SWRITE(os, v, size_);
     }
 
     static bool _w(ostream &os, const Message &v)
@@ -938,7 +595,7 @@ protected:
         uint8_t c;
         uint8_t m;
 
-        if (!ASSERT_SREAD(&d[0], sizeof(uint8_t), is_))
+        if (!ASSERT_SREAD(is_, &d[0], sizeof(uint8_t)))
         {
             return false;
         }
@@ -956,7 +613,7 @@ protected:
 
         if (b > 1)
         {
-            if (!ASSERT_SREAD(&d[1], b-1, is_))
+            if (!ASSERT_SREAD(is_, &d[1], b-1))
             {
                 return false;
             }
@@ -1001,7 +658,7 @@ protected:
     {
         bool rv;
 
-        if (!ASSERT_SREAD(&rv, sizeof(v), is_))
+        if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
         {
             return false;
         }
@@ -1017,7 +674,7 @@ protected:
     {
         float rv;
 
-        if (!ASSERT_SREAD(&rv, sizeof(v), is_))
+        if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
         {
             return false;
         }
@@ -1033,7 +690,7 @@ protected:
     {
         double rv;
 
-        if (!ASSERT_SREAD(&rv, sizeof(v), is_))
+        if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
         {
             return false;
         }
@@ -1049,7 +706,7 @@ protected:
     {
         long double rv;
 
-        if (!ASSERT_SREAD(&rv, sizeof(v), is_))
+        if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
         {
             return false;
         }
@@ -1072,7 +729,7 @@ protected:
 
         vector<char> tmp(len);
 
-        if (!ASSERT_SREAD(tmp.data(), len, is_))
+        if (!ASSERT_SREAD(is_, tmp.data(), len))
         {
             return false;
         }
@@ -1124,7 +781,7 @@ protected:
 
         memset(bits, 0, len);
 
-        if (!ASSERT_SREAD(bits, len, is_))
+        if (!ASSERT_SREAD(is_, bits, len))
         {
             return false;
         }
@@ -1201,7 +858,7 @@ protected:
 
             memset(bits, 0, len);
 
-            if (!ASSERT_SREAD(bits, len, is_))
+            if (!ASSERT_SREAD(is_, bits, len))
             {
                 return false;
             }
@@ -1309,169 +966,121 @@ protected:
     }
 
 #if !defined(BINARY_ONLY)
-    static string _t(const uint8_t &v, int indent = -1)
+    static void _t(ostream &o, const uint8_t &v, int indent = -1)
     {
-        (void)indent;
-
-        stringstream o;
-        o << "{\"U\":" << static_cast<int>(v) << "}";
-        return(o.str());
+        _t(o, static_cast<uint64_t>(v), indent);
     }
 
-    static string _t(const uint16_t &v, int indent = -1)
+    static void _t(ostream &o, const uint16_t &v, int indent = -1)
+    {
+        _t(o, static_cast<uint64_t>(v), indent);
+    }
+
+    static void _t(ostream &o, const uint32_t &v, int indent = -1)
+    {
+        _t(o, static_cast<uint64_t>(v), indent);
+    }
+
+    static void _t(ostream &o, const uint64_t &v, int indent = -1)
     {
         (void)indent;
 
-        stringstream o;
         o << "{\"U\":" << v << "}";
-        return(o.str());
     }
 
-    static string _t(const uint32_t &v, int indent = -1)
+    static void _t(ostream &o, const int8_t &v, int indent = -1)
+    {
+        _t(o, static_cast<int64_t>(v), indent);
+    }
+
+    static void _t(ostream &o, const int16_t &v, int indent = -1)
+    {
+        _t(o, static_cast<int64_t>(v), indent);
+    }
+
+    static void _t(ostream &o, const int32_t &v, int indent = -1)
+    {
+        _t(o, static_cast<int64_t>(v), indent);
+    }
+
+    static void _t(ostream &o, const int64_t &v, int indent = -1)
     {
         (void)indent;
 
-        stringstream o;
-        o << "{\"U\":" << v << "}";
-        return(o.str());
-    }
-
-    static string _t(const uint64_t &v, int indent = -1)
-    {
-        (void)indent;
-
-        stringstream o;
-        o << "{\"U\":" << v << "}";
-        return(o.str());
-    }
-
-    static string _t(const int8_t &v, int indent = -1)
-    {
-        (void)indent;
-
-        stringstream o;
-        o << "{\"S\":" << static_cast<int>(v) << "}";
-        return(o.str());
-    }
-
-    static string _t(const int16_t &v, int indent = -1)
-    {
-        (void)indent;
-
-        stringstream o;
         o << "{\"S\":" << v << "}";
-        return(o.str());
     }
 
-    static string _t(const int32_t &v, int indent = -1)
+    static void _t(ostream &o, const float &v, int indent = -1)
     {
         (void)indent;
-
-        stringstream o;
-        o << "{\"S\":" << v << "}";
-        return(o.str());
-    }
-
-    static string _t(const int64_t &v, int indent = -1)
-    {
-        (void)indent;
-
-        stringstream o;
-        o << "{\"S\":" << v << "}";
-        return(o.str());
-    }
-
-    static string _t(const float &v, int indent = -1)
-    {
-        (void)indent;
-
-        stringstream o;
 
         o << "{\"F\":\"";
         
-        _t(reinterpret_cast<const char *>(&v), sizeof(v), o);
+        _t(o, &v, sizeof(v));
         
         o << "\"}";
-
-        return(o.str());
     }
 
-    static string _t(const double &v, int indent = -1)
+    static void _t(ostream &o, const double &v, int indent = -1)
     {
         (void)indent;
-
-        stringstream o;
 
         o << "{\"D\":\"";
         
-        _t(reinterpret_cast<const char *>(&v), sizeof(v), o);
+        _t(o, &v, sizeof(v));
         
         o << "\"}";
-
-        return(o.str());
     }
 
-    static string _t(const long double &v, int indent = -1)
+    static void _t(ostream &o, const long double &v, int indent = -1)
     {
         (void)indent;
-
-        stringstream o;
 
         o << "{\"Q\":\"";
         
-        _t(reinterpret_cast<const char *>(&v), sizeof(v), o);
+        _t(o, &v, sizeof(v));
         
         o << "\"}";
-
-        return(o.str());
     }
 
-    static string _t(const char *v, int indent = -1)
+    static void _t(ostream &o, const char *v, int indent = -1)
     {
         (void)indent;
 
-        stringstream o;
         o << "{\"T\":\"" << v << "\"}";
-        return(o.str());
     }
 
-    static string _t(const string &v, int indent = -1)
+    static void _t(ostream &o, const string &v, int indent = -1)
     {
         (void)indent;
 
-        stringstream o;
         o << "{\"T\":\"" << v << "\"}";
-        return(o.str());
     }
 
-    static string _t(const bool &v, int indent = -1)
+    static void _t(ostream &o, const bool &v, int indent = -1)
     {
         (void)indent;
 
-        return( v ? "{\"B\":true}" : "{\"B\":false}");
+        o << (v ? "{\"B\":true}" : "{\"B\":false}");
     }
 
-    static string _t(const Message &v, int indent = -1)
+    static void _t(ostream &o, const Message &v, int indent = -1)
     {
-        return v._s(indent);
+        v._s(o, indent);
     }
 
     template<size_t N>
-    static string _t(const bitset<N> &v, int indent = -1)
+    static void _t(ostream &o, const bitset<N> &v, int indent = -1)
     {
         (void)indent;
 
-        stringstream o;
         o << "{\"B\":\"" << v << "\"}";
-        return(o.str());
     }
 
     template<class T>
-    static string _t(const vector<T> &v, int indent = -1)
+    static void _t(ostream &o, const vector<T> &v, int indent = -1)
     {
         (void)indent;
-
-        stringstream o;
 
         o << "{";
 
@@ -1493,8 +1102,10 @@ protected:
         {
             for (size_t i=0; i<len; i++)
             {
-                o << INDENT(2) << _t(static_cast<const T &>(v[i]),
-                                     (indent >= 0) ? (indent+2) : -1);
+                o << INDENT(2);
+                
+                _t(o, static_cast<const T &>(v[i]),
+                      (indent >= 0) ? (indent+2) : -1);
 
                 if ((indent >=0) && (i < (len-1)))
                 {
@@ -1516,15 +1127,11 @@ protected:
         }
 
         o << INDENT(0) << "}";
-
-        return(o.str());
     }
 
-    static string _t(const vector<bool> &v, int indent = -1)
+    static void _t(ostream &o, const vector<bool> &v, int indent = -1)
     {
         (void)indent;
-
-        stringstream o;
 
         o << "{\"B(" << v.size() << ")\":\"";
 
@@ -1534,16 +1141,12 @@ protected:
         }
 
         o << "\"}";
-
-        return(o.str());
     }
 
     template<class T>
-    static string _t(const optional<T> &v, int indent = -1)
+    static void _t(ostream &o, const optional<T> &v, int indent = -1)
     {
         (void)indent;
-
-        stringstream o;
 
         o << "{";
 
@@ -1556,8 +1159,8 @@ protected:
 
         if (v.has_value())
         {
-            o << _t(static_cast<const T &>(*v),
-                    (indent >= 0) ? (indent+1) : -1);
+            _t(o, static_cast<const T &>(*v),
+                  (indent >= 0) ? (indent+1) : -1);
         }
         else
         if (indent >= 0)
@@ -1571,16 +1174,12 @@ protected:
         }
 
         o << INDENT(0) << "}";
-
-        return(o.str());
     }
 
     template<class K, class V>
-    static string _t(const map<K,V> &v, int indent = -1)
+    static void _t(ostream &o, const map<K,V> &v, int indent = -1)
     {
         (void)indent;
-
-        stringstream o;
 
         o << "{";
 
@@ -1612,8 +1211,8 @@ protected:
                     o << INDENT(3) << "\"k\": ";
                 }
 
-                o << _t(static_cast<const K&>((*ci).first),
-                        (indent >= 0) ? (indent+1) : -1);
+                _t(o, static_cast<const K&>((*ci).first),
+                      (indent >= 0) ? (indent+1) : -1);
                 o << ",";
 
                 if (indent >= 0)
@@ -1623,8 +1222,8 @@ protected:
                       << "\"v\": ";
                 }
 
-                o << _t(static_cast<const V&>((*ci).second),
-                        (indent >= 0) ? (indent+1) : -1);
+                _t(o, static_cast<const V&>((*ci).second),
+                      (indent >= 0) ? (indent+1) : -1);
 
                 if (indent >= 0)
                 {
@@ -1656,20 +1255,20 @@ protected:
         }
 
         o << INDENT(0) << "}";
-
-        return(o.str());
     }
 #endif // !BINARY_ONLY
 
-    static void _t(const char *v, size_t s, ostream &o)
+    static void _t(ostream &o, const void *v, size_t s)
     {
         for (size_t i = 0; i<s; i++)
         {
-            o << hex
-              << setw(2)
-              << setfill('0')
-              << static_cast<int>(v[i] & 0xff);
+              o << hex 
+                << setw(2)
+                << setfill('0')
+                << static_cast<int>(reinterpret_cast<const char*>(v)[i] & 0xff);
         }
+
+        o << dec << setw(0);
     }
 
     virtual bool _r(Message &ref) { (void)ref; return true; }
@@ -1678,7 +1277,7 @@ protected:
     {
         uint64_t id_;
 
-        _ss.str("");
+        _ss.str(string());
         _is = NULL;
         _sp = 0;
         _ep = 0;
@@ -1707,7 +1306,7 @@ protected:
 
             if (NULL != buffer)
             {
-                if (deserialize(buffer,sz_,is_))
+                if (deserialize(is_,buffer,sz_))
                 {
                     if (_ss.write(buffer,sz_).good())
                     {
@@ -1807,34 +1406,28 @@ protected:
         (void)v;
     }
 
-    virtual const string _s(int indent) const
+    virtual void _s(ostream &o, int indent) const
     {
         (void)indent;
 
+        o << "{";
+
 #if !defined(BINARY_ONLY)
-        stringstream ss;
+        if (indent >= 0)
+        {
+            o << endl
+              << INDENT(1) << "\"i\": ";
+        }
 
-        ss << "{";
+        _t(o, get_id(), (indent >= 0) ? (indent+1) : -1);
 
         if (indent >= 0)
         {
-            ss << endl
-               << INDENT(1) << "\"i\": ";
+            o << endl;
         }
-
-        ss << _t(get_id(), (indent >= 0) ? (indent+1) : -1);
-
-        if (indent >= 0)
-        {
-            ss << endl;
-        }
-
-        ss << "}";
-
-        return ss.str();
-#else // !BINARY_ONLY
-        return "{}";
 #endif // !BINARY_ONLY
+
+        o << "}";
     }
 
     virtual void flush_pending()
@@ -1878,7 +1471,7 @@ private:
         return true;
     }
 
-    bool deserialize(void *v, size_t s, istream &is_)
+    bool deserialize(istream &is_, void *v, size_t s)
     {
         // Check whether **only** an internal logic error occurred ...
         //
@@ -1895,9 +1488,9 @@ private:
     }
 
 #if defined(DEBUG_WRITE)
-    static bool _w(const char *v, const size_t s, ostream &os)
+    static bool _w(ostream &os, const void *v, const size_t s)
     {
-        if (os.write(v,s).good())
+        if (os.write(reinterpret_cast<const char *>(v),s).good())
         {
 #if !defined(DUMP_ALL)
             if (dynamic_cast<ofstream*>(&os) != NULL)
@@ -1905,7 +1498,7 @@ private:
             {
                 cout << "DEBUG_WRITE:";
 
-                _t(v,s,cout);
+                _t(cout,v,s);
 
                 cout << endl;
             }
@@ -1916,6 +1509,267 @@ private:
         return false;
     }
 #endif // DEBUG_WRITE
+
+    static bool parse(istream &is, ostream &os, char t)
+    {
+        char c;
+        bool group = ('}' == t);
+        bool array = (']' == t);
+        bool kword = ('"' == t);
+        bool skip  = false;
+
+        string token;
+
+        while (is.get(c).good() && ((t != c) || skip))
+        {
+            if (kword)
+            {
+                if (!skip && ('\\' == c))
+                {
+                    skip = true;
+                }
+                else
+                {
+                    skip = false;
+                    token += c;
+                }
+            }
+            else
+            if (!isspace(c))
+            {
+                skip = false;
+
+                switch (c)
+                {
+                    case '{' : parse(is, os, '}'); break;
+                    case '[' : parse(is, os, ']'); break;
+                    case '"' : parse(is, os, '"'); break;
+                    default  :                     break;
+                }
+            }
+        }
+
+        if (!token.empty())
+        {
+            while (is.get(c).good())
+            {
+                if (':' == c)
+                {
+                    string value;
+                    bool   dump      = false;
+                    bool   has_value = true;
+                    size_t count_pos = 0;
+
+                    if ("U" == token)
+                    {
+                        dump = true;
+                    }
+                    else
+                    if ("S" == token)
+                    {
+                        dump = true;
+                    }
+                    else
+                    if ("F" == token)
+                    {
+                        dump = true;
+                    }
+                    else
+                    if ("D" == token)
+                    {
+                        dump = true;
+                    }
+                    else
+                    if ("Q" == token)
+                    {
+                        dump = true;
+                    }
+                    else
+                    if ("B" == token)
+                    {
+                        dump = true;
+                    }
+                    else
+                    if ("T" == token)
+                    {
+                        dump = true;
+                    }
+                    else
+                    if (token.find("V(") == 0)
+                    {
+                        dump      = true;
+                        has_value = false;
+                        count_pos = strlen("V(");
+                    }
+                    else
+                    if (token.find("M(") == 0)
+                    {
+                        dump      = true;
+                        has_value = false;
+                        count_pos = strlen("M(");
+                    }
+                    else
+                    if (token.find("O(") == 0)
+                    {
+                        dump      = true;
+                        has_value = false;
+                        count_pos = strlen("O(");
+                    }
+                    else
+                    if (token.find("B(") == 0)
+                    {
+                        dump      = true;
+                        has_value = true;
+                        count_pos = strlen("B(");
+                    }
+
+                    if (dump)
+                    {
+                        if (has_value)
+                        {
+                            bool can_be_spaced = false;
+
+                            skip = false;
+
+                            while (is.get(c).good())
+                            {
+                                if (can_be_spaced || !isspace(c))
+                                {
+                                    if (!skip && ('"' == c))
+                                    {
+                                        can_be_spaced = !can_be_spaced;
+                                    }
+                                    else
+                                    if (!skip && ('\\' == c))
+                                    {
+                                        skip = true;
+                                    }
+                                    else
+                                    {
+                                        skip = false;
+
+                                        if ('}' == c)
+                                        {
+                                            is.unget();
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            value += c;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (count_pos > 0)
+                        {
+                            string count = token.substr(count_pos,
+                                                        token.size()-count_pos-1);
+
+                            uint64_t v_count = stoull(count);
+
+                            ASSERT_DUMP(os, v_count);
+                        }
+
+                        if (has_value)
+                        {
+                            if ("U" == token)
+                            {
+                                uint64_t v_value = stoull(value);
+
+                                ASSERT_DUMP(os, v_value);
+                            }
+                            else
+                            if ("S" == token)
+                            {
+                                int64_t v_value = stoll(value);
+
+                                ASSERT_DUMP(os, v_value);
+                            }
+                            else
+                            if ("F" == token)
+                            {
+                                ASSERT_DUMP(os, hex_to_val<float>(value));
+                            }
+                            else
+                            if ("D" == token)
+                            {
+                                ASSERT_DUMP(os, hex_to_val<double>(value));
+                            }
+                            else
+                            if ("Q" == token)
+                            {
+                                ASSERT_DUMP(os, hex_to_val<long double>(value));
+                            }
+                            else
+                            if ("T" == token)
+                            {
+                                ASSERT_DUMP(os, value);
+                            }
+                            else
+                            if (("B" == token) || (token.find("B(") == 0))
+                            {
+                                if (("true" == value) || ("false" == value))
+                                {
+                                    bool v_value = ("true" == value);
+
+                                    ASSERT_DUMP(os, v_value);
+                                }
+                                else
+                                {
+                                    vector<bool> v_value;
+
+                                    for (ssize_t i=value.size()-1; i>=0; i--)
+                                    {
+                                        if (('1' == value[i]) || ('0' == value[i]))
+                                        {
+                                            v_value.push_back(value[i] == '1');
+                                        }
+                                    }
+
+                                    ASSERT_DUMP(os, v_value, false);
+                                }
+                            }
+                        }
+                    }
+
+                    break;
+                }
+                else
+                if (!isspace(c))
+                {
+                    is.unget();
+
+                    break;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    static inline uint8_t hex_to_int(const char &c)
+    {
+        if (c >= '0' && c <= '9') { return c - '0' +  0; }
+        if (c >= 'A' && c <= 'F') { return c - 'A' + 10; }
+        if (c >= 'a' && c <= 'f') { return c - 'a' + 10; }
+        return 0xff;
+    }
+
+    template<class T>
+    static inline T hex_to_val(const string &s)
+    {
+        union { T n; uint8_t x[sizeof(T)]; } x2n;
+
+        for (size_t i = 0; i < sizeof(T); i++)
+        {
+            x2n.x[i] = (hex_to_int(s[(2*i)+0]) & 0x0f) << 4 |
+                       (hex_to_int(s[(2*i)+1]) & 0x0f);
+        }
+
+        return x2n.n;
+    }
 };
 
 bool operator<<(ostream &is, Message &m) { return m >> is; } 
@@ -1962,77 +1816,80 @@ bool operator>>(Message &im, Message &m) { return m << im; }
 #define WTEXT_FIELD(t, n, ...)                                                 \
         if (indent >=0)                                                        \
         {                                                                      \
-            ss << INDENT(2)                                                    \
-               << "{"                                                          \
-               << endl                                                         \
-        /*     << INDENT(3)                                                    \
-               << "\"t\": \"" << STR(t) << "\","                               \
-               << endl                                                         \
-        */     << INDENT(3)                                                    \
-               << "\"n\": \"" << STR(n) << "\","                               \
-               << endl                                                         \
-               << INDENT(3)                                                    \
-               << "\"v\": ";                                                   \
+            o << INDENT(2)                                                     \
+              << "{"                                                           \
+              << endl                                                          \
+              << INDENT(3)                                                     \
+              << "\"t\": \"" << STR(t) << "\","                                \
+              << endl                                                          \
+              << INDENT(3)                                                     \
+              << "\"n\": \"" << STR(n) << "\","                                \
+              << endl                                                          \
+              << INDENT(3)                                                     \
+              << "\"v\": ";                                                    \
         }                                                                      \
                                                                                \
-        ss << _t(static_cast<const t&>(n), (indent >= 0) ? (indent+3): -1);    \
+        _t(o, static_cast<const t&>(n), (indent >= 0) ? (indent+3): -1);       \
                                                                                \
         if (indent >=0)                                                        \
         {                                                                      \
-            ss << endl                                                         \
-               << INDENT(2)                                                    \
-               << "},"                                                         \
-               << endl;                                                        \
+            o << endl                                                          \
+              << INDENT(2)                                                     \
+              << "},"                                                          \
+              << endl;                                                         \
         }
 
 #define ASCII_DUMP(name_,value_,...)                                           \
-        stringstream ss;                                                       \
         size_t sz = 0;                                                         \
                                                                                \
-        if (has_payload(get_id()) && _w(ss))                                   \
+        if (has_payload(get_id()))                                             \
         {                                                                      \
-            sz = ss.str().size();                                              \
+            stringstream ss;                                                   \
+                                                                               \
+            if (_w(ss))                                                        \
+            {                                                                  \
+                sz = ss.str().size();                                          \
+            }                                                                  \
         }                                                                      \
                                                                                \
-        ss.str("");                                                            \
-                                                                               \
-        ss << "{";                                                             \
+        o << "{";                                                              \
                                                                                \
         if (indent >= 0)                                                       \
         {                                                                      \
-            ss << endl                                                         \
-               << INDENT(1) << "\"t\": \"" << STR(name_) << "\","              \
-               << endl                                                         \
-               << INDENT(1) << "\"i\": ";                                      \
+            o << endl                                                          \
+              << INDENT(1) << "\"t\": \"" << STR(name_) << "\","               \
+              << endl                                                          \
+              << INDENT(1) << "\"i\": ";                                       \
         }                                                                      \
                                                                                \
-        ss << _t(get_id(), (indent >= 0) ? (indent+1) : -1);                   \
+        _t(o, get_id(), (indent >= 0) ? (indent+1) : -1);                      \
                                                                                \
         if (indent >= 0)                                                       \
         {                                                                      \
-            ss << ","                                                          \
-               << endl                                                         \
-               << INDENT(1) << "\"s\": \"" << value_ << "\","                  \
-               << endl;                                                        \
+            o << ","                                                           \
+              << endl                                                          \
+              << INDENT(1) << "\"s\": \"" << value_ << "\"";                   \
         }                                                                      \
                                                                                \
         if (has_payload(get_id()))                                             \
         {                                                                      \
+            o << ",";                                                          \
+                                                                               \
             if (indent >= 0)                                                   \
             {                                                                  \
-                ss << INDENT(1) << "\"b\": ";                                  \
+                o << endl << INDENT(1) << "\"b\": ";                           \
             }                                                                  \
                                                                                \
-            ss << _t(sz, (indent >= 0) ? (indent+1) : -1);                     \
+            _t(o, sz, (indent >= 0) ? (indent+1) : -1);                        \
         }                                                                      \
                                                                                \
         if (sz > 0)                                                            \
         {                                                                      \
             if (indent >= 0)                                                   \
             {                                                                  \
-                ss << "," << endl                                              \
-                   << INDENT(1) << "\"f\": ["                                  \
-                   << endl;                                                    \
+                o << "," << endl                                               \
+                  << INDENT(1) << "\"f\": ["                                   \
+                  << endl;                                                     \
             }                                                                  \
                                                                                \
             SCAN_FIELDS(WTEXT_FIELD, FIRST(__VA_ARGS__))                       \
@@ -2040,22 +1897,20 @@ bool operator>>(Message &im, Message &m) { return m << im; }
                                                                                \
             if (indent >= 0)                                                   \
             {                                                                  \
-                ss << INDENT(2) << "null"                                      \
-                   << endl << INDENT(1) << "]";                                \
+                o << INDENT(2) << "null"                                       \
+                  << endl << INDENT(1) << "]";                                 \
             }                                                                  \
         }                                                                      \
                                                                                \
         if (indent >= 0)                                                       \
         {                                                                      \
-           ss << endl;                                                         \
+           o << endl;                                                          \
         }                                                                      \
                                                                                \
-        ss << INDENT(0) << "}";                                                \
-                                                                               \
-        return ss.str();
+        o << INDENT(0) << "}";
 #else // !BINARY_ONLY
 #define ASCII_DUMP(n,v,...)                                                    \
-        return "{}";
+        ss << "{}";
 #endif // !BINARY_ONLY
 
 #define CHANGED_FIELDS(n, ...) \
@@ -2264,7 +2119,7 @@ protected:                                                                     \
         IF(HAS_ARGS(__VA_ARGS__))(SET_CHANGED(name_,f,v))                      \
     }                                                                          \
                                                                                \
-    virtual const string _s(int indent) const                                  \
+    virtual void _s(ostream &o, int indent) const                              \
     {                                                                          \
         (void)indent;                                                          \
                                                                                \

@@ -7,17 +7,9 @@ int main(int argc, char *argv[])
     ofstream raw;
 
     txt.open(argv[1]);
-
-    Message::Inporter txt2raw(txt);
-
     raw.open(argv[2], std::ios::binary);
 
-    char c;
-
-    while (txt2raw.get(c).good())
-    {
-        raw << c;
-    }
+    Message::parse(txt,raw);
 
     txt.close();
     raw.close();
