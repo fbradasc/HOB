@@ -434,11 +434,13 @@ int main(int argc, char *argv[])
         if (argv[0][0] == 'r')
         {
             do_read = true;
+            file_arg  = 1;
         }
         else
         if (argv[0][0] == 'w')
         {
             do_write = true;
+            file_arg  = 1;
         }
         else
         if (argv[0][0] == 'i')
@@ -458,11 +460,13 @@ int main(int argc, char *argv[])
             {
                 do_read   = true;
                 from_file = true;
+                file_arg  = 2;
             }
             else
             if (argv[1][0] == 'w')
             {
                 do_write = true;
+                file_arg = 2;
             }
             else
             if (argv[1][0] == 'i')
@@ -476,7 +480,7 @@ int main(int argc, char *argv[])
 
     if (do_write)
     {
-        std::ofstream ofs("output.dat", std::ios::binary);
+        std::ofstream ofs(argv[file_arg], std::ios::binary);
 #else // !OUTPUT_ON_FILE
 #if defined(SEPARATE_IN_AND_OUT_STRING_STREAMS)
         std::ostringstream ofs;
