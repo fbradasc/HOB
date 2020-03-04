@@ -9,15 +9,6 @@ g++ -std=c++98 \
     test_message.cpp \
     -o test_message_on_file
 
-//
-// Usage to write messages on the outpud.dat file:
-//
-//    ./test_message_on_file w
-//
-// Usage to read messages from the outpud.dat file:
-//
-//    ./test_message r
-//
 ******************************************************************************/
 
 /******************************************************************************
@@ -75,9 +66,67 @@ diff3 f.txt i.txt s.txt
 #include "message.hpp"
 #include <inttypes.h>
 #include <limits.h>
+#include <getopt.h>
 
-#define LOG(message_,type_) printf("%s\n\n", message_(/*Message::JSON*/).c_str())
+static struct option const long_options[] =
+{
+    // These options set a flag
+    {"write"     , required_argument, 0, 'w'},
+    {"read"      , optional_argument, 0, 'r'},
+    {"inport"    , optional_argument, 0, 'i'},
+    {"dump"      , optional_argument, 0, 'd'},
+    {"help"      , no_argument      , 0, 'h'},
 
+    {0           , 0                , 0,   0}
+};
+
+char * dump_modes[] =
+{
+    [Message::JSON] = (char []){ 'j', 's', 'o', 'n', '\0' },
+    [Message::TEXT] = (char []){ 't', 'e', 'x', 't', '\0' },
+    NULL
+};
+
+void help(const char *my_name)
+{
+    static const char * const descr_options[] =
+    {
+        "<output_file>\n\n\twrite messages to binary <output_file>",
+        "<input_file|->\n\n\tread messages from binary <input_file> or from standard input <->",
+        "<input_file|->\n\n\tinport messages from text/json <input_file> or from standard input <->",
+        "<text|json>\n\n\tdump messages in plain <text> or <json> format",
+        "\n\n\tthis help",
+    };
+
+    cerr << endl << "Usage:" << endl << endl;
+
+    char short_option[2];
+
+    short_option[1] = '\0';
+
+    for (size_t i = 0; i < sizeof(descr_options) / sizeof(char *); i++)
+    {
+        short_option[0] = long_options[i].val;
+
+        cerr << my_name
+             << " --"
+             << long_options[i].name
+             << " | "
+             << "-"
+             << short_option
+             << " "
+             << descr_options[i]
+             << endl << endl;
+    }
+
+    cerr << endl;
+
+    exit(0);
+}
+
+Message::Dump dump_mode = Message::JSON;
+
+#define LOG(message_,type_) printf("%s\n", message_(dump_mode).c_str())
 
 #if defined(MINIMAL)
 DECLARE_MESSAGE(NumericNoParamMessage1, 42)
@@ -418,69 +467,127 @@ int main(int argc, char *argv[])
     (void)argv;
 
 #if defined(OUTPUT_ON_FILE)
-    bool do_read   = true;
-    bool do_write  = true;
+    bool do_read   = false;
+    bool do_write  = false;
     bool do_inport = false;
     bool from_file = false;
+    string in_file;
 
     int  file_arg  = 0;
 
-    if (argc>0)
+    int  option_index = 0;
+    int  c;
+
+    char *subopts;
+    char *value;
+    int   errfnd = 0;
+
+
+    while (true)
     {
-        do_read   = false;
-        do_write  = false;
-        do_inport = false;
+        c = getopt_long(argc,
+                        argv,
+                        "w:r:i:d:h",
+                        long_options,
+                        &option_index);
 
-        if (argv[0][0] == 'r')
+        if (c == -1)
         {
-            do_read = true;
-            file_arg  = 1;
-        }
-        else
-        if (argv[0][0] == 'w')
-        {
-            do_write = true;
-            file_arg  = 1;
-        }
-        else
-        if (argv[0][0] == 'i')
-        {
-            do_inport = true;
-            file_arg  = 1;
+            break;
         }
 
-        if (argc>1)
+        switch (c)
         {
-            if (argv[1][0] == '-')
-            {
-                do_read = true;
-            }
-            else
-            if (argv[1][0] == 'r')
-            {
-                do_read   = true;
-                from_file = true;
-                file_arg  = 2;
-            }
-            else
-            if (argv[1][0] == 'w')
-            {
-                do_write = true;
-                file_arg = 2;
-            }
-            else
-            if (argv[1][0] == 'i')
-            {
-                do_inport = true;
-                from_file = true;
-                file_arg  = 2;
-            }
+            case 'w':
+                {
+                    do_write = true;
+                    
+                    if (NULL != optarg)
+                    {
+                        in_file  = optarg;
+                    }
+                    else
+                    {
+                        help(argv[0]);
+                    }
+                }
+                break;
+
+            case 'r':
+                {
+                    do_read = true;
+
+                    if (NULL != optarg)
+                    {
+                        in_file = optarg;
+
+                        if (!in_file.empty() && in_file != "-")
+                        {
+                            from_file = true;
+                        }
+                    }
+                }
+                break;
+
+            case 'i':
+                {
+                    do_inport = true;
+
+                    if (NULL != optarg)
+                    {
+                        in_file = optarg;
+
+                        if (!in_file.empty() && in_file != "-")
+                        {
+                            from_file = true;
+                        }
+                    }
+                }
+                break;
+
+            case 'h':
+                {
+                    help(argv[0]);
+                }
+                break;
+
+            case 'd':
+                {
+                    subopts = optarg;
+
+                    while ((NULL != subopts) && (*subopts != '\0') && !errfnd)
+                    {
+                        switch (getsubopt(&subopts, dump_modes, &value))
+                        {
+                            case Message::JSON:
+                                dump_mode = Message::JSON;
+                                break;
+
+                            case Message::TEXT:
+                                dump_mode = Message::TEXT;
+                                break;
+
+                            default:
+                                errfnd = 1;
+                                break;
+                        }
+                    }
+                }
+                break;
+
+            default:
+                break;
         }
+    }
+
+    if (!do_read && !do_write && !do_inport)
+    {
+        help(argv[0]);
     }
 
     if (do_write)
     {
-        std::ofstream ofs(argv[file_arg], std::ios::binary);
+        std::ofstream ofs(in_file.c_str(), std::ios::binary);
 #else // !OUTPUT_ON_FILE
 #if defined(SEPARATE_IN_AND_OUT_STRING_STREAMS)
         std::ostringstream ofs;
@@ -636,17 +743,17 @@ int main(int argc, char *argv[])
         {
             if (do_inport)
             {
-                ifile.open(argv[file_arg]);
+                ifile.open(in_file.c_str());
             }
             else
             {
-                ifile.open(argv[file_arg], std::ios::binary);
+                ifile.open(in_file.c_str(), std::ios::binary);
             }
 
             is = &ifile;
         }
 
-        if (do_inport && Message::parse(*is, os))
+        if (do_inport && (*is >> os)) // same of Message::parse(*is, os)
         {
             is = &os;
         }

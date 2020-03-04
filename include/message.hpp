@@ -1772,9 +1772,10 @@ private:
     }
 };
 
-bool operator<<(ostream &is, Message &m) { return m >> is; } 
-bool operator>>(istream &is, Message &m) { return m << is; } 
-bool operator>>(Message &im, Message &m) { return m << im; }
+bool operator<<(ostream &o, Message &m) { return m >> o; } 
+bool operator>>(istream &i, Message &m) { return m << i; } 
+bool operator>>(Message &i, Message &m) { return m << i; }
+bool operator>>(istream &i, ostream &o) { return Message::parse(i,o); } 
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
