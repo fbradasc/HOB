@@ -67,6 +67,17 @@ diff3 f.txt i.txt s.txt
 #include <inttypes.h>
 #include <limits.h>
 #include <getopt.h>
+#include "../messages.h"
+
+Message::Dump dump_mode = Message::JSON;
+
+MyStruct               m_MyStruct              ;
+AnotherStruct          m_AnotherStruct         ;
+NoParamMessage         m_NoParamMessage        ;
+NumericNoParamMessage  m_NumericNoParamMessage ;
+NumericMessage         m_NumericMessage        ;
+NumericExtraParameters m_NumericExtraParameters;
+ComplexStruct          m_ComplexStruct         ;
 
 static struct option const long_options[] =
 {
@@ -124,130 +135,14 @@ void help(const char *my_name)
     exit(0);
 }
 
-Message::Dump dump_mode = Message::JSON;
-
-#define LOG(message_,type_) printf("%s\n", message_(dump_mode).c_str())
-
 #if defined(MINIMAL)
-DECLARE_MESSAGE(NumericNoParamMessage1, 42)
-DECLARE_MESSAGE(NumericNoParamMessage2, 42)
-
-NumericNoParamMessage1 m_NumericNoParamMessage1;
-NumericNoParamMessage2 m_NumericNoParamMessage2;
-
 int main(int argc, char *argv[])
 {
-    LOG(m_NumericNoParamMessage1, NumericNoParamMessage1);
-    LOG(m_NumericNoParamMessage2, NumericNoParamMessage2);
+    LOG(m_NumericNoParamMessage1);
+    LOG(m_NumericNoParamMessage2);
     return 0;
 }
 #else // MINIMAL
-enum MyEnum {
-    enOne,
-    enTwo,
-    enThree,
-    invalidMax = 2147483647
-};
-
-typedef bitset<256> MegaFlagsT;
-typedef bitset<4> FlagsT;
-
-typedef map<uint8_t, string> MyMap;
-
-DECLARE_MESSAGE(MyStruct, "MY_STRUCT",
-    //
-    // mandatory fields
-    //
-    (uint32_t, anEnum  , static_cast<uint32_t>(enTwo))
-    (uint8_t , aChar   , 4              )
-    (float   , aFloat  , 3.14f          ),
-    //
-    // optional fields
-    //
-    (bool    , optional, true           )
-)
-
-#if 0
-DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
-    (int8_t  , bnil, 0        )
-    (int8_t  , bone, 1        )
-    (int8_t  , bmin, SCHAR_MIN)
-    (int8_t  , bmax, SCHAR_MAX)
-    (int16_t , snil, 0        )
-    (int16_t , sone, 1        )
-    (int16_t , smin, SHRT_MIN )
-    (int16_t , smax, SHRT_MAX )
-    (int32_t , inil, 0        )
-    (int32_t , ione, 1        )
-    (int32_t , imin, INT_MIN  )
-    (int32_t , imax, INT_MAX  )
-    (int64_t , lnil, 0        )
-    (int64_t , lone, 1        )
-    (int64_t , lmin, LLONG_MIN)
-    (int64_t , lmax, LLONG_MAX)
-    (double  , bar , 3.1415927)
-    (MyStruct, dat            )
-)
-#else
-DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
-    (int8_t  , bnil, 0)
-    (int8_t  , bone, 0)
-    (int8_t  , bmin, 0)
-    (int8_t  , bmax, 0)
-    (int16_t , snil, 0)
-    (int16_t , sone, 0)
-    (int16_t , smin, 0)
-    (int16_t , smax, 0)
-    (int32_t , inil, 0)
-    (int32_t , ione, 0)
-    (int32_t , imin, 0)
-    (int32_t , imax, 0)
-    (int64_t , lnil, 0)
-    (int64_t , lone, 0)
-    (int64_t , lmin, 0)
-    (int64_t , lmax, 0)
-    (double  , bar , 0)
-    (MyStruct, dat    )
-    (MyMap   , aMap   )
-)
-#endif
-
-DECLARE_MESSAGE(ComplexStruct, "COMPLEX_STRUCT",
-    (AnotherStruct , root)
-    (MegaFlagsT    , bits)
-    (vector<bool>  , var_bits)
-    (vector<FlagsT>, iperbits)
-)
-
-DECLARE_MESSAGE(NoParamMessage, "NO_PARAMS")
-
-DECLARE_MESSAGE(NumericNoParamMessage, Message::UID(42))
-
-DECLARE_MESSAGE(NumericMessage, Message::UID(42),
-     (bool              , valid, false)
-     /*(long double       , bignum, 1.23456789123456789)*/
-     (string            , text , "1Po'DiMaiuscoleMinuscole&Numeri")
-     (vector<int8_t>    , bytes)
-     (vector<double>    , levels)
-     (optional<string>  , opt_param)
-     (optional<MyStruct>, opt_struct)
-     (vector<float>     , numbers)
-     (vector<string>    , names)
-     (vector<MyStruct>  , structs)
-)
-
-DECLARE_MESSAGE(NumericExtraParameters, Message::UID(43),
-     ,
-     (bool, extra, true)
-)
-
-MyStruct               m_MyStruct              ;
-AnotherStruct          m_AnotherStruct         ;
-NoParamMessage         m_NoParamMessage        ;
-NumericNoParamMessage  m_NumericNoParamMessage ;
-NumericMessage         m_NumericMessage        ;
-NumericExtraParameters m_NumericExtraParameters;
-ComplexStruct          m_ComplexStruct         ;
 
 bool handle_message(Message &m)
 {
@@ -267,7 +162,7 @@ bool handle_message(Message &m)
 
     if (m == m_AnotherStruct)
     {
-        LOG(m_AnotherStruct, AnotherStruct);
+        LOG(m_AnotherStruct);
     }
 
 #if 0
@@ -275,7 +170,7 @@ bool handle_message(Message &m)
     {
         printf("Skipping\n");
 
-        LOG(m, Message);
+        LOG(m);
 
         m.skip();
 
@@ -287,12 +182,12 @@ bool handle_message(Message &m)
 
     if (m >> m_MyStruct)
     {
-        LOG(m_MyStruct, MyStruct);
+        LOG(m_MyStruct);
     }
     else
     if (m >> m_AnotherStruct)
     {
-        LOG(m_AnotherStruct, AnotherStruct);
+        LOG(m_AnotherStruct);
 
         if (m_AnotherStruct)
         {
@@ -426,34 +321,34 @@ bool handle_message(Message &m)
     else
     if (m >> m_NoParamMessage)
     {
-        LOG(m_NoParamMessage, NoParamMessage);
+        LOG(m_NoParamMessage);
     }
     else
     if (m >> m_NumericNoParamMessage)
     {
-        LOG(m_NumericNoParamMessage, NumericNoParamMessage);
+        LOG(m_NumericNoParamMessage);
     }
     else
     if (m >> m_NumericMessage)
     {
-        LOG(m_NumericMessage, NumericMessage);
+        LOG(m_NumericMessage);
     }
     else
     if (m >> m_ComplexStruct)
     {
-        LOG(m_ComplexStruct, ComplexStruct);
+        LOG(m_ComplexStruct);
     }
 /*
     else
     if (m_NumericExtraParameters << m)
     {
-        LOG(m_NumericExtraParameters, NumericExtraParameters);
+        LOG(m_NumericExtraParameters);
     }
 */
     else
     {
         printf("Unknown message\n");
-        LOG(m, Message);
+        LOG(m);
 
         handled = false;
     }
@@ -598,11 +493,11 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING MESSAGES ]------------------\n\n");
 
-        { MyStruct               m; m >> ofs; LOG(m, MyStruct             ); }
+        { MyStruct               m; m >> ofs; LOG(m); }
         {
             AnotherStruct m;
 
-            // LOG(m, AnotherStruct);
+            // LOG(m);
 
             m.bmin = SCHAR_MIN;
             m.bmax = SCHAR_MAX;
@@ -621,7 +516,7 @@ int main(int argc, char *argv[])
 
             m >> ofs;
 
-            LOG(m, AnotherStruct);
+            LOG(m);
 
             m.bnil       = 2;
             m.bone       = 3;
@@ -630,11 +525,11 @@ int main(int argc, char *argv[])
 
             m >> ofs;
 
-            LOG(m, AnotherStruct);
+            LOG(m);
         }
-        { NoParamMessage         m; m >> ofs; LOG(m, NoParamMessage        ); }
-        { NumericNoParamMessage  m; m >> ofs; LOG(m, NumericNoParamMessage ); }
-        { NumericExtraParameters m; m >> ofs; LOG(m, NumericExtraParameters); }
+        { NoParamMessage         m; m >> ofs; LOG(m); }
+        { NumericNoParamMessage  m; m >> ofs; LOG(m); }
+        { NumericExtraParameters m; m >> ofs; LOG(m); }
         {
             NumericMessage m;
 
@@ -679,7 +574,7 @@ int main(int argc, char *argv[])
 
             m >> ofs;
 
-            LOG(m, NumericMessage);
+            LOG(m);
         }
         {
             ComplexStruct m;
@@ -726,7 +621,7 @@ int main(int argc, char *argv[])
 
             m >> ofs;
 
-            LOG(m, ComplexStruct);
+            LOG(m);
         }
 
 #if defined(OUTPUT_ON_FILE)
@@ -753,7 +648,10 @@ int main(int argc, char *argv[])
             is = &ifile;
         }
 
-        if (do_inport && (*is >> os)) // same of Message::parse(*is, os)
+        Message::Src src(*is);
+        Message::Snk snk(os);
+
+        if (do_inport && (src >> snk)) // same of Message::parse(src, snk)
         {
             is = &os;
         }

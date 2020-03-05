@@ -278,9 +278,24 @@ public:
         return ss.str();
     }
 
-    static bool parse(istream &is, ostream &os)
+    template<class T>
+    class StreamWrapper
     {
-        return parse(is,os,'\0');
+    public:
+        StreamWrapper(T &s): _str_ref(s) {}
+
+        T & operator()(void) { return _str_ref; }
+
+    private:
+        T & _str_ref;
+    };
+
+    typedef StreamWrapper<istream> Src;
+    typedef StreamWrapper<ostream> Snk;
+
+    static bool parse(Src &is, Snk &os)
+    {
+        return parse(is(),os(),'\0');
     }
 
 protected:
@@ -1772,10 +1787,10 @@ private:
     }
 };
 
-bool operator<<(ostream &o, Message &m) { return m >> o; } 
-bool operator>>(istream &i, Message &m) { return m << i; } 
-bool operator>>(Message &i, Message &m) { return m << i; }
-bool operator>>(istream &i, ostream &o) { return Message::parse(i,o); } 
+bool operator<<(ostream      &o, Message      &m) { return m >> o; } 
+bool operator>>(istream      &i, Message      &m) { return m << i; } 
+bool operator>>(Message      &i, Message      &m) { return m << i; }
+bool operator>>(Message::Src &i, Message::Snk &o) { return Message::parse(i,o); } 
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))

@@ -7,7 +7,9 @@
 #include <cstring>
 #include <iostream>
 #include <thread>
-#include "messages.h"
+#include "../messages.h"
+
+Message::Dump dump_mode = Message::JSON;
 
 Hello m_hi;
 Put   m_put;
@@ -88,7 +90,7 @@ int main(int argc, char *argv[])
 
         usleep(500000);
 
-        std::cout << "Type a command (bye|put|get): ";
+        std::cout << "Type a command (bye|put|get|msg): ";
 
         std::getline(std::cin, data);
 
@@ -106,6 +108,16 @@ int main(int argc, char *argv[])
             m_put.data = data;
 
             io << m_put; std::cout << "Sending: " << m_put(Message::JSON) << std::endl;
+        }
+
+        if (data == "msg")
+        {
+            std::cout << "Enter text/json messages to send:" << endl;
+
+            Message::Src src(std::cin);
+            Message::Snk snk(io);
+
+            src >> snk;
         }
 
         if (data == "get")
