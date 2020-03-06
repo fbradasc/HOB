@@ -1,5 +1,5 @@
 #include <fstream>
-#include "HOB.hpp"
+#include "hob.hpp"
 
 int main(int argc, char *argv[])
 {

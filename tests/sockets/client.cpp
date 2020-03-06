@@ -7,7 +7,7 @@
 #include <cstring>
 #include <iostream>
 #include <thread>
-#include "../HOBs.h"
+#include "../hobs.h"
 
 HOB::Dump dump_mode = HOB::JSON;
 

@@ -63,11 +63,11 @@ diff3 f.txt i.txt s.txt
 ******************************************************************************/
 #include <stdio.h>
 #include <fstream>
-#include "HOB.hpp"
+#include "hob.hpp"
 #include <inttypes.h>
 #include <limits.h>
 #include <getopt.h>
-#include "../HOBs.h"
+#include "../hobs.h"
 
 HOB::Dump dump_mode = HOB::JSON;
 
