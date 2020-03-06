@@ -1,27 +1,26 @@
-# Message
+# Header Only Buffer
 
-**Message** is a single header implementation C preprocessor macro to define C++
-message classes which can binary and JSON serializable over a std::iostream.
+**Header Only Buffer** (**HOB** for short) is a single C++ header implementation
+preprocessor macro to define C++ structured buffers classes which can be binary
+and text/JSON serializable over a std::iostream.
 
-JSON data is only serialized, binary data are deserialized as well.
+## The HOBSTRUCT macro
 
-## The DECLARE_MESSAGE macro
-
-A message needs to be declared by using the DECLARE_MESSAGE() macro.
+An **HOB** structure needs to be declared by using the HOBSTRUCT() macro.
 
 ### Identification
 
-A very basic message requires a name and an identifier:
+A very basic **HOB** requires a name and an identifier:
 
 ```
-DECLARE_MESSAGE (
-    class_name,
+HOBSTRUCT (
+    hob_name,
     identifier
 )
 ```
 
-*class_name*: it's the message C++ class name  
-*identifier*: it's used to assign the message *UID* base value  
+*hob_name*: it's the **HOB** C++ class name  
+*identifier*: it's used to assign the **HOB** *UID* base value  
 
 The *identifier* can be:  
 
@@ -30,11 +29,11 @@ The *identifier* can be:
 
 ### Core parameters
 
-A message can have core parameters:
+An **HOB** can have core parameters:
 
 ```
-DECLARE_MESSAGE (
-    class_name,
+HOBSTRUCT (
+    hob_name,
     identifier,
     parameters
 )
@@ -53,15 +52,15 @@ DECLARE_MESSAGE (
 *field_#_name*         : [mandatory] it's the field's C++ varible name  
 *field_#_default_value*: [optional] it's the field's C++ variable default value
 
-The core parameters are used to update the message *UID*.
+The core parameters are used to update the **HOB** *UID*.
 
 ### Extra parameters
 
-A message can also have extra parameters:
+An **HOB** can also have extra parameters:
 
 ```
-DECLARE_MESSAGE (
-    class_name,
+HOBSTRUCT (
+    hob_name,
     identifier,
     core_parameters,
     extra_parameters
@@ -70,11 +69,11 @@ DECLARE_MESSAGE (
 
 Extra parameters are defined in the same way as core parameters.
 
-The extra parameters are **not** used to update the message *UID*.
+The extra parameters are **not** used to update the **HOB** *UID*.
 
 ### Parameter types
 
-The message parameters are C++ variables by value (references and pointers are
+The **HOB** parameters are C++ variables by value (references and pointers are
 not supported) and can be any of the following types:
 
 #### Base types
@@ -88,15 +87,15 @@ not supported) and can be any of the following types:
 
 Where N is the number of bits to be stored in the bitset.
 
-#### Another message
+#### Another **HOB**
 
-    Message
+    HOB
 
 Example:
 ```
-DECLARE_MESSAGE(Payload, 42)
+HOBSTRUCT(Payload, 42)
 
-DECLARE_MESSAGE (
+HOBSTRUCT (
     Envelope,
     "Encapsulated",
     ( Payload, payload )
@@ -119,20 +118,20 @@ To do this just declare the parameter by means of:
 
 Where T can be any of the above parameter's type.
 
-## Messages definition and usage
+## **HOB** definition and usage
 
-After a message has been declared, by means of the DECLARE_MESSAGE() macro, a
-variable can be defined with the message type:
+After an **HOB** has been declared, by means of the HOBSTRUCT() macro, a
+variable can be defined with the **HOB** type:
 
 ```
-DECLARE_MESSAGE(MyMessageT, ...)
+HOBSTRUCT(MyMessageT, ...)
 
 MyMessageT myMessage;
 ```
 
 ### Serialization
 
-Messages can be serialized over a C++ STL ostream or iostream derived object:
+**HOBs** can be serialized over a C++ STL ostream or iostream derived object:
 
 ```
 std::stringstream stream;
@@ -142,26 +141,26 @@ myMessage >> stream;
 
 ### Deserialization
 
-Messages can be retrieved from a C++ STL istream derived object.  
+**HOBSs** can be retrieved from a C++ STL istream derived object.  
 However to make sure that the deserialized data is really what it should be,
 some steps are needed:
 
-1. Deserialization of the message *UID*
+1. Deserialization of the **HOB** *UID*
     
 | equivalent syntaxes           |
 | :---                          |
 | ```std::istream >> message``` |
 | ```message << std::istream``` |
 
-2. Optionally match the deserialized *UID* with the message type to be read
+2. Optionally match the deserialized *UID* with the **HOB** type to be read
     
 | syntaxes                    | relation                       |
 | :---                        | :---                           |
 | ```message == my_message``` | message **IS A** my_message    | 
 | ```message != my_message``` | message **IS NOT A** my_message|
 
-3. Deserialization of the message data, it is successful only if the *UID*
-   matches the message to be read
+3. Deserialization of the **HOB** data, it is successful only if the *UID*
+   matches the **HOB** to be read
 
 | equivalent syntaxes          |
 | :---                         |
@@ -172,24 +171,24 @@ Example:
 ```
 std::ifstream stream("messages.dat", std::ios::binary);
 
-Message m;  // define a generic message object
+HOB m;  // define a generic HOB object
 
-// 1. retrieve the message UID from the input stream
+// 1. retrieve the HOB UID from the input stream
 //
 if (stream >> m)
 {
-    // 2. [optional] ensure the message read is of MyMessageT type
+    // 2. [optional] ensure the HOB read is of MyMessageT type
     //
     if (m != myMessage)
     {
-        printf("Unknown message type\n");
+        printf("Unknown HOB type\n");
     }
 
-    // 3. deserialize the message content
+    // 3. deserialize the HOB content
     //
     if (m >> myMessage)
     {
-        // do stuffs with the message
+        // do stuffs with the HOB
     }
 }
 ```
@@ -197,22 +196,22 @@ if (stream >> m)
 NOTE:  
 The following syntaxes are equivalent:
     
-| 1. retrieve message *UID*     | 3. retrieve message data    |
+| 1. retrieve **HOB** *UID*     | 3. retrieve **HOB** data    |
 | :---                          | :---                        |
 | ```std::istream >> message``` | ```message >> my_message``` |
 | ```message << std::istream``` | ```my_message << message``` |
 
 #### Detecting changes due to deserialization
 
-The declared messages have methods to enquire/reset changes in their data:
+The declared **HOBSs** have methods to enquire/reset changes in their data:
 
     operator bool () const;
 
-Can be used to detect the change status in any of the message fileds.
+Can be used to detect the change status in any of the **HOB** fileds.
 
     void operator ~ ();
 
-Can be used to reset the change status in all of the message fileds.
+Can be used to reset the change status in all of the **HOB** fileds.
 
     bool operator & (const Fields &field) const;
 
@@ -236,24 +235,24 @@ enum Fields
 ##### Changes detection example
 
 ```
-// declare the specific message class
+// declare the specific HOB class
 //
-DECLARE_MESSAGE (
+HOBSTRUCT (
     ChemicalReactionM,
     42,
     (double, temp, 0.0d)
     (double, pres, 0.0d)
 )
 
-Message m;  // define a generic message object
+HOB m;  // define a generic HOB object
 
-ChemicalReactionM chemicalReaction; // define the specific message object
+ChemicalReactionM chemicalReaction; // define the specific HOB object
 
-// retrieve the message UID from the input stream
+// retrieve the HOB UID from the input stream
 //
 while (stream >> m)
 {
-    // deserialize the message content
+    // deserialize the HOB content
     //
     // NOTE:
     // the change status of all the fields is being reset by the deserialization
@@ -295,19 +294,19 @@ while (stream >> m)
     }
 }
 ```
-#### Messages as events
+#### HOBs as events
 
-Messages can be used as events in an event oriented application.
+**HOBSs** can be used as events in an event oriented application.
 
 ```
-DECLARE_MESSAGE(AlmightyEvent, 42)
+HOBSTRUCT(AlmightyEvent, 42)
 
 AlmightyEvent almight_evt;
 ```
 
 ##### Sending events
 
-To send an event just use message serialization:
+To send an event just use **HOB** serialization:
 
 ```
 std::stringstream events_queue;
@@ -320,11 +319,11 @@ almight_evt >> events_queue;
 Dispatch events in the following manner:
 
 ```
-typedef void (*EventHandler)(const Message &);
+typedef void (*EventHandler)(const HOB &);
 
 list<EventHandlers> event_handlers;
 
-Message evt;
+HOB evt;
 
 // 1. retrieve the event UID from the events queue
 //
@@ -342,7 +341,7 @@ while (events_queue >> evt)
 ##### Handling events
 
 ```
-void handle_message(Message &m)
+void handle_message(HOB &m)
 {
     // 2. ensure the event read is of AlmightyEvent type
     //
@@ -368,7 +367,7 @@ void handle_message(Message &m)
 
 ### Binary Serialization
 
-The Message content data types are encoded according to their data types.
+The **HOB** content data types are encoded according to their data types.
 
 #### Data type encoding
 
@@ -466,23 +465,23 @@ bitset<N>
 *bitset* types with *N* bits are encoded as a **vector<uint8_t>** having
 **(N+7)/8** items.
 
-###### Message types
+###### **HOB** types
 
 ```
-Message
+HOB
 ```
 
-*Message* are encoded by packing the message *UID* optionally followed by 
-the number of bytes required to serialize the message parameters, followed by
-the message parameters serialization.
+**HOB** are encoded by packing the **HOB** *UID* optionally followed by 
+the number of bytes required to serialize the **HOB** parameters, followed by
+the **HOB** parameters serialization.
 
-The *UID* of a message without parameters is an even integer numeric value.
+The *UID* of an **HOB** without parameters is an even integer numeric value.
 
 | UID (even value) |
 |     :---:        |
 |     VARINT       |
 
-The *UID* of a message with parameters is an odd integer numeric value.
+The *UID* of an **HOB** with parameters is an odd integer numeric value.
 
 | UID (odd value) | Payload Size |      Payload       |
 |     :---:       |    :---:     |       :---:        |

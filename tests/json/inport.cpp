@@ -1,5 +1,5 @@
 #include <fstream>
-#include "message.hpp"
+#include "HOB.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -9,10 +9,10 @@ int main(int argc, char *argv[])
     txt.open(argv[1]);
     raw.open(argv[2], std::ios::binary);
 
-    Message::Src src(txt);
-    Message::Snk snk(raw);
+    HOB::Src src(txt);
+    HOB::Snk snk(raw);
 
-    src >> snk; // same of Message::parse(src,snk);
+    src >> snk; // same of HOB::parse(src,snk);
 
     txt.close();
     raw.close();

@@ -1,5 +1,5 @@
-#if !defined(__MESSAGE_DECLARATION__)
-#define __MESSAGE_DECLARATION__
+#if !defined(__HOB_HPP__)
+#define __HOB_HPP__
 #include <stdint.h>
 #include <vector>
 #include <map>
@@ -20,12 +20,12 @@
                               printf(__VA_ARGS__);        \
                               printf("\n");
 
-#define ASSERT_DUMP(os, ...)  if (!Message::_w(os, __VA_ARGS__)) { return false; }
+#define ASSERT_DUMP(os, ...)  if (!HOB::_w(os, __VA_ARGS__)) { return false; }
 
 #define ASSERT_SREAD(f,v,s)   deserialize(f,v,s)
 
 #if defined(DEBUG_WRITE)
-#define ASSERT_SWRITE(f,v,s)  Message::_w(f,v,s)
+#define ASSERT_SWRITE(f,v,s)  HOB::_w(f,v,s)
 #else // DEBUG_WRITE
 #define ASSERT_SWRITE(f,v,s)  (f.write(reinterpret_cast<const char *>(v),s)\
                                 .good())
@@ -105,7 +105,7 @@
 using namespace std;
 using namespace nonstd;
 
-class Message
+class HOB
 {
 public:
     typedef uint64_t UID;
@@ -118,7 +118,7 @@ public:
         TEXT,
     };
 
-    Message()
+    HOB()
         : _id(UNDEFINED)
         , _is(     NULL)
         , _sp(        0)
@@ -126,7 +126,7 @@ public:
         , _np(       -1)
     { }
 
-    Message(const UID &id_)
+    HOB(const UID &id_)
         : _id(   0)
         , _is(NULL)
         , _sp(   0)
@@ -136,7 +136,7 @@ public:
         update_id(id_);
     }
 
-    Message(const char *id_)
+    HOB(const char *id_)
         : _id(   0)
         , _is(NULL)
         , _sp(   0)
@@ -146,7 +146,7 @@ public:
         update_id(id_);
     }
 
-    Message(const string &id_)
+    HOB(const string &id_)
         : _id(   0)
         , _is(NULL)
         , _sp(   0)
@@ -156,16 +156,16 @@ public:
         update_id(id_);
     }
 
-    Message(const Message &ref)
+    HOB(const HOB &ref)
     {
         *this = ref;
     }
 
-    virtual ~Message()
+    virtual ~HOB()
     {
     }
 
-    Message & operator=(const Message & ref)
+    HOB & operator=(const HOB & ref)
     {
         _id = ref._id;
         _ss.str(ref._ss.str()); // TODO: needed ?
@@ -183,7 +183,7 @@ public:
         return _r(is_);
     }
 
-    bool operator<<(Message & ref)
+    bool operator<<(HOB & ref)
     {
         return ((_id == ref._id) && _r(ref));
     }
@@ -227,14 +227,14 @@ public:
         return true;
     }
 
-    bool operator==(const Message &ref) const
+    bool operator==(const HOB &ref) const
     {
         bool rv = (_id == ref._id);
 
         return rv;
     }
 
-    bool operator!=(const Message &ref) const
+    bool operator!=(const HOB &ref) const
     {
         bool rv = (_id != ref._id);
 
@@ -435,7 +435,7 @@ protected:
         return ASSERT_SWRITE(os, v, size_);
     }
 
-    static bool _w(ostream &os, const Message &v)
+    static bool _w(ostream &os, const HOB &v)
     {
         return (v >> os);
     }
@@ -760,11 +760,11 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, Message &v, ssize_t field=-1)
+    bool _r(istream &is_, HOB &v, ssize_t field=-1)
     {
         if (!is_.eof())
         {
-            Message m;
+            HOB m;
 
             if (m << is_)
             {
@@ -1079,7 +1079,7 @@ protected:
         o << (v ? "{\"B\":true}" : "{\"B\":false}");
     }
 
-    static void _t(ostream &o, const Message &v, int indent = -1)
+    static void _t(ostream &o, const HOB &v, int indent = -1)
     {
         v._s(o, indent);
     }
@@ -1286,7 +1286,7 @@ protected:
         o << dec << setw(0);
     }
 
-    virtual bool _r(Message &ref) { (void)ref; return true; }
+    virtual bool _r(HOB &ref) { (void)ref; return true; }
 
     virtual bool _r(istream &is_)
     {
@@ -1371,7 +1371,7 @@ protected:
         if (NULL != in)
         {
             //
-            // count message parameters
+            // count HOB parameters
             //
             _np++;
 
@@ -1386,8 +1386,8 @@ protected:
         //
         if (_np >= 0)
         {
-            // Messages with    parameters have an odd  ID
-            // Messages without parameters have an even ID
+            // HOBs with    parameters have an odd  ID
+            // HOBs without parameters have an even ID
 
             _id <<= 1;
             _id |= (_np > 0);
@@ -1787,10 +1787,10 @@ private:
     }
 };
 
-bool operator<<(ostream      &o, Message      &m) { return m >> o; } 
-bool operator>>(istream      &i, Message      &m) { return m << i; } 
-bool operator>>(Message      &i, Message      &m) { return m << i; }
-bool operator>>(Message::Src &i, Message::Snk &o) { return Message::parse(i,o); } 
+bool operator<<(ostream  &o, HOB      &m) { return m >> o; } 
+bool operator>>(istream  &i, HOB      &m) { return m << i; } 
+bool operator>>(HOB      &i, HOB      &m) { return m << i; }
+bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); } 
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
@@ -1819,8 +1819,8 @@ bool operator>>(Message::Src &i, Message::Snk &o) { return Message::parse(i,o); 
 #define DECLARE_ENUM(t, n, ...)  _ ## n,
 #define DECLARE_FIELD(t, n, ...) t n;
 #define INIT_FIELD(t, n, ...)    IF(HAS_ARGS(__VA_ARGS__) )(n = __VA_ARGS__;)
-#define READ_FIELD(t, n, ...)    && Message::_r(is_, n, _ ## n)
-#define WRITE_FIELD(t, n, ...)   && Message::_w(os, n)
+#define READ_FIELD(t, n, ...)    && HOB::_r(is_, n, _ ## n)
+#define WRITE_FIELD(t, n, ...)   && HOB::_w(os, n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
 #define UPDATE_NP(t, n, ...)     update_id("");
@@ -1963,8 +1963,8 @@ bool operator>>(Message::Src &i, Message::Snk &o) { return Message::parse(i,o); 
             __ ## n ## __changed__fields__[f] = v;                             \
         }                                                                      \
 
-#define DECLARE_MESSAGE(name_, value_, ...)                                    \
-class name_ : public Message                                                   \
+#define HOBSTRUCT(name_, value_, ...)                                          \
+class name_ : public HOB                                                       \
 {                                                                              \
 public:                                                                        \
     enum Fields                                                                \
@@ -1977,7 +1977,7 @@ public:                                                                        \
     SCAN_FIELDS(DECLARE_FIELD, FIRST(__VA_ARGS__))                             \
     SCAN_FIELDS(DECLARE_FIELD, REMAIN(__VA_ARGS__))                            \
                                                                                \
-    name_() : Message(value_)                                                  \
+    name_() : HOB(value_)                                                      \
     {                                                                          \
         SCAN_FIELDS(INIT_FIELD, FIRST(__VA_ARGS__))                            \
         SCAN_FIELDS(INIT_FIELD, REMAIN(__VA_ARGS__))                           \
@@ -1988,15 +1988,15 @@ public:                                                                        \
         /* Extra fields update parameters count */                             \
         SCAN_FIELDS(UPDATE_NP, REMAIN(__VA_ARGS__))                            \
                                                                                \
-        update_id(static_cast<const char *>(NULL)); /* finalize message ID */  \
+        update_id(static_cast<const char *>(NULL)); /* finalize HOB ID */      \
     }                                                                          \
                                                                                \
-    name_(const Message & ref): Message(ref)                                   \
+    name_(const HOB & ref): HOB(ref)                                           \
     {                                                                          \
         *this = ref;                                                           \
     }                                                                          \
                                                                                \
-    name_(const name_ & ref): Message(ref)                                     \
+    name_(const name_ & ref): HOB(ref)                                         \
     {                                                                          \
         *this = ref;                                                           \
     }                                                                          \
@@ -2005,16 +2005,16 @@ public:                                                                        \
     {                                                                          \
     }                                                                          \
                                                                                \
-    name_ & operator=(const Message & ref)                                     \
+    name_ & operator=(const HOB & ref)                                         \
     {                                                                          \
-        *static_cast<Message *>(this) = static_cast<const Message &>(ref);     \
+        *static_cast<HOB *>(this) = static_cast<const HOB &>(ref);             \
                                                                                \
         return *this;                                                          \
     }                                                                          \
                                                                                \
     name_ & operator=(const name_ & ref)                                       \
     {                                                                          \
-        *static_cast<Message *>(this) = static_cast<const Message &>(ref);     \
+        *static_cast<HOB *>(this) = static_cast<const HOB &>(ref);             \
                                                                                \
         SCAN_FIELDS(CLONE_FIELD, FIRST(__VA_ARGS__))                           \
         SCAN_FIELDS(CLONE_FIELD, REMAIN(__VA_ARGS__))                          \
@@ -2026,8 +2026,8 @@ public:                                                                        \
     {                                                                          \
         bool rv;                                                               \
                                                                                \
-        rv = ((*static_cast<const Message*>(this) ==                           \
-                static_cast<const Message &>(ref))                             \
+        rv = ((*static_cast<const HOB*>(this) ==                               \
+                static_cast<const HOB &>(ref))                                 \
                SCAN_FIELDS(COMPARE_FIELD, FIRST(__VA_ARGS__))                  \
                SCAN_FIELDS(COMPARE_FIELD, REMAIN(__VA_ARGS__)));               \
                                                                                \
@@ -2071,7 +2071,7 @@ protected:                                                                     \
         return is_changed(_FIELDS_COUNT_);                                     \
     }                                                                          \
                                                                                \
-    bool _r(Message &ref)                                                      \
+    bool _r(HOB &ref)                                                          \
     {                                                                          \
         reset_changes();                                                       \
                                                                                \
@@ -2099,7 +2099,7 @@ protected:                                                                     \
                                                                                \
             if ((true SCAN_FIELDS(READ_FIELD, REMAIN(__VA_ARGS__))) || true)   \
             {                                                                  \
-                Message::flush_pending();                                      \
+                HOB::flush_pending();                                          \
                                                                                \
                 return true;                                                   \
             }                                                                  \
@@ -2119,7 +2119,7 @@ protected:                                                                     \
                                                                                \
     virtual bool rewind()                                                      \
     {                                                                          \
-        return Message::rewind();                                              \
+        return HOB::rewind();                                                  \
     }                                                                          \
                                                                                \
     virtual void set_changed(ssize_t f, bool v)                                \
@@ -2150,4 +2150,4 @@ private:                                                                       \
     CHANGED_FIELDS(name_, __VA_ARGS__)                                         \
 };
 
-#endif // __MESSAGE_DECLARATION__
+#endif // __HOB_HPP__

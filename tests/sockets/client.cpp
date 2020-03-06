@@ -7,9 +7,9 @@
 #include <cstring>
 #include <iostream>
 #include <thread>
-#include "../messages.h"
+#include "../HOBs.h"
 
-Message::Dump dump_mode = Message::JSON;
+HOB::Dump dump_mode = HOB::JSON;
 
 Hello m_hi;
 Put   m_put;
@@ -18,7 +18,7 @@ Bye   m_bye;
 
 static void handleServer(std::iostream *io)
 {
-    Message m;
+    HOB m;
 
     while ((*io) >> m)
     {
@@ -26,26 +26,26 @@ static void handleServer(std::iostream *io)
 
         if (m >> m_hi)
         {
-            std::cout << m_hi(Message::JSON);
+            std::cout << m_hi(HOB::JSON);
         }
         else
         if (m >> m_put)
         {
-            std::cout << m_put(Message::JSON);
+            std::cout << m_put(HOB::JSON);
         }
         else
         if (m >> m_get)
         {
-            std::cout << m_get(Message::JSON);
+            std::cout << m_get(HOB::JSON);
         }
         else
         if (m >> m_bye)
         {
-            std::cout << m_bye(Message::JSON);
+            std::cout << m_bye(HOB::JSON);
         }
         else
         {
-            std::cout << "Unknown message: " << m(Message::JSON);
+            std::cout << "Unknown HOB: " << m(HOB::JSON);
         }
 
         std::cout << std::endl;
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 
     m_hi.my_id = m_put.my_id = m_get.my_id = m_bye.my_id = random();
 
-    io << m_hi; std::cout << "Sending: " << m_hi(Message::JSON) << std::endl;
+    io << m_hi; std::cout << "Sending: " << m_hi(HOB::JSON) << std::endl;
 
     while (!io.fail())
     {
@@ -107,15 +107,15 @@ int main(int argc, char *argv[])
 
             m_put.data = data;
 
-            io << m_put; std::cout << "Sending: " << m_put(Message::JSON) << std::endl;
+            io << m_put; std::cout << "Sending: " << m_put(HOB::JSON) << std::endl;
         }
 
         if (data == "msg")
         {
-            std::cout << "Enter text/json messages to send:" << endl;
+            std::cout << "Enter text/json HOBs to send:" << endl;
 
-            Message::Src src(std::cin);
-            Message::Snk snk(io);
+            HOB::Src src(std::cin);
+            HOB::Snk snk(io);
 
             src >> snk;
         }
@@ -128,11 +128,11 @@ int main(int argc, char *argv[])
 
             m_get.data = data;
 
-            io << m_get; std::cout << "Sending: " << m_get(Message::JSON) << std::endl;
+            io << m_get; std::cout << "Sending: " << m_get(HOB::JSON) << std::endl;
         }
     }
 
-    io << m_bye; std::cout << "Sending: " << m_bye(Message::JSON) << std::endl;
+    io << m_bye; std::cout << "Sending: " << m_bye(HOB::JSON) << std::endl;
 
     th1.join();
 

@@ -1,22 +1,22 @@
-#if !defined(__MESSAGES_H__)
-#define __MESSAGES_H__
+#if !defined(__HOBS_H__)
+#define __HOBS_H__
 
 #include <inttypes.h>
-#include "message.hpp"
+#include "HOB.hpp"
 
-extern Message::Dump dump_mode;
+extern HOB::Dump dump_mode;
 
-#define LOG(message_) printf("%s\n", message_(dump_mode).c_str())
+#define LOG(hob_) printf("%s\n", hob_(dump_mode).c_str())
 
-DECLARE_MESSAGE(Hello, Message::UID(0), (uint32_t, my_id))
-DECLARE_MESSAGE(Put  , Message::UID(1), (uint32_t, my_id) (string, data))
-DECLARE_MESSAGE(Get  , Message::UID(2), (uint32_t, my_id) (string, data))
-DECLARE_MESSAGE(Bye  , Message::UID(3), (uint32_t, my_id))
+HOBSTRUCT(Hello, HOB::UID(0), (uint32_t, my_id))
+HOBSTRUCT(Put  , HOB::UID(1), (uint32_t, my_id) (string, data))
+HOBSTRUCT(Get  , HOB::UID(2), (uint32_t, my_id) (string, data))
+HOBSTRUCT(Bye  , HOB::UID(3), (uint32_t, my_id))
 
 #if defined(MINIMAL)
 
-DECLARE_MESSAGE(NumericNoParamMessage1, 42)
-DECLARE_MESSAGE(NumericNoParamMessage2, 42)
+HOBSTRUCT(NumericNoParamMessage1, 42)
+HOBSTRUCT(NumericNoParamMessage2, 42)
 
 extern NumericNoParamMessage1 m_NumericNoParamMessage1;
 extern NumericNoParamMessage2 m_NumericNoParamMessage2;
@@ -35,7 +35,7 @@ typedef bitset<4> FlagsT;
 
 typedef map<uint8_t, string> MyMap;
 
-DECLARE_MESSAGE(MyStruct, "MY_STRUCT",
+HOBSTRUCT(MyStruct, "MY_STRUCT",
     //
     // mandatory fields
     //
@@ -49,7 +49,7 @@ DECLARE_MESSAGE(MyStruct, "MY_STRUCT",
 )
 
 #if 0
-DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
+HOBSTRUCT(AnotherStruct, "ANOTHER_STRUCT",
     (int8_t  , bnil, 0        )
     (int8_t  , bone, 1        )
     (int8_t  , bmin, SCHAR_MIN)
@@ -70,7 +70,7 @@ DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
     (MyStruct, dat            )
 )
 #else
-DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
+HOBSTRUCT(AnotherStruct, "ANOTHER_STRUCT",
     (int8_t  , bnil, 0)
     (int8_t  , bone, 0)
     (int8_t  , bmin, 0)
@@ -93,18 +93,18 @@ DECLARE_MESSAGE(AnotherStruct, "ANOTHER_STRUCT",
 )
 #endif
 
-DECLARE_MESSAGE(ComplexStruct, "COMPLEX_STRUCT",
+HOBSTRUCT(ComplexStruct, "COMPLEX_STRUCT",
     (AnotherStruct , root)
     (MegaFlagsT    , bits)
     (vector<bool>  , var_bits)
     (vector<FlagsT>, iperbits)
 )
 
-DECLARE_MESSAGE(NoParamMessage, "NO_PARAMS")
+HOBSTRUCT(NoParamMessage, "NO_PARAMS")
 
-DECLARE_MESSAGE(NumericNoParamMessage, Message::UID(42))
+HOBSTRUCT(NumericNoParamMessage, HOB::UID(42))
 
-DECLARE_MESSAGE(NumericMessage, Message::UID(42),
+HOBSTRUCT(NumericMessage, HOB::UID(42),
      (bool              , valid, false)
      /*(long double       , bignum, 1.23456789123456789)*/
      (string            , text , "1Po'DiMaiuscoleMinuscole&Numeri")
@@ -117,11 +117,11 @@ DECLARE_MESSAGE(NumericMessage, Message::UID(42),
      (vector<MyStruct>  , structs)
 )
 
-DECLARE_MESSAGE(NumericExtraParameters, Message::UID(43),
+HOBSTRUCT(NumericExtraParameters, HOB::UID(43),
      ,
      (bool, extra, true)
 )
 
 #endif // MINIMAL
 
-#endif // __MESSAGES_H__
+#endif // __HOBS_H__

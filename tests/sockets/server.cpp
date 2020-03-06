@@ -8,9 +8,9 @@
 #include <iostream>
 #include <list>
 #include <thread>
-#include "../messages.h"
+#include "../HOBs.h"
 
-Message::Dump dump_mode = Message::JSON;
+HOB::Dump dump_mode = HOB::JSON;
 
 Hello                  m_hi                    ;
 Put                    m_put                   ;
@@ -26,37 +26,37 @@ ComplexStruct          m_ComplexStruct         ;
 
 static std::list<std::iostream *> streamList;
 
-static void wall(Message &m, ostream *s)
+static void wall(HOB &m, ostream *s)
 {
     // for (auto s : streamList)
     {
         if (m >> m_hi)
         {
-            (*s) << m_hi; std::cout << "Sending: " << m_hi(Message::JSON) << std::endl;
+            (*s) << m_hi; std::cout << "Sending: " << m_hi(HOB::JSON) << std::endl;
         }
         else
         if (m >> m_put)
         {
             m_get.data = "recv some data";
 
-            (*s) << m_get; std::cout << "Sending: " << m_get(Message::JSON) << std::endl;
+            (*s) << m_get; std::cout << "Sending: " << m_get(HOB::JSON) << std::endl;
         }
         else
         if (m >> m_get)
         {
             m_put.data = "sent some data";
 
-            (*s) << m_put; std::cout << "Sending: " << m_put(Message::JSON) << std::endl;
+            (*s) << m_put; std::cout << "Sending: " << m_put(HOB::JSON) << std::endl;
         }
         else
         if (m >> m_bye)
         {
-            (*s) << m_bye; std::cout << "Sending: " << m_bye(Message::JSON) << std::endl;
+            (*s) << m_bye; std::cout << "Sending: " << m_bye(HOB::JSON) << std::endl;
         }
     }
 }
 
-bool handle_message(Message &m)
+bool handle_message(HOB &m)
 {
     bool handled = true;
 
@@ -68,7 +68,7 @@ bool handle_message(Message &m)
         (m == m_NumericExtraParameters) ||
         (m == m_ComplexStruct         ))
     {
-        printf("Known message\n");
+        printf("Known HOB\n");
     }
 
     if (m == m_AnotherStruct)
@@ -256,7 +256,7 @@ bool handle_message(Message &m)
     }
     else
     {
-        printf("Unknown message\n");
+        printf("Unknown HOB\n");
         LOG(m);
 
         handled = false;
@@ -270,7 +270,7 @@ static void handleClient(int fd, std::string remote)
     std::iostream io(&sbuf);
     streamList.push_back(&io);
 
-    Message m;
+    HOB m;
 
     while (io >> m)
     {
@@ -278,27 +278,27 @@ static void handleClient(int fd, std::string remote)
 
         if (m >> m_hi)
         {
-            std::cout << m_hi(Message::JSON);
+            std::cout << m_hi(HOB::JSON);
         }
         else
         if (m >> m_put)
         {
-            std::cout << m_put(Message::JSON);
+            std::cout << m_put(HOB::JSON);
         }
         else
         if (m >> m_get)
         {
-            std::cout << m_get(Message::JSON);
+            std::cout << m_get(HOB::JSON);
         }
         else
         if (m >> m_bye)
         {
-            std::cout << m_bye(Message::JSON);
+            std::cout << m_bye(HOB::JSON);
         }
         else 
         if (!handle_message(m))
         {
-            std::cout << "Unknown message: " << m(Message::JSON);
+            std::cout << "Unknown HOB: " << m(HOB::JSON);
         }
 
         std::cout << std::endl;

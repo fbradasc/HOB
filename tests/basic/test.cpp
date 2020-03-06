@@ -1,6 +1,6 @@
 /******************************************************************************
 //
-// This build command generate a test executable which writes and read messages
+// This build command generate a test executable which writes and read HOBs
 // to and from a file:
 
 g++ -std=c++98 \
@@ -13,7 +13,7 @@ g++ -std=c++98 \
 
 /******************************************************************************
 //
-// This build command generate a test executable which writes messages on a
+// This build command generate a test executable which writes HOBs on a
 // ostringstream and read messases from a istringstream initialized by the
 // previous ostringstream pbject:
 
@@ -33,7 +33,7 @@ g++ -std=c++98 \
 /******************************************************************************
 //
 // This build command generate a test executable which writes and reads
-// messages on the same stringstream for both output and input:
+// HOBs on the same stringstream for both output and input:
 
 g++ -std=c++98 \
     -O3 \
@@ -63,13 +63,13 @@ diff3 f.txt i.txt s.txt
 ******************************************************************************/
 #include <stdio.h>
 #include <fstream>
-#include "message.hpp"
+#include "HOB.hpp"
 #include <inttypes.h>
 #include <limits.h>
 #include <getopt.h>
-#include "../messages.h"
+#include "../HOBs.h"
 
-Message::Dump dump_mode = Message::JSON;
+HOB::Dump dump_mode = HOB::JSON;
 
 MyStruct               m_MyStruct              ;
 AnotherStruct          m_AnotherStruct         ;
@@ -93,8 +93,8 @@ static struct option const long_options[] =
 
 char * dump_modes[] =
 {
-    [Message::JSON] = (char []){ 'j', 's', 'o', 'n', '\0' },
-    [Message::TEXT] = (char []){ 't', 'e', 'x', 't', '\0' },
+    [HOB::JSON] = (char []){ 'j', 's', 'o', 'n', '\0' },
+    [HOB::TEXT] = (char []){ 't', 'e', 'x', 't', '\0' },
     NULL
 };
 
@@ -102,10 +102,10 @@ void help(const char *my_name)
 {
     static const char * const descr_options[] =
     {
-        "<output_file>\n\n\twrite messages to binary <output_file>",
-        "<input_file|->\n\n\tread messages from binary <input_file> or from standard input <->",
-        "<input_file|->\n\n\tinport messages from text/json <input_file> or from standard input <->",
-        "<text|json>\n\n\tdump messages in plain <text> or <json> format",
+        "<output_file>\n\n\twrite HOBs to binary <output_file>",
+        "<input_file|->\n\n\tread HOBs from binary <input_file> or from standard input <->",
+        "<input_file|->\n\n\tinport HOBs from text/json <input_file> or from standard input <->",
+        "<text|json>\n\n\tdump HOBs in plain <text> or <json> format",
         "\n\n\tthis help",
     };
 
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 }
 #else // MINIMAL
 
-bool handle_message(Message &m)
+bool handle_message(HOB &m)
 {
 
     bool handled = true;
@@ -157,7 +157,7 @@ bool handle_message(Message &m)
 //        (m == m_NumericExtraParameters) ||
         (m == m_ComplexStruct         ))
     {
-        printf("Known message\n");
+        printf("Known HOB\n");
     }
 
     if (m == m_AnotherStruct)
@@ -347,7 +347,7 @@ bool handle_message(Message &m)
 */
     else
     {
-        printf("Unknown message\n");
+        printf("Unknown HOB\n");
         LOG(m);
 
         handled = false;
@@ -454,12 +454,12 @@ int main(int argc, char *argv[])
                     {
                         switch (getsubopt(&subopts, dump_modes, &value))
                         {
-                            case Message::JSON:
-                                dump_mode = Message::JSON;
+                            case HOB::JSON:
+                                dump_mode = HOB::JSON;
                                 break;
 
-                            case Message::TEXT:
-                                dump_mode = Message::TEXT;
+                            case HOB::TEXT:
+                                dump_mode = HOB::TEXT;
                                 break;
 
                             default:
@@ -491,7 +491,7 @@ int main(int argc, char *argv[])
 #endif // SEPARATE_IN_AND_OUT_STRING_STREAMS
 #endif // OUTPUT_ON_FILE
 
-        printf("------------------[ WRITING MESSAGES ]------------------\n\n");
+        printf("------------------[ WRITING HOBS ]------------------\n\n");
 
         { MyStruct               m; m >> ofs; LOG(m); }
         {
@@ -648,10 +648,10 @@ int main(int argc, char *argv[])
             is = &ifile;
         }
 
-        Message::Src src(*is);
-        Message::Snk snk(os);
+        HOB::Src src(*is);
+        HOB::Snk snk(os);
 
-        if (do_inport && (src >> snk)) // same of Message::parse(src, snk)
+        if (do_inport && (src >> snk)) // same of HOB::parse(src, snk)
         {
             is = &os;
         }
@@ -665,9 +665,9 @@ int main(int argc, char *argv[])
         std::istream *is = &ifs;
 #endif // OUTPUT_ON_FILE
 
-        printf("------------------[ READING MESSAGES ]------------------\n\n");
+        printf("------------------[ READING HOBS ]------------------\n\n");
 
-        Message m;
+        HOB m;
 
         while (*is >> m) // same of (m << *is)
         {
