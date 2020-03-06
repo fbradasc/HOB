@@ -983,53 +983,81 @@ protected:
 #if !defined(BINARY_ONLY)
     static void _t(ostream &o, const uint8_t &v, int indent = -1)
     {
-        _t(o, static_cast<uint64_t>(v), indent);
+        (void)indent;
+
+        o << noshowpos << "{\"C\":" << static_cast<unsigned int>(v) << "}";
     }
 
     static void _t(ostream &o, const uint16_t &v, int indent = -1)
     {
-        _t(o, static_cast<uint64_t>(v), indent);
+        (void)indent;
+
+        o << noshowpos << "{\"S\":" << v << "}";
     }
 
     static void _t(ostream &o, const uint32_t &v, int indent = -1)
     {
-        _t(o, static_cast<uint64_t>(v), indent);
+        (void)indent;
+
+        o << noshowpos << "{\"I\":" << v << "}";
     }
 
     static void _t(ostream &o, const uint64_t &v, int indent = -1)
     {
         (void)indent;
 
-        o << "{\"U\":" << v << "}";
+        o << noshowpos << "{\"L\":" << v << "}";
     }
 
     static void _t(ostream &o, const int8_t &v, int indent = -1)
     {
-        _t(o, static_cast<int64_t>(v), indent);
+        (void)indent;
+
+        o << "{\"C\":"
+          << showpos
+          << static_cast<int>(v)
+          << noshowpos
+          << "}";
     }
 
     static void _t(ostream &o, const int16_t &v, int indent = -1)
     {
-        _t(o, static_cast<int64_t>(v), indent);
+        (void)indent;
+
+        o << "{\"S\":"
+          << showpos
+          << v
+          << noshowpos
+          << "}";
     }
 
     static void _t(ostream &o, const int32_t &v, int indent = -1)
     {
-        _t(o, static_cast<int64_t>(v), indent);
+        (void)indent;
+
+        o << "{\"I\":"
+          << showpos
+          << v
+          << noshowpos
+          << "}";
     }
 
     static void _t(ostream &o, const int64_t &v, int indent = -1)
     {
         (void)indent;
 
-        o << "{\"S\":" << v << "}";
+        o << "{\"L\":"
+          << showpos
+          << v
+          << noshowpos
+          << "}";
     }
 
     static void _t(ostream &o, const float &v, int indent = -1)
     {
         (void)indent;
 
-        o << "{\"F\":\"";
+        o << noshowpos << "{\"F\":\"";
         
         _t(o, &v, sizeof(v));
         
@@ -1040,7 +1068,7 @@ protected:
     {
         (void)indent;
 
-        o << "{\"D\":\"";
+        o << noshowpos << "{\"D\":\"";
         
         _t(o, &v, sizeof(v));
         
@@ -1051,7 +1079,7 @@ protected:
     {
         (void)indent;
 
-        o << "{\"Q\":\"";
+        o << noshowpos << "{\"Q\":\"";
         
         _t(o, &v, sizeof(v));
         
@@ -1062,14 +1090,14 @@ protected:
     {
         (void)indent;
 
-        o << "{\"T\":\"" << v << "\"}";
+        o << noshowpos << "{\"T\":\"" << v << "\"}";
     }
 
     static void _t(ostream &o, const string &v, int indent = -1)
     {
         (void)indent;
 
-        o << "{\"T\":\"" << v << "\"}";
+        o << noshowpos << "{\"T\":\"" << v << "\"}";
     }
 
     static void _t(ostream &o, const bool &v, int indent = -1)
@@ -1089,7 +1117,7 @@ protected:
     {
         (void)indent;
 
-        o << "{\"B\":\"" << v << "\"}";
+        o << noshowpos << "{\"B\":\"" << v << "\"}";
     }
 
     template<class T>
@@ -1097,7 +1125,7 @@ protected:
     {
         (void)indent;
 
-        o << "{";
+        o << noshowpos << "{";
 
         if (indent >= 0)
         {
@@ -1148,7 +1176,7 @@ protected:
     {
         (void)indent;
 
-        o << "{\"B(" << v.size() << ")\":\"";
+        o << noshowpos << "{\"B(" << v.size() << ")\":\"";
 
         for (size_t i=0; i<v.size(); i++)
         {
@@ -1163,7 +1191,7 @@ protected:
     {
         (void)indent;
 
-        o << "{";
+        o << noshowpos << "{";
 
         if (indent >= 0)
         {
@@ -1196,7 +1224,7 @@ protected:
     {
         (void)indent;
 
-        o << "{";
+        o << noshowpos << "{";
 
         if (indent >= 0)
         {
@@ -1425,7 +1453,7 @@ protected:
     {
         (void)indent;
 
-        o << "{";
+        o << noshowpos << "{";
 
 #if !defined(BINARY_ONLY)
         if (indent >= 0)
@@ -1575,63 +1603,61 @@ private:
                     bool   has_value = true;
                     size_t count_pos = 0;
 
-                    if ("U" == token)
+                    if (("C" == token) || // [u]int8_t  (char)
+                        ("S" == token) || // [u]int16_t (short)
+                        ("I" == token) || // [u]int32_t (int)
+                        ("L" == token))   // [u]int64_t (long)
                     {
                         dump = true;
                     }
                     else
-                    if ("S" == token)
+                    if ("F" == token) // float
                     {
                         dump = true;
                     }
                     else
-                    if ("F" == token)
+                    if ("D" == token) // double
                     {
                         dump = true;
                     }
                     else
-                    if ("D" == token)
+                    if ("Q" == token) // long double
                     {
                         dump = true;
                     }
                     else
-                    if ("Q" == token)
+                    if ("B" == token) // bool
                     {
                         dump = true;
                     }
                     else
-                    if ("B" == token)
+                    if ("T" == token) // string / char*
                     {
                         dump = true;
                     }
                     else
-                    if ("T" == token)
-                    {
-                        dump = true;
-                    }
-                    else
-                    if (token.find("V(") == 0)
+                    if (token.find("V(") == 0) // vector<>
                     {
                         dump      = true;
                         has_value = false;
                         count_pos = strlen("V(");
                     }
                     else
-                    if (token.find("M(") == 0)
+                    if (token.find("M(") == 0) // map<>
                     {
                         dump      = true;
                         has_value = false;
                         count_pos = strlen("M(");
                     }
                     else
-                    if (token.find("O(") == 0)
+                    if (token.find("O(") == 0) // optional<>
                     {
                         dump      = true;
                         has_value = false;
                         count_pos = strlen("O(");
                     }
                     else
-                    if (token.find("B(") == 0)
+                    if (token.find("B(") == 0) // bitset<> / vector<bool>
                     {
                         dump      = true;
                         has_value = true;
@@ -1689,41 +1715,51 @@ private:
 
                         if (has_value)
                         {
-                            if ("U" == token)
+                            if (("C" == token) || // [u]int8_t  (char)
+                                ("S" == token) || // [u]int16_t (short)
+                                ("I" == token) || // [u]int32_t (int)
+                                ("L" == token))   // [u]int64_t (long)
                             {
-                                uint64_t v_value = stoull(value);
+                                if (value[0] == '+' || value[0] == '-')
+                                {
+                                    // signed integer values
 
-                                ASSERT_DUMP(os, v_value);
+                                    int64_t v_value = stoll(value);
+
+                                    ASSERT_DUMP(os, v_value);
+                                }
+                                else
+                                {
+                                    // unsigned integer values
+
+                                    uint64_t v_value = stoull(value);
+
+                                    ASSERT_DUMP(os, v_value);
+                                }
                             }
                             else
-                            if ("S" == token)
-                            {
-                                int64_t v_value = stoll(value);
-
-                                ASSERT_DUMP(os, v_value);
-                            }
-                            else
-                            if ("F" == token)
+                            if ("F" == token) // float
                             {
                                 ASSERT_DUMP(os, hex_to_val<float>(value));
                             }
                             else
-                            if ("D" == token)
+                            if ("D" == token) // double
                             {
                                 ASSERT_DUMP(os, hex_to_val<double>(value));
                             }
                             else
-                            if ("Q" == token)
+                            if ("Q" == token) // long double
                             {
                                 ASSERT_DUMP(os, hex_to_val<long double>(value));
                             }
                             else
-                            if ("T" == token)
+                            if ("T" == token) // string / char*
                             {
                                 ASSERT_DUMP(os, value);
                             }
                             else
-                            if (("B" == token) || (token.find("B(") == 0))
+                            if (("B" == token) ||        // bool
+                                (token.find("B(") == 0)) // bitset<> / vector<bool>
                             {
                                 if (("true" == value) || ("false" == value))
                                 {
@@ -1868,7 +1904,7 @@ bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); }
             }                                                                  \
         }                                                                      \
                                                                                \
-        o << "{";                                                              \
+        o << noshowpos << "{";                                                 \
                                                                                \
         if (indent >= 0)                                                       \
         {                                                                      \
