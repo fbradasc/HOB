@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 #include "fdstreambuf.h"
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -7,7 +10,7 @@
 #include <cstring>
 #include <iostream>
 #include <list>
-#include <thread>
+#include <thread.hpp>
 #include "../hobs.h"
 
 HOB::Dump dump_mode = HOB::JSON;
@@ -264,9 +267,22 @@ bool handle_message(HOB &m)
 
     return handled;
 }
-static void handleClient(int fd, std::string remote)
+
+class Client
 {
-    wl::fdstreambuf sbuf(fd);
+public:
+    int fd;
+    std::string remote;
+
+    Client(int fd_, const std::string &remote_)
+        : fd(fd_)
+        , remote(remote_)
+    {}
+};
+
+static void handleClient(Client client)
+{
+    wl::fdstreambuf sbuf(client.fd);
     std::iostream io(&sbuf);
     streamList.push_back(&io);
 
@@ -312,8 +328,8 @@ static void handleClient(int fd, std::string remote)
     }
 
     streamList.remove(&io);
-    close(fd);
-    std::cout << "Disconnect from " << remote << std::endl;
+    close(client.fd);
+    std::cout << "Disconnect from " << client.remote << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -342,10 +358,14 @@ int main(int argc, char *argv[])
     {
         struct sockaddr_in dst;
         socklen_t size = sizeof(dst);
-        int cfd = accept(sockfd, reinterpret_cast<struct sockaddr *>(&dst), &size);
-        std::string remote(inet_ntoa(dst.sin_addr) );
-        std::cout << "Connect from " << remote << std::endl;
-        auto th = std::thread(handleClient, cfd, remote);
+
+        Client client(accept(sockfd, reinterpret_cast<struct sockaddr *>(&dst), &size),
+                      inet_ntoa(dst.sin_addr));
+
+        std::cout << "Connect from " << client.remote << std::endl;
+
+        std::thread<Client> th = std::thread<Client>(handleClient, client);
+
         th.detach();
     }
 

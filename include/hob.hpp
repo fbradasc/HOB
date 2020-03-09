@@ -1,6 +1,7 @@
 #if !defined(__HOB_HPP__)
 #define __HOB_HPP__
 #include <stdint.h>
+#include <stdlib.h>
 #include <vector>
 #include <map>
 #include <bitset>
@@ -1726,7 +1727,7 @@ private:
                             string count = token.substr(count_pos,
                                                         token.size()-count_pos-1);
 
-                            uint64_t v_count = stoull(count);
+                            uint64_t v_count = strtoull(count.c_str(),NULL,10);
 
                             ASSERT_DUMP(os, v_count);
                         }
@@ -1742,7 +1743,7 @@ private:
                                 {
                                     // signed integer values
 
-                                    int64_t v_value = stoll(value);
+                                    int64_t v_value = strtoll(value.c_str(),NULL,10);
 
                                     ASSERT_DUMP(os, v_value);
                                 }
@@ -1750,7 +1751,7 @@ private:
                                 {
                                     // unsigned integer values
 
-                                    uint64_t v_value = stoull(value);
+                                    uint64_t v_value = strtoull(value.c_str(),NULL,10);
 
                                     ASSERT_DUMP(os, v_value);
                                 }

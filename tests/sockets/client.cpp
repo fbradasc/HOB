@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "fdstreambuf.h"
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -6,7 +7,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
-#include <thread>
+#include <thread.hpp>
 #include "../hobs.h"
 
 HOB::Dump dump_mode = HOB::JSON;
@@ -76,7 +77,7 @@ int main(int argc, char *argv[])
     connect(sockfd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst) );
     wl::fdstreambuf sbuf(sockfd);
     std::iostream io(&sbuf);
-    auto th1 = std::thread(handleServer, &io);
+    std::thread<std::iostream *> th1 = std::thread<std::iostream *>(handleServer, &io);
 
     srandom(time(NULL));
 

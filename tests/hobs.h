@@ -2,6 +2,7 @@
 #define __HOBS_H__
 
 #include <inttypes.h>
+#include <stdio.h>
 #include "hob.hpp"
 
 extern HOB::Dump dump_mode;

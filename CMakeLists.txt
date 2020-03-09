@@ -21,7 +21,7 @@ set(SOCKET_CLIENT_SRC
     tests/sockets/fdstreambuf.cpp
     tests/sockets/client.cpp)
 
-# set(CMAKE_CXX_STANDARD 98)
+set(CMAKE_CXX_STANDARD 98)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(include)

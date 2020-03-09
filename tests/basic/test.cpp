@@ -62,6 +62,7 @@ diff3 f.txt i.txt s.txt
 //
 ******************************************************************************/
 #include <stdio.h>
+#include <stdlib.h>
 #include <fstream>
 #include "hob.hpp"
 #include <inttypes.h>
