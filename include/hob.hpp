@@ -13,6 +13,8 @@
 #include "optional.hpp"
 #include "cpp_magic.h"
 
+#define FLOAT_TO_INTEGER_SERIALIZATION
+
 #define M_LOG(...)            printf("%s:%s:%d: ",        \
                                      __FILE__,            \
                                      __PRETTY_FUNCTION__, \
@@ -402,12 +404,20 @@ protected:
 
     static bool _w(ostream &os, const float &v)
     {
+#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
+        return _w(os, *reinterpret_cast<const uint32_t*>(&v));
+#else // !FLOAT_TO_INTEGER_SERIALIZATION
         return ASSERT_SWRITE(os, &v, sizeof(v));
+#endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
     static bool _w(ostream &os, const double &v)
     {
+#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
+        return _w(os, *reinterpret_cast<const uint64_t*>(&v));
+#else // !FLOAT_TO_INTEGER_SERIALIZATION
         return ASSERT_SWRITE(os, &v, sizeof(v));
+#endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
     static bool _w(ostream &os, const long double &v)
@@ -689,7 +699,11 @@ protected:
     {
         float rv;
 
+#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
+        if (!_r(is_, *reinterpret_cast<uint32_t*>(&rv)))
+#else // !FLOAT_TO_INTEGER_SERIALIZATION
         if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
+#endif // !FLOAT_TO_INTEGER_SERIALIZATION
         {
             return false;
         }
@@ -705,7 +719,11 @@ protected:
     {
         double rv;
 
+#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
+        if (!_r(is_, *reinterpret_cast<uint64_t*>(&rv)))
+#else // !FLOAT_TO_INTEGER_SERIALIZATION
         if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
+#endif // !FLOAT_TO_INTEGER_SERIALIZATION
         {
             return false;
         }
