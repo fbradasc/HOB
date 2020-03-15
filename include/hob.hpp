@@ -1077,9 +1077,9 @@ protected:
         (void)indent;
 
         o << noshowpos << "{\"F\":\"";
-        
+
         _t(o, &v, sizeof(v));
-        
+
         o << "\"}";
     }
 
@@ -1088,9 +1088,9 @@ protected:
         (void)indent;
 
         o << noshowpos << "{\"D\":\"";
-        
+
         _t(o, &v, sizeof(v));
-        
+
         o << "\"}";
     }
 
@@ -1099,9 +1099,9 @@ protected:
         (void)indent;
 
         o << noshowpos << "{\"Q\":\"";
-        
+
         _t(o, &v, sizeof(v));
-        
+
         o << "\"}";
     }
 
@@ -1165,7 +1165,7 @@ protected:
             for (size_t i=0; i<len; i++)
             {
                 o << INDENT(2);
-                
+
                 _t(o, static_cast<const T &>(v[i]),
                       (indent >= 0) ? (indent+2) : -1);
 
@@ -1253,7 +1253,7 @@ protected:
         size_t len = v.size();
 
         o << INDENT(1) << "\"M(" << len << ")\":[";
-        
+
         if (indent >= 0)
         {
             o << endl;
@@ -1842,10 +1842,10 @@ private:
     }
 };
 
-bool operator<<(ostream  &o, HOB      &m) { return m >> o; } 
-bool operator>>(istream  &i, HOB      &m) { return m << i; } 
-bool operator>>(HOB      &i, HOB      &m) { return m << i; }
-bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); } 
+inline bool operator<<(ostream  &o, HOB      &m) { return m >> o; } 
+inline bool operator>>(istream  &i, HOB      &m) { return m << i; } 
+inline bool operator>>(HOB      &i, HOB      &m) { return m << i; }
+inline bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); } 
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
