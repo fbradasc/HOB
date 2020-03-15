@@ -246,7 +246,9 @@ public:
 
     operator size_t() const
     {
-        return ( _ep - _sp );
+        size_t sz = _l();
+
+        return _l(_id) + ((sz > 0) ? ( _l(sz) + sz ) : 0); // ( _ep - _sp );
     }
 
     virtual bool rewind()
@@ -329,24 +331,24 @@ protected:
     //
     //========================================================================
 
-    static bool _w(ostream &os, const uint8_t &v)
+    static inline bool _w(ostream &os, const uint8_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
-    static bool _w(ostream &os, const uint16_t &v)
+    static inline bool _w(ostream &os, const uint16_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
-    static bool _w(ostream &os, const uint32_t &v)
+    static inline bool _w(ostream &os, const uint32_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
     // VARINT packing
     //
-    static bool _w(ostream &os, const uint64_t &v)
+    static inline bool _w(ostream &os, const uint64_t &v)
     {
         uint8_t d[9];
 
@@ -376,34 +378,34 @@ protected:
         return ASSERT_SWRITE(os, d, b);
     }
 
-    static bool _w(ostream &os, const int8_t &v)
+    static inline bool _w(ostream &os, const int8_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
-    static bool _w(ostream &os, const int16_t &v)
+    static inline bool _w(ostream &os, const int16_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
-    static bool _w(ostream &os, const int32_t &v)
+    static inline bool _w(ostream &os, const int32_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
     // ZIGZAG encoding
     //
-    static bool _w(ostream &os, const int64_t &v)
+    static inline bool _w(ostream &os, const int64_t &v)
     {
         return _w(os, ZIGZAG_ENCODE(v));
     }
 
-    static bool _w(ostream &os, const bool &v)
+    static inline bool _w(ostream &os, const bool &v)
     {
         return ASSERT_SWRITE(os, &v, sizeof(v));
     }
 
-    static bool _w(ostream &os, const float &v)
+    static inline bool _w(ostream &os, const float &v)
     {
 #if defined(FLOAT_TO_INTEGER_SERIALIZATION)
         return _w(os, *reinterpret_cast<const uint32_t*>(&v));
@@ -412,7 +414,7 @@ protected:
 #endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
-    static bool _w(ostream &os, const double &v)
+    static inline bool _w(ostream &os, const double &v)
     {
 #if defined(FLOAT_TO_INTEGER_SERIALIZATION)
         return _w(os, *reinterpret_cast<const uint64_t*>(&v));
@@ -421,12 +423,12 @@ protected:
 #endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
-    static bool _w(ostream &os, const long double &v)
+    static inline bool _w(ostream &os, const long double &v)
     {
         return ASSERT_SWRITE(os, &v, sizeof(v));
     }
 
-    static bool _w(ostream &os, const string &v)
+    static inline bool _w(ostream &os, const string &v)
     {
         if (!_w(os, v.size()))
         {
@@ -436,7 +438,7 @@ protected:
         return ASSERT_SWRITE(os, v.data(), v.size());
     }
 
-    static bool _w(ostream &os, uint8_t size_, const void *v)
+    static inline bool _w(ostream &os, uint8_t size_, const void *v)
     {
         if (!_w(os, size_))
         {
@@ -999,6 +1001,158 @@ protected:
         return true;
     }
 
+    static inline size_t _l(const uint8_t &v)
+    {
+        return _l(static_cast<const uint64_t &>(v));
+    }
+
+    static inline size_t _l(const uint16_t &v)
+    {
+        return _l(static_cast<const uint64_t &>(v));
+    }
+
+    static inline size_t _l(const uint32_t &v)
+    {
+        return _l(static_cast<const uint64_t &>(v));
+    }
+
+    // VARINT packing
+    //
+    static inline size_t _l(const uint64_t &v)
+    {
+        return (v <= 0x000000000000007fllu) ? 1 :
+               (v <= 0x0000000000003fffllu) ? 2 :
+               (v <= 0x00000000001fffffllu) ? 3 :
+               (v <= 0x000000000fffffffllu) ? 4 :
+               (v <= 0x00000007ffffffffllu) ? 5 :
+               (v <= 0x000003ffffffffffllu) ? 6 :
+               (v <= 0x0001ffffffffffffllu) ? 7 :
+               (v <= 0x00ffffffffffffffllu) ? 8 : 9;
+    }
+
+    static inline size_t _l(const int8_t &v)
+    {
+        return _l(static_cast<int64_t>(v));
+    }
+
+    static inline size_t _l(const int16_t &v)
+    {
+        return _l(static_cast<int64_t>(v));
+    }
+
+    static inline size_t _l(const int32_t &v)
+    {
+        return _l(static_cast<int64_t>(v));
+    }
+
+    // ZIGZAG encoding
+    //
+    static inline size_t _l(const int64_t &v)
+    {
+        return _l(ZIGZAG_ENCODE(v));
+    }
+
+    static inline size_t _l(const bool &v)
+    {
+        return _l(sizeof(v));
+    }
+
+    static inline size_t _l(const float &v)
+    {
+#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
+        return _l(*reinterpret_cast<const uint32_t*>(&v));
+#else // !FLOAT_TO_INTEGER_SERIALIZATION
+        return sizeof(v);
+#endif // !FLOAT_TO_INTEGER_SERIALIZATION
+    }
+
+    static inline size_t _l(const double &v)
+    {
+#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
+        return _l(*reinterpret_cast<const uint64_t*>(&v));
+#else // !FLOAT_TO_INTEGER_SERIALIZATION
+        return _l(sizeof(v));
+#endif // !FLOAT_TO_INTEGER_SERIALIZATION
+    }
+
+    static inline size_t _l(const long double &v)
+    {
+        return _l(sizeof(v));
+    }
+
+    static inline size_t _l(const string &v)
+    {
+        return _l(v.size()) + v.size();
+    }
+
+    static inline size_t _l(uint8_t size_, const void *v)
+    {
+        return _l(size_) + size_;
+    }
+
+    static size_t _l(const HOB &v)
+    {
+        return v;
+    }
+
+    template<size_t N>
+    static size_t _l(const std::bitset<N>& v)
+    {
+        return _l((N+7)>>3) + ((N+7)>>3);
+    }
+
+    template<class T>
+    static size_t _l(const vector<T> &v)
+    {
+        size_t retval = _l(v.size());
+
+        for (size_t i=0; i<v.size(); i++)
+        {
+            retval += _l(static_cast<const T &>(v[i]));
+        }
+
+        return retval;
+    }
+
+    static size_t _l(const vector<bool> &v, bool dump_size=true)
+    {
+        size_t sz = v.size();
+
+        return ((dump_size) ? _l(sz) : 0) + _l((sz+7)>>3) + ((sz+7)>>3);
+    } 
+
+    template<class T>
+    static size_t _l(const optional<T> &v)
+    {
+        size_t retval = _l(static_cast<bool>(v));
+
+        if (static_cast<bool>(v))
+        {
+            retval +=  _l(static_cast<const T &>(*v));
+        }
+
+        return retval;
+    }
+
+    template<class K, class V>
+    static size_t _l(const map<K,V> &v)
+    {
+        size_t len = v.size();
+        size_t retval = _l(len);
+
+        for (typename map<K,V>::const_iterator ci = v.begin();
+             (len > 0) && (ci != v.end());
+             ++ci)
+        {
+            retval += _l(static_cast<const K &>((*ci).first ));
+            retval += _l(static_cast<const V &>((*ci).second));
+
+            len--;
+        }
+
+        return retval;
+    }
+
 #if !defined(BINARY_ONLY)
     static void _t(ostream &o, const uint8_t &v, int indent = -1)
     {
@@ -1392,6 +1546,8 @@ protected:
     }
 
     virtual bool _w(ostream &os) const { (void)os; return true; }
+
+    virtual size_t _l() const { return 0; }
 
     inline const uint64_t& get_id() const
     {
@@ -1876,6 +2032,7 @@ inline bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); }
 #define INIT_FIELD(t, n, ...)    IF(HAS_ARGS(__VA_ARGS__) )(n = __VA_ARGS__;)
 #define READ_FIELD(t, n, ...)    && HOB::_r(is_, n, _ ## n)
 #define WRITE_FIELD(t, n, ...)   && HOB::_w(os, n)
+#define FIELD_SIZE(t, n, ...)    + HOB::_l(n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
 #define UPDATE_NP(t, n, ...)     update_id("");
@@ -2170,6 +2327,13 @@ protected:                                                                     \
         return (true                                                           \
                 SCAN_FIELDS(WRITE_FIELD, FIRST(__VA_ARGS__))                   \
                 SCAN_FIELDS(WRITE_FIELD, REMAIN(__VA_ARGS__)));                \
+    }                                                                          \
+                                                                               \
+    size_t _l() const                                                          \
+    {                                                                          \
+        return (0                                                              \
+                SCAN_FIELDS(FIELD_SIZE, FIRST(__VA_ARGS__))                    \
+                SCAN_FIELDS(FIELD_SIZE, REMAIN(__VA_ARGS__)));                 \
     }                                                                          \
                                                                                \
     virtual bool rewind()                                                      \

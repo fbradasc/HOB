@@ -7,7 +7,7 @@
 
 extern HOB::Dump dump_mode;
 
-#define LOG(hob_) printf("%s\n", hob_(dump_mode).c_str())
+#define LOG(hob_) printf("Size: %ld: %s\n", static_cast<size_t>(hob_), hob_(dump_mode).c_str())
 
 HOBSTRUCT(Hello, HOB::UID(0), (uint32_t, my_id))
 HOBSTRUCT(Put  , HOB::UID(1), (uint32_t, my_id) (string, data))
