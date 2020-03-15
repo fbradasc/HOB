@@ -203,29 +203,22 @@ public:
             return false;
         }
 
-#if 0
-        std::ostringstream ss;
-
-        if (!_w((has_payload(_id)) ? ss : os))
-        {
-            return false;
-        }
-
-        if (has_payload(_id) && !_w(os, ss.str()))
-        {
-            return false;
-        }
-#else
         if (has_payload(_id))
         {
+#if 0
             std::ostringstream ss;
 
             if (!_w(ss) || !_w(os, ss.str()))
             {
                 return false;
             }
-        }
+#else
+            if (!_w(os,_l()) || !_w(os))
+            {
+                return false;
+            }
 #endif
+        }
 
         return true;
     }
@@ -2068,7 +2061,7 @@ inline bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); }
         }
 
 #define ASCII_DUMP(name_,value_,...)                                           \
-        size_t sz = 0;                                                         \
+        size_t sz = _l(); /* 0;                                                \
                                                                                \
         if (has_payload(get_id()))                                             \
         {                                                                      \
@@ -2078,7 +2071,7 @@ inline bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); }
             {                                                                  \
                 sz = ss.str().size();                                          \
             }                                                                  \
-        }                                                                      \
+        } */                                                                   \
                                                                                \
         o << noshowpos << "{";                                                 \
                                                                                \
