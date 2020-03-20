@@ -111,6 +111,8 @@ using namespace nonstd;
 class HOB
 {
 public:
+    class Buffer;
+
     typedef uint64_t UID;
 
     static const UID UNDEFINED = ULLONG_MAX;
@@ -191,6 +193,24 @@ public:
         return ((_id == ref._id) && _r(ref));
     }
 
+    bool operator>>(HOB::Buffer & buffer) const
+    {
+        /*
+        size_t payload = _l();
+
+        buffer.reserve
+        (
+            buffer.size()
+            +
+            _l(_id)+((payload>0)?(_l(payload)+payload):0)
+        );
+        */
+
+        ostream os(&buffer);
+
+        return *this >> os;
+    }
+
     bool operator>>(ostream &os) const
     {
         if (UNDEFINED == _id)
@@ -205,19 +225,10 @@ public:
 
         if (has_payload(_id))
         {
-#if 0
-            std::ostringstream ss;
-
-            if (!_w(ss) || !_w(os, ss.str()))
-            {
-                return false;
-            }
-#else
             if (!_w(os,_l()) || !_w(os))
             {
                 return false;
             }
-#endif
         }
 
         return true;
@@ -275,6 +286,73 @@ public:
 
         return ss.str();
     }
+
+    class Buffer: public stringbuf
+    {
+    public:
+        Buffer(size_t reserve_=0)
+            : stringbuf()
+            , _buffer  (NULL)
+            , _size    (0)
+            , _capacity(0)
+        {
+            reserve(reserve_);
+        }
+
+        ~Buffer()
+        {
+            free(_buffer);
+        }
+
+        const uint8_t *data    () const { return _buffer  ; }
+        size_t         size    () const { return _size    ; }
+        size_t         capacity() const { return _capacity; }
+
+        void reserve(const size_t &s)
+        {
+            if (s > _capacity)
+            {
+                _buffer = reinterpret_cast<uint8_t*>(realloc(_buffer,s));
+
+                _capacity = s;
+            }
+        }
+
+        void clear() { _size = 0; }
+
+        void log(const string & h)
+        {
+            cerr << h
+                 << " - Capacity: "
+                 << _capacity
+                 << " Size: "
+                 << _size
+                 << endl;
+        }
+
+    private:
+        uint8_t *_buffer;
+        size_t   _size;
+        size_t   _capacity;
+
+        virtual int_type overflow(int_type c)
+        {
+            if (c != traits_type::eof())
+            {
+                if ((_size + 1) > _capacity)
+                {
+                    reserve((_size + 1) * 1.2);
+                }
+
+                if (NULL != _buffer)
+                {
+                    _buffer[_size++] = traits_type::to_char_type(c);
+                }
+            }
+
+            return traits_type::not_eof(c);
+        }
+    };
 
     template<class T>
     class StreamWrapper
@@ -497,7 +575,7 @@ protected:
         }
 
         return _w(os, ((v.size()+7)>>3), bits);
-    } 
+    }
 
     template<class T>
     static bool _w(ostream &os, const optional<T> &v)
@@ -1517,6 +1595,7 @@ protected:
             {
                 if (deserialize(is_,buffer,sz_))
                 {
+                    // if (ASSERT_SWRITE(_ss,buffer,sz_))
                     if (_ss.write(buffer,sz_).good())
                     {
                         _is     = NULL;
@@ -1991,10 +2070,10 @@ private:
     }
 };
 
-inline bool operator<<(ostream  &o, HOB      &m) { return m >> o; } 
-inline bool operator>>(istream  &i, HOB      &m) { return m << i; } 
+inline bool operator<<(ostream  &o, HOB      &m) { return m >> o; }
+inline bool operator>>(istream  &i, HOB      &m) { return m << i; }
 inline bool operator>>(HOB      &i, HOB      &m) { return m << i; }
-inline bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); } 
+inline bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); }
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
