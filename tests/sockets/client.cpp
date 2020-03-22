@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include "fdstreambuf.h"
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -17,7 +16,7 @@ Put   m_put;
 Get   m_get;
 Bye   m_bye;
 
-static void handleServer(std::iostream *io)
+static void handleServer(HOBIO::FdReaderWriter *io)
 {
     HOB m;
 
@@ -75,9 +74,8 @@ int main(int argc, char *argv[])
     hp = gethostbyname(argv[1]);
     std::memcpy(&dst.sin_addr, hp->h_addr, hp->h_length);
     connect(sockfd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst) );
-    wl::fdstreambuf sbuf(sockfd);
-    std::iostream io(&sbuf);
-    std::thread<std::iostream *> th1 = std::thread<std::iostream *>(handleServer, &io);
+    HOBIO::FdReaderWriter io(sockfd);
+    std::thread<HOBIO::FdReaderWriter *> th1 = std::thread<HOBIO::FdReaderWriter *>(handleServer, &io);
 
     srandom(time(NULL));
 
@@ -85,7 +83,7 @@ int main(int argc, char *argv[])
 
     io << m_hi; std::cout << "Sending: " << m_hi(HOB::JSON) << std::endl;
 
-    while (!io.fail())
+    while (io.good())
     {
         std::string data;
 
@@ -115,10 +113,9 @@ int main(int argc, char *argv[])
         {
             std::cout << "Enter text/json HOBs to send:" << endl;
 
-            HOB::Src src(std::cin);
-            HOB::Snk snk(io);
+            HOBIO::FileReader src(stdin);
 
-            src >> snk;
+            src >> io;
         }
 
         if (data == "get")

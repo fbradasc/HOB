@@ -3,16 +3,10 @@
 
 int main(int argc, char *argv[])
 {
-    ifstream txt;
-    ofstream raw;
+    HOBIO::FileReader txt(argv[1]);
+    HOBIO::FileWriter raw(argv[2]);
 
-    txt.open(argv[1]);
-    raw.open(argv[2], std::ios::binary);
-
-    HOB::Src src(txt);
-    HOB::Snk snk(raw);
-
-    src >> snk; // same of HOB::parse(src,snk);
+    txt >> raw; // same of HOB::parse(txt,raw);
 
     txt.close();
     raw.close();

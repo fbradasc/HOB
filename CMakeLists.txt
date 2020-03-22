@@ -14,11 +14,9 @@ set(JSON_INPORT_SRC
     tests/json/inport.cpp)
 
 set(SOCKET_SERVER_SRC
-    tests/sockets/fdstreambuf.cpp
     tests/sockets/server.cpp)
 
 set(SOCKET_CLIENT_SRC
-    tests/sockets/fdstreambuf.cpp
     tests/sockets/client.cpp)
 
 set(CMAKE_CXX_STANDARD 98)

@@ -13,6 +13,7 @@
 #include <iomanip>
 #include "optional.hpp"
 #include "cpp_magic.h"
+#include "hobio.hpp"
 
 #define FLOAT_TO_INTEGER_SERIALIZATION
 
@@ -24,15 +25,6 @@
                               printf("\n");
 
 #define ASSERT_DUMP(os, ...)  if (!HOB::_w(os, __VA_ARGS__)) { return false; }
-
-#define ASSERT_SREAD(f,v,s)   deserialize(f,v,s)
-
-#if defined(DEBUG_WRITE)
-#define ASSERT_SWRITE(f,v,s)  HOB::_w(f,v,s)
-#else // DEBUG_WRITE
-#define ASSERT_SWRITE(f,v,s)  (f.write(reinterpret_cast<const char *>(v),s)\
-                                .good())
-#endif // DEBUG_WRITE
 
 #define INDENT(l)             string(((indent >= 0)?(indent + (l)):0)*4,' ')
 
@@ -111,8 +103,6 @@ using namespace nonstd;
 class HOB
 {
 public:
-    class Buffer;
-
     typedef uint64_t UID;
 
     static const UID UNDEFINED = ULLONG_MAX;
@@ -173,7 +163,7 @@ public:
     HOB & operator=(const HOB & ref)
     {
         _id = ref._id;
-        _ss.str(ref._ss.str()); // TODO: needed ?
+        _ss = ref._ss; // TODO: needed ?
         _is = ref._is;
         _sp = ref._sp;
         _ep = ref._ep;
@@ -181,7 +171,7 @@ public:
         return *this;
     }
 
-    bool operator<<(istream &is_)
+    bool operator<<(HOBIO::AbstractReader &is_)
     {
         flush_pending();
 
@@ -193,30 +183,16 @@ public:
         return ((_id == ref._id) && _r(ref));
     }
 
-    bool operator>>(HOB::Buffer & buffer) const
-    {
-        /*
-        size_t payload = _l();
-
-        buffer.reserve
-        (
-            buffer.size()
-            +
-            _l(_id)+((payload>0)?(_l(payload)+payload):0)
-        );
-        */
-
-        ostream os(&buffer);
-
-        return *this >> os;
-    }
-
-    bool operator>>(ostream &os) const
+    bool operator>>(HOBIO::AbstractWriter &os) const
     {
         if (UNDEFINED == _id)
         {
             return true;
         }
+
+        size_t payload = _l();
+
+        os.alloc(_l(_id)+((payload>0)?(_l(payload)+payload):0));
 
         if (!_w(os, _id))
         {
@@ -257,14 +233,12 @@ public:
 
     virtual bool rewind()
     {
-        istream & s_ = static_cast<istream&>(*this);
+        HOBIO::AbstractReader & s_ = static_cast<HOBIO::AbstractReader&>(*this);
 
-        s_.clear();
-
-        return s_.seekg(_sp,s_.beg).good();
+        return s_.seek(_sp,SEEK_SET);
     }
 
-    operator istream &() { return (NULL != _is) ? *_is : _ss; }
+    operator HOBIO::AbstractReader &() { return (NULL != _is) ? *_is : _ss; }
 
     operator bool() const
     {
@@ -287,91 +261,9 @@ public:
         return ss.str();
     }
 
-    class Buffer: public stringbuf
+    static bool parse(HOBIO::AbstractReader &is, HOBIO::AbstractWriter &os)
     {
-    public:
-        Buffer(size_t reserve_=0)
-            : stringbuf()
-            , _buffer  (NULL)
-            , _size    (0)
-            , _capacity(0)
-        {
-            reserve(reserve_);
-        }
-
-        ~Buffer()
-        {
-            free(_buffer);
-        }
-
-        const uint8_t *data    () const { return _buffer  ; }
-        size_t         size    () const { return _size    ; }
-        size_t         capacity() const { return _capacity; }
-
-        void reserve(const size_t &s)
-        {
-            if (s > _capacity)
-            {
-                _buffer = reinterpret_cast<uint8_t*>(realloc(_buffer,s));
-
-                _capacity = s;
-            }
-        }
-
-        void clear() { _size = 0; }
-
-        void log(const string & h)
-        {
-            cerr << h
-                 << " - Capacity: "
-                 << _capacity
-                 << " Size: "
-                 << _size
-                 << endl;
-        }
-
-    private:
-        uint8_t *_buffer;
-        size_t   _size;
-        size_t   _capacity;
-
-        virtual int_type overflow(int_type c)
-        {
-            if (c != traits_type::eof())
-            {
-                if ((_size + 1) > _capacity)
-                {
-                    reserve((_size + 1) * 1.2);
-                }
-
-                if (NULL != _buffer)
-                {
-                    _buffer[_size++] = traits_type::to_char_type(c);
-                }
-            }
-
-            return traits_type::not_eof(c);
-        }
-    };
-
-    template<class T>
-    class StreamWrapper
-    {
-    public:
-        StreamWrapper(T &s): _str_ref(s) {}
-
-        T & operator()(void) { return _str_ref; }
-
-    private:
-        T & _str_ref;
-    };
-
-    typedef StreamWrapper<istream> Src;
-    typedef StreamWrapper<ostream> Snk;
-
-    static bool parse(Src &is, Snk &os)
-    {
-        return parse(is(),os(),'\0');
+        return parse(is,os,'\0');
     }
 
 protected:
@@ -402,24 +294,24 @@ protected:
     //
     //========================================================================
 
-    static inline bool _w(ostream &os, const uint8_t &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const uint8_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
-    static inline bool _w(ostream &os, const uint16_t &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const uint16_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
-    static inline bool _w(ostream &os, const uint32_t &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const uint32_t &v)
     {
         return _w(os, static_cast<const uint64_t &>(v));
     }
 
     // VARINT packing
     //
-    static inline bool _w(ostream &os, const uint64_t &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const uint64_t &v)
     {
         uint8_t d[9];
 
@@ -446,86 +338,86 @@ protected:
         d[0] &= static_cast<uint8_t>(m & 0xff);
         d[0] |= static_cast<uint8_t>(c & 0xff);
 
-        return ASSERT_SWRITE(os, d, b);
+        return os.write(d,b);
     }
 
-    static inline bool _w(ostream &os, const int8_t &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const int8_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
-    static inline bool _w(ostream &os, const int16_t &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const int16_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
-    static inline bool _w(ostream &os, const int32_t &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const int32_t &v)
     {
         return _w(os, static_cast<int64_t>(v));
     }
 
     // ZIGZAG encoding
     //
-    static inline bool _w(ostream &os, const int64_t &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const int64_t &v)
     {
         return _w(os, ZIGZAG_ENCODE(v));
     }
 
-    static inline bool _w(ostream &os, const bool &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const bool &v)
     {
-        return ASSERT_SWRITE(os, &v, sizeof(v));
+        return os.write(&v,sizeof(v));
     }
 
-    static inline bool _w(ostream &os, const float &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const float &v)
     {
 #if defined(FLOAT_TO_INTEGER_SERIALIZATION)
         return _w(os, *reinterpret_cast<const uint32_t*>(&v));
 #else // !FLOAT_TO_INTEGER_SERIALIZATION
-        return ASSERT_SWRITE(os, &v, sizeof(v));
+        return os.write(&v,sizeof(v));
 #endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
-    static inline bool _w(ostream &os, const double &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const double &v)
     {
 #if defined(FLOAT_TO_INTEGER_SERIALIZATION)
         return _w(os, *reinterpret_cast<const uint64_t*>(&v));
 #else // !FLOAT_TO_INTEGER_SERIALIZATION
-        return ASSERT_SWRITE(os, &v, sizeof(v));
+        return os.write(&v,sizeof(v));
 #endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
-    static inline bool _w(ostream &os, const long double &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const long double &v)
     {
-        return ASSERT_SWRITE(os, &v, sizeof(v));
+        return os.write(&v,sizeof(v));
     }
 
-    static inline bool _w(ostream &os, const string &v)
+    static inline bool _w(HOBIO::AbstractWriter &os, const string &v)
     {
         if (!_w(os, v.size()))
         {
             return false;
         }
 
-        return ASSERT_SWRITE(os, v.data(), v.size());
+        return os.write(v.data(),v.size());
     }
 
-    static inline bool _w(ostream &os, uint8_t size_, const void *v)
+    static inline bool _w(HOBIO::AbstractWriter &os, uint8_t size_, const void *v)
     {
         if (!_w(os, size_))
         {
             return false;
         }
 
-        return ASSERT_SWRITE(os, v, size_);
+        return os.write(v,size_);
     }
 
-    static bool _w(ostream &os, const HOB &v)
+    static bool _w(HOBIO::AbstractWriter &os, const HOB &v)
     {
         return (v >> os);
     }
 
     template<size_t N>
-    static bool _w(ostream &os, const std::bitset<N>& v)
+    static bool _w(HOBIO::AbstractWriter &os, const std::bitset<N>& v)
     {
         uint8_t bits[(N+7)>>3];
 
@@ -540,7 +432,7 @@ protected:
     }
 
     template<class T>
-    static bool _w(ostream &os, const vector<T> &v)
+    static bool _w(HOBIO::AbstractWriter &os, const vector<T> &v)
     {
         if (!_w(os, v.size()))
         {
@@ -558,7 +450,7 @@ protected:
         return true;
     }
 
-    static bool _w(ostream &os, const vector<bool> &v, bool dump_size=true)
+    static bool _w(HOBIO::AbstractWriter &os, const vector<bool> &v, bool dump_size=true)
     {
         if (dump_size && !_w(os, v.size()))
         {
@@ -578,7 +470,7 @@ protected:
     }
 
     template<class T>
-    static bool _w(ostream &os, const optional<T> &v)
+    static bool _w(HOBIO::AbstractWriter &os, const optional<T> &v)
     {
         if (!_w(os, static_cast<bool>(v)))
         {
@@ -597,7 +489,7 @@ protected:
     }
 
     template<class K, class V>
-    static bool _w(ostream &os, const map<K,V> &v)
+    static bool _w(HOBIO::AbstractWriter &os, const map<K,V> &v)
     {
         size_t len = v.size();
 
@@ -626,7 +518,7 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, uint8_t &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, uint8_t &v, ssize_t field=-1)
     {
         uint64_t r;
 
@@ -644,7 +536,7 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, uint16_t &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, uint16_t &v, ssize_t field=-1)
     {
         uint64_t r;
 
@@ -662,7 +554,7 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, uint32_t &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, uint32_t &v, ssize_t field=-1)
     {
         uint64_t r;
 
@@ -682,19 +574,14 @@ protected:
 
     // VARINT unpacking
     //
-    bool _r(istream &is_, uint64_t &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, uint64_t &v, ssize_t field=-1)
     {
-        if (is_.eof())
-        {
-            return false;
-        }
-
         uint8_t d[9];
         uint8_t b = 0;
         uint8_t c;
         uint8_t m;
 
-        if (!ASSERT_SREAD(is_, &d[0], sizeof(uint8_t)))
+        if (!is_.read(&d[0], sizeof(uint8_t)))
         {
             return false;
         }
@@ -712,7 +599,7 @@ protected:
 
         if (b > 1)
         {
-            if (!ASSERT_SREAD(is_, &d[1], b-1))
+            if (!is_.read(&d[1], b-1))
             {
                 return false;
             }
@@ -733,31 +620,31 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, int8_t &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, int8_t &v, ssize_t field=-1)
     {
         return _z<int8_t>(is_,v,field);
     }
 
-    bool _r(istream &is_, int16_t &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, int16_t &v, ssize_t field=-1)
     {
         return _z<int16_t>(is_,v,field);
     }
 
-    bool _r(istream &is_, int32_t &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, int32_t &v, ssize_t field=-1)
     {
         return _z<int32_t>(is_,v,field);
     }
 
-    bool _r(istream &is_, int64_t &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, int64_t &v, ssize_t field=-1)
     {
         return _z<int64_t>(is_,v,field);
     }
 
-    bool _r(istream &is_, bool &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, bool &v, ssize_t field=-1)
     {
         bool rv;
 
-        if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
+        if (!is_.read(&rv, sizeof(v)))
         {
             return false;
         }
@@ -769,14 +656,14 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, float &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, float &v, ssize_t field=-1)
     {
         float rv;
 
 #if defined(FLOAT_TO_INTEGER_SERIALIZATION)
         if (!_r(is_, *reinterpret_cast<uint32_t*>(&rv)))
 #else // !FLOAT_TO_INTEGER_SERIALIZATION
-        if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
+        if (!is_.read(&rv, sizeof(v)))
 #endif // !FLOAT_TO_INTEGER_SERIALIZATION
         {
             return false;
@@ -789,14 +676,14 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, double &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, double &v, ssize_t field=-1)
     {
         double rv;
 
 #if defined(FLOAT_TO_INTEGER_SERIALIZATION)
         if (!_r(is_, *reinterpret_cast<uint64_t*>(&rv)))
 #else // !FLOAT_TO_INTEGER_SERIALIZATION
-        if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
+        if (!is_.read(&rv, sizeof(v)))
 #endif // !FLOAT_TO_INTEGER_SERIALIZATION
         {
             return false;
@@ -809,11 +696,11 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, long double &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, long double &v, ssize_t field=-1)
     {
         long double rv;
 
-        if (!ASSERT_SREAD(is_, &rv, sizeof(v)))
+        if (!is_.read(&rv, sizeof(v)))
         {
             return false;
         }
@@ -825,7 +712,7 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, string &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, string &v, ssize_t field=-1)
     {
         uint64_t len;
 
@@ -836,7 +723,7 @@ protected:
 
         vector<char> tmp(len);
 
-        if (!ASSERT_SREAD(is_, tmp.data(), len))
+        if (!is_.read(tmp.data(), len))
         {
             return false;
         }
@@ -852,22 +739,19 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, HOB &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, HOB &v, ssize_t field=-1)
     {
-        if (!is_.eof())
+        HOB m;
+
+        if (m << is_)
         {
-            HOB m;
+            v = m;
 
-            if (m << is_)
+            if ( v << static_cast<HOBIO::AbstractReader&>(m) )
             {
-                v = m;
+                set_changed(field, v);
 
-                if ( v << static_cast<istream&>(m) )
-                {
-                    set_changed(field, v);
-
-                    return true;
-                }
+                return true;
             }
         }
 
@@ -875,7 +759,7 @@ protected:
     }
 
     template<size_t N>
-    bool _r(istream &is_, bitset<N> &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, bitset<N> &v, ssize_t field=-1)
     {
         size_t len;
 
@@ -888,7 +772,7 @@ protected:
 
         memset(bits, 0, len);
 
-        if (!ASSERT_SREAD(is_, bits, len))
+        if (!is_.read(bits, len))
         {
             return false;
         }
@@ -908,7 +792,7 @@ protected:
     }
 
     template<class T>
-    bool _r(istream &is_, vector<T> &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, vector<T> &v, ssize_t field=-1)
     {
         size_t len;
 
@@ -943,7 +827,7 @@ protected:
         return true;
     }
 
-    bool _r(istream &is_, vector<bool> &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, vector<bool> &v, ssize_t field=-1)
     {
         size_t count;
 
@@ -965,7 +849,7 @@ protected:
 
             memset(bits, 0, len);
 
-            if (!ASSERT_SREAD(is_, bits, len))
+            if (!is_.read(bits, len))
             {
                 return false;
             }
@@ -994,7 +878,7 @@ protected:
     }
 
     template<class T>
-    bool _r(istream &is_, optional<T> &v, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, optional<T> &v, ssize_t field=-1)
     {
         bool has_field;
 
@@ -1027,7 +911,7 @@ protected:
     }
 
     template<class K, class V>
-    bool _r(istream &is_, map<K,V> &v_, ssize_t field=-1)
+    bool _r(HOBIO::AbstractReader &is_, map<K,V> &v_, ssize_t field=-1)
     {
         size_t len;
 
@@ -1190,7 +1074,7 @@ protected:
         size_t sz = v.size();
 
         return ((dump_size) ? _l(sz) : 0) + _l((sz+7)>>3) + ((sz+7)>>3);
-    } 
+    }
 
     template<class T>
     static size_t _l(const optional<T> &v)
@@ -1549,7 +1433,7 @@ protected:
     {
         for (size_t i = 0; i<s; i++)
         {
-              o << hex 
+              o << hex
                 << setw(2)
                 << setfill('0')
                 << static_cast<int>(reinterpret_cast<const char*>(v)[i] & 0xff);
@@ -1560,11 +1444,11 @@ protected:
 
     virtual bool _r(HOB &ref) { (void)ref; return true; }
 
-    virtual bool _r(istream &is_)
+    virtual bool _r(HOBIO::AbstractReader &is_)
     {
         uint64_t id_;
 
-        _ss.str(string());
+        _ss.clear();
         _is = NULL;
         _sp = 0;
         _ep = 0;
@@ -1585,7 +1469,7 @@ protected:
 
         _is = &is_;
 
-        if ((sz_ > 0) && (static_cast<istream&>(*this).tellg() < 0))
+        if ((sz_ > 0) && (static_cast<HOBIO::AbstractReader&>(*this).tell() < 0))
         {
             success = false;
 
@@ -1593,10 +1477,9 @@ protected:
 
             if (NULL != buffer)
             {
-                if (deserialize(is_,buffer,sz_))
+                if (is_.read(buffer,sz_))
                 {
-                    // if (ASSERT_SWRITE(_ss,buffer,sz_))
-                    if (_ss.write(buffer,sz_).good())
+                    if (_ss.write(buffer,sz_))
                     {
                         _is     = NULL;
                         success = true;
@@ -1609,7 +1492,7 @@ protected:
 
         if (success)
         {
-            _sp = static_cast<istream&>(*this).tellg();
+            _sp = static_cast<HOBIO::AbstractReader&>(*this).tell();
             _ep = _sp + sz_;
             _id = id_;
         }
@@ -1617,7 +1500,7 @@ protected:
         return success;
     }
 
-    virtual bool _w(ostream &os) const { (void)os; return true; }
+    virtual bool _w(HOBIO::AbstractWriter &os) const { (void)os; return true; }
 
     virtual size_t _l() const { return 0; }
 
@@ -1722,28 +1605,28 @@ protected:
 
     virtual void flush_pending()
     {
-        istream & s_ = static_cast<istream&>(*this);
+        HOBIO::AbstractReader & s_ = static_cast<HOBIO::AbstractReader&>(*this);
 
-        size_t cp = s_.tellg();
+        ssize_t cp = s_.tell();
 
-        if (cp < _ep)
+        if ((cp >= 0) && (cp < _ep))
         {
             s_.ignore(_ep - cp);
         }
     }
 
 private:
-    UID           _id;
-    stringstream  _ss;
-    istream      *_is;
-    size_t        _sp;
-    size_t        _ep;
-    ssize_t       _np;
+    UID                        _id;
+    HOBIO::BufferReaderWriter  _ss;
+    HOBIO::AbstractReader     *_is;
+    ssize_t                    _sp;
+    ssize_t                    _ep;
+    ssize_t                    _np;
 
     // ZIGZAG decoding
     //
     template<class T>
-    bool _z(istream &is_, T &v, ssize_t field=-1)
+    bool _z(HOBIO::AbstractReader &is_, T &v, ssize_t field=-1)
     {
         uint64_t r;
 
@@ -1761,48 +1644,9 @@ private:
         return true;
     }
 
-    bool deserialize(istream &is_, void *v, size_t s)
+    static bool parse(HOBIO::AbstractReader &is, HOBIO::AbstractWriter &os, uint8_t t)
     {
-        // Check whether **only** an internal logic error occurred ...
-        //
-        if (is_.fail() && !is_.bad() && !is_.eof())
-        {
-            // ... and ignore it
-            //
-            is_.clear();
-        }
-
-        // Fail in case of any other error
-        //
-        return is_.good() && is_.read(static_cast<char *>(v),s).good();
-    }
-
-#if defined(DEBUG_WRITE)
-    static bool _w(ostream &os, const void *v, const size_t s)
-    {
-        if (os.write(reinterpret_cast<const char *>(v),s).good())
-        {
-#if !defined(DUMP_ALL)
-            if (dynamic_cast<ofstream*>(&os) != NULL)
-#endif // DUMP_ALL
-            {
-                cout << "DEBUG_WRITE:";
-
-                _t(cout,v,s);
-
-                cout << endl;
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-#endif // DEBUG_WRITE
-
-    static bool parse(istream &is, ostream &os, char t)
-    {
-        char c;
+        uint8_t c;
         bool group = ('}' == t);
         bool array = (']' == t);
         bool kword = ('"' == t);
@@ -1810,7 +1654,7 @@ private:
 
         string token;
 
-        while (is.get(c).good() && ((t != c) || skip))
+        while (is.get(c) && ((t != c) || skip))
         {
             if (kword)
             {
@@ -1841,7 +1685,7 @@ private:
 
         if (!token.empty())
         {
-            while (is.get(c).good())
+            while (is.get(c))
             {
                 if (':' == c)
                 {
@@ -1919,7 +1763,7 @@ private:
 
                             skip = false;
 
-                            while (is.get(c).good())
+                            while (is.get(c))
                             {
                                 if (can_be_spaced || !isspace(c))
                                 {
@@ -1938,7 +1782,7 @@ private:
 
                                         if ('}' == c)
                                         {
-                                            is.unget();
+                                            is.unget(c);
                                             break;
                                         }
                                         else
@@ -2037,7 +1881,7 @@ private:
                 else
                 if (!isspace(c))
                 {
-                    is.unget();
+                    is.unget(c);
 
                     break;
                 }
@@ -2070,10 +1914,14 @@ private:
     }
 };
 
-inline bool operator<<(ostream  &o, HOB      &m) { return m >> o; }
-inline bool operator>>(istream  &i, HOB      &m) { return m << i; }
-inline bool operator>>(HOB      &i, HOB      &m) { return m << i; }
-inline bool operator>>(HOB::Src &i, HOB::Snk &o) { return HOB::parse(i,o); }
+inline bool operator<<(HOBIO::AbstractWriter &o, HOB &m) { return m >> o; }
+inline bool operator>>(HOBIO::AbstractReader &i, HOB &m) { return m << i; }
+inline bool operator>>(HOB                   &i, HOB &m) { return m << i; }
+
+inline bool operator>>(HOBIO::AbstractReader &i, HOBIO::AbstractWriter &o)
+{
+    return HOB::parse(i,o);
+}
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
@@ -2361,7 +2209,7 @@ protected:                                                                     \
                                                                                \
         ref.rewind();                                                          \
                                                                                \
-        if (!_r(static_cast<istream&>(ref)))                                   \
+        if (!_r(static_cast<HOBIO::AbstractReader&>(ref)))                     \
         {                                                                      \
             return false;                                                      \
         }                                                                      \
@@ -2371,7 +2219,7 @@ protected:                                                                     \
         return true;                                                           \
     }                                                                          \
                                                                                \
-    bool _r(istream &is_)                                                      \
+    bool _r(HOBIO::AbstractReader &is_)                                        \
     {                                                                          \
         (void)is_;                                                             \
                                                                                \
@@ -2392,7 +2240,7 @@ protected:                                                                     \
         return false;                                                          \
     }                                                                          \
                                                                                \
-    bool _w(ostream &os) const                                                 \
+    bool _w(HOBIO::AbstractWriter &os) const                                   \
     {                                                                          \
         (void)os;                                                              \
                                                                                \

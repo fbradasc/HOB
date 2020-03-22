@@ -378,7 +378,6 @@ int main(int argc, char *argv[])
     char *value;
     int   errfnd = 0;
 
-
     while (true)
     {
         c = getopt_long(argc,
@@ -397,7 +396,7 @@ int main(int argc, char *argv[])
             case 'w':
                 {
                     do_write = true;
-                    
+
                     if (NULL != optarg)
                     {
                         in_file  = optarg;
@@ -483,12 +482,12 @@ int main(int argc, char *argv[])
 
     if (do_write)
     {
-        std::ofstream ofs(in_file.c_str(), std::ios::binary);
+        HOBIO::FileWriter ofs(in_file.c_str());
 #else // !OUTPUT_ON_FILE
 #if defined(SEPARATE_IN_AND_OUT_STRING_STREAMS)
-        std::ostringstream ofs;
+        HOBIO::BufferWriter ofs;
 #else // SEPARATE_IN_AND_OUT_STRING_STREAMS
-        std::stringstream ofs;
+        HOBIO::BufferReaderWriter ofs;
 #endif // SEPARATE_IN_AND_OUT_STRING_STREAMS
 #endif // OUTPUT_ON_FILE
 
@@ -631,39 +630,27 @@ int main(int argc, char *argv[])
 
     if (do_read || do_inport)
     {
-        std::ifstream ifile;
-        std::istream *is = &cin;
-        std::stringstream os;
+        HOBIO::FileReader ifile;
+        HOBIO::AbstractReader *is = &ifile;
+        HOBIO::BufferReaderWriter os;
 
         if (from_file)
         {
-            if (do_inport)
-            {
-                ifile.open(in_file.c_str());
-            }
-            else
-            {
-                ifile.open(in_file.c_str(), std::ios::binary);
-            }
-
-            is = &ifile;
+            ifile.open(in_file.c_str(), !do_inport);
         }
 
-        HOB::Src src(*is);
-        HOB::Snk snk(os);
-
-        if (do_inport && (src >> snk)) // same of HOB::parse(src, snk)
+        if (do_inport && (*is >> os)) // same of HOB::parse(src, os)
         {
             is = &os;
         }
 
 #else // OUTPUT_ON_FILE
 #if defined(SEPARATE_IN_AND_OUT_STRING_STREAMS)
-        std::istringstream ifs(ofs.str());
+        HOBIO::BufferReader ifs(ofs);
 #else // SEPARATE_IN_AND_OUT_STRING_STREAMS
-        std::stringstream & ifs = ofs;
+        HOBIO::BufferReaderWriter & ifs = ofs;
 #endif // SEPARATE_IN_AND_OUT_STRING_STREAMS
-        std::istream *is = &ifs;
+        HOBIO::AbstractReader *is = &ifs;
 #endif // OUTPUT_ON_FILE
 
         printf("------------------[ READING HOBS ]------------------\n\n");
@@ -688,8 +675,8 @@ int main(int argc, char *argv[])
 #if defined(OUTPUT_ON_FILE)
         if (from_file)
         {
-            std::ifstream *pifs = (do_inport) ? &ifile
-                                              : static_cast<std::ifstream *>(is);
+            HOBIO::FileReader *pifs = (do_inport) ? &ifile
+                                           : static_cast<HOBIO::FileReader *>(is);
 
             pifs->close();
         }

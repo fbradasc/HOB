@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include "fdstreambuf.h"
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -27,9 +26,9 @@ NumericMessage         m_NumericMessage        ;
 NumericExtraParameters m_NumericExtraParameters;
 ComplexStruct          m_ComplexStruct         ;
 
-static std::list<std::iostream *> streamList;
+static std::list<HOBIO::FdReaderWriter *> streamList;
 
-static void wall(HOB &m, ostream *s)
+static void wall(HOB &m, HOBIO::FdReaderWriter *s)
 {
     // for (auto s : streamList)
     {
@@ -282,8 +281,7 @@ public:
 
 static void handleClient(Client client)
 {
-    wl::fdstreambuf sbuf(client.fd);
-    std::iostream io(&sbuf);
+    HOBIO::FdReaderWriter io(client.fd);
     streamList.push_back(&io);
 
     HOB m;
