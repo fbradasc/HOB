@@ -40,6 +40,11 @@ namespace HOBIO
 
         virtual bool read(void *data, size_t size)
         {
+            if ((NULL == data) || (size < 1))
+            {
+                return false;
+            }
+
             return true;
         }
 
@@ -106,12 +111,9 @@ namespace HOBIO
 
         bool open(const char *pathname, bool append = false)
         {
-            if (NULL != _pf)
-            {
-                return set_good(false);
-            }
+            close();
 
-            _pf = ::fopen(pathname, (append) ? "a" : "w");
+            _pf = ::fopen(pathname, (append) ? "ab" : "wb");
 
             return set_good(_can_close = (NULL != _pf));
         }
@@ -123,7 +125,7 @@ namespace HOBIO
                 return true;
             }
 
-            if (NULL == _pf)
+            if (!good() || (NULL == _pf))
             {
                 return false;
             }
@@ -189,10 +191,7 @@ namespace HOBIO
 
         bool open(const char *pathname, bool binary=true)
         {
-            if (NULL != _pf)
-            {
-                return set_good(false);
-            }
+            close();
 
             _pf = ::fopen(pathname, (binary) ? "rb" : "r");
 
@@ -201,17 +200,22 @@ namespace HOBIO
 
         virtual bool read(void *data, size_t size)
         {
-            if (NULL == _pf)
+            if (!good() || (NULL == _pf) || ::feof(_pf))
+            {
+                return set_good(false);
+            }
+
+            if ((NULL == data) || (size < 1))
             {
                 return false;
             }
 
-            return set_good(!::feof(_pf) && (::fread(data,1,size,_pf) == size));
+            return set_good(::fread(data,1,size,_pf) == size);
         }
 
         virtual bool get(uint8_t &v)
         {
-            if (NULL == _pf || ::feof(_pf))
+            if (!good() || (NULL == _pf) || ::feof(_pf))
             {
                 return set_good(false);
             }
@@ -230,7 +234,7 @@ namespace HOBIO
 
         virtual bool unget(const uint8_t &v)
         {
-            if (NULL == _pf)
+            if (!good() || (NULL == _pf))
             {
                 return set_good(false);
             }
@@ -240,12 +244,12 @@ namespace HOBIO
 
         virtual bool seek(long offset, int whence)
         {
-            if (NULL == _pf)
+            if (!good() || (NULL == _pf) || ::feof(_pf))
             {
                 return set_good(false);
             }
 
-            return set_good( ::fseek(_pf,offset,whence) >= 0 );
+            return ( ::fseek(_pf,offset,whence) >= 0 );
         }
 
         virtual ssize_t tell()
@@ -260,9 +264,14 @@ namespace HOBIO
 
         void close()
         {
-            if (_can_close)
+            if (NULL != _pf)
             {
-                ::fclose(_pf);
+                // ::fflush(_pf);
+
+                if (_can_close)
+                {
+                    ::fclose(_pf);
+                }
             }
 
             _pf = NULL;
@@ -299,7 +308,7 @@ namespace HOBIO
                 return true;
             }
 
-            if (_fd < 0)
+            if (!good() || (_fd < 0))
             {
                 return set_good(false);
             }
@@ -336,9 +345,14 @@ namespace HOBIO
 
         virtual bool read(void *data, size_t size)
         {
-            if (_fd < 0)
+            if (!good() || (_fd < 0))
             {
                 return set_good(false);
+            }
+
+            if ((NULL == data) || (size < 1))
+            {
+                return false;
             }
 
             uint8_t *ptr = static_cast<uint8_t*>(data);
@@ -383,12 +397,24 @@ namespace HOBIO
 
         virtual bool seek(ssize_t offset, int whence)
         {
-            return set_good( ::lseek(_fd,static_cast<off_t>(offset),whence) >= 0 );
+            if (!good() || (_fd < 0))
+            {
+                return set_good(false);
+            }
+
+            return ( ::lseek(_fd,static_cast<off_t>(offset),whence) >= 0 );
         }
 
         virtual ssize_t tell()
         {
-            return static_cast<ssize_t>(::lseek(_fd,0,SEEK_CUR));
+            if (!good() || (_fd < 0))
+            {
+                set_good(false);
+
+                return -1;
+            }
+
+            return ::lseek(_fd,0,SEEK_CUR);
         }
 
         void close()
@@ -428,7 +454,7 @@ namespace HOBIO
                 return true;
             }
 
-            if (_fd < 0)
+            if (!good() || (_fd < 0))
             {
                 return set_good(false);
             }
@@ -440,9 +466,14 @@ namespace HOBIO
 
         virtual bool read(void *data, size_t size)
         {
-            if (_fd < 0)
+            if (!good() || (_fd < 0))
             {
                 return set_good(false);
+            }
+
+            if ((NULL == data) || (size < 1))
+            {
+                return false;
             }
 
             uint8_t *ptr = static_cast<uint8_t*>(data);
@@ -475,7 +506,7 @@ namespace HOBIO
 
         virtual bool unget(const uint8_t &v)
         {
-            if (_fd < 0)
+            if (!good() || (_fd < 0))
             {
                 return set_good(false);
             }
@@ -492,11 +523,23 @@ namespace HOBIO
 
         virtual bool seek(ssize_t offset, int whence)
         {
-            return set_good( ::lseek(_fd,static_cast<off_t>(offset),whence) >= 0 );
+            if (!good() || (_fd < 0))
+            {
+                return set_good(false);
+            }
+
+            return ( ::lseek(_fd,static_cast<off_t>(offset),whence) >= 0 );
         }
 
         virtual ssize_t tell()
         {
+            if (!good() || (_fd < 0))
+            {
+                set_good(false);
+
+                return -1;
+            }
+
             return ::lseek(_fd,0,SEEK_CUR);
         }
 
@@ -522,7 +565,10 @@ namespace HOBIO
             , _size    (0)
             , _capacity(0)
         {
-            alloc(reserve_);
+            if (reserve_ > 0)
+            {
+                alloc(reserve_);
+            }
         }
 
         ~BufferWriter()
@@ -532,27 +578,37 @@ namespace HOBIO
             _buffer = NULL;
         }
 
-        const uint8_t *data    () const { return _buffer  ; }
-        size_t         size    () const { return _size    ; }
-        size_t         capacity() const { return _capacity; }
+        inline const uint8_t *data    () const { return _buffer  ; }
+        inline size_t         size    () const { return _size    ; }
+        inline size_t         capacity() const { return _capacity; }
 
         inline bool alloc(const size_t &s)
         {
+            if ( s == 0 )
+            {
+                return true;
+            }
+
             if ((_size + s) > _capacity)
             {
-                _capacity = _size + s;
+                size_t new_capacity = _size + s;
 
                 _buffer = reinterpret_cast<uint8_t*> (
-                    realloc(_buffer,_capacity)
+                    realloc(_buffer,new_capacity)
                 );
+
+                if (NULL != _buffer)
+                {
+                    _capacity = new_capacity;
+                }
             }
 
             return set_good( NULL != _buffer );
         }
 
-        virtual void clear() { _size = 0; }
+        inline virtual void clear() { _size = 0; }
 
-        virtual bool write(const void *data, size_t size)
+        inline virtual bool write(const void *data, size_t size)
         {
             if ((NULL == data) || (0 == size))
             {
@@ -564,9 +620,18 @@ namespace HOBIO
                 return set_good( false );
             }
 
+#if 1
             memcpy(&_buffer[_size], data, size);
 
             _size += size;
+#else
+            for (const uint8_t *from = static_cast<const uint8_t*>(data);
+                 size>0;
+                 size--)
+            {
+                _buffer[_size++] = *(from++);
+            }
+#endif
 
             return true;
         }
@@ -582,10 +647,33 @@ namespace HOBIO
         , public AbstractReader
     {
     public:
+        BufferReader()
+            : BaseIO()
+            , AbstractReader()
+            , _buffer       (NULL)
+            , _size         (0)
+            , _capacity     (0)
+            , _pos          (0)
+        {
+        }
+
+        BufferReader(const BufferReader &ref)
+            : BaseIO()
+            , AbstractReader()
+            , _buffer       (NULL)
+            , _size         (0)
+            , _capacity     (0)
+            , _pos          (0)
+        {
+            *this = ref;
+        }
+
         BufferReader(const BufferWriter &ref)
             : BaseIO()
             , AbstractReader()
             , _buffer       (NULL)
+            , _size         (0)
+            , _capacity     (0)
             , _pos          (0)
         {
             if (ref.capacity() > 0)
@@ -608,6 +696,41 @@ namespace HOBIO
             set_good( NULL != _buffer );
         }
 
+        BufferReader(AbstractReader &ref, size_t size)
+            : BaseIO()
+            , AbstractReader()
+            , _buffer       (NULL)
+            , _size         (0)
+            , _capacity     (0)
+            , _pos          (0)
+        {
+            load(ref, size);
+        }
+
+        BufferReader & operator=(const BufferReader &ref)
+        {
+            if (ref.capacity() > 0)
+            {
+                _buffer = reinterpret_cast<uint8_t*>
+                (
+                    malloc(ref.capacity())
+                );
+
+                if (NULL != _buffer)
+                {
+                    memcpy(_buffer,ref.data(),ref.capacity());
+
+                    _size     = ref.size();
+
+                    _capacity = ref.capacity();
+                }
+            }
+
+            set_good( NULL != _buffer );
+
+            return *this;
+        }
+
         ~BufferReader()
         {
             free(_buffer);
@@ -615,15 +738,63 @@ namespace HOBIO
             _buffer = NULL;
         }
 
-        const uint8_t *data    () const { return _buffer  ; }
-        size_t         size    () const { return _size    ; }
-        size_t         capacity() const { return _capacity; }
+        inline const uint8_t *data    () const { return _buffer  ; }
+        inline size_t         size    () const { return _size    ; }
+        inline size_t         capacity() const { return _capacity; }
 
-        virtual bool read(void *data, size_t size)
+        inline bool alloc(const size_t &s)
         {
-            if (NULL == _buffer)
+            if ( s == 0 )
+            {
+                return true;
+            }
+
+            size_t new_capacity = _size + s;
+
+            if (new_capacity > _capacity)
+            {
+                _buffer = reinterpret_cast<uint8_t*>
+                (
+                    realloc(_buffer,new_capacity)
+                );
+
+                if (NULL != _buffer)
+                {
+                    _capacity = new_capacity;
+                }
+            }
+
+            return set_good( NULL != _buffer );
+        }
+
+        inline virtual void clear()
+        {
+            _size = 0;
+            _pos  = 0;
+        }
+
+        inline virtual bool load(AbstractReader &ref, size_t size)
+        {
+            if ((size > 0) && (!alloc(size) || !ref.read(&_buffer[_size], size)))
             {
                 return set_good(false);
+            }
+
+            _size += size;
+
+            return true;
+        }
+
+        inline virtual bool read(void *data, size_t size)
+        {
+            if (!good() || (NULL == _buffer))
+            {
+                return set_good(false);
+            }
+
+            if ((NULL == data) || (size < 1))
+            {
+                return false;
             }
 
             if ((_pos + size) > _size)
@@ -638,9 +809,9 @@ namespace HOBIO
             return true;
         }
 
-        virtual bool get(uint8_t &v)
+        inline virtual bool get(uint8_t &v)
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
             }
@@ -655,9 +826,9 @@ namespace HOBIO
             return true;
         }
 
-        virtual bool unget(const uint8_t &v)
+        inline virtual bool unget(const uint8_t &v)
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
             }
@@ -672,9 +843,9 @@ namespace HOBIO
             return true;
         }
 
-        virtual bool seek(ssize_t offset, int whence)
+        inline virtual bool seek(ssize_t offset, int whence)
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
             }
@@ -726,10 +897,12 @@ namespace HOBIO
             return true;
         }
 
-        virtual ssize_t tell()
+        inline virtual ssize_t tell()
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
+                set_good(false);
+
                 return -1;
             }
 
@@ -758,7 +931,10 @@ namespace HOBIO
             , _capacity(0)
             , _pos     (0)
         {
-            alloc(reserve_);
+            if (reserve_ > 0)
+            {
+                alloc(reserve_);
+            }
         }
 
         ~BufferReaderWriter()
@@ -786,32 +962,41 @@ namespace HOBIO
             return *this;
         }
 
-        const uint8_t *data    () const { return _buffer  ; }
-        size_t         size    () const { return _size    ; }
-        size_t         capacity() const { return _capacity; }
+        inline const uint8_t *data    () const { return _buffer  ; }
+        inline size_t         size    () const { return _size    ; }
+        inline size_t         capacity() const { return _capacity; }
 
         inline bool alloc(const size_t &s)
         {
+            if ( s == 0 )
+            {
+                return true;
+            }
+
             if ((_size + s) > _capacity)
             {
-                _capacity = _size + s;
+                size_t new_capacity = _size + s;
 
-                _buffer = reinterpret_cast<uint8_t*>
-                (
-                    realloc(_buffer,_capacity)
+                _buffer = reinterpret_cast<uint8_t*> (
+                    realloc(_buffer,new_capacity)
                 );
+
+                if (NULL != _buffer)
+                {
+                    _capacity = new_capacity;
+                }
             }
 
             return set_good( NULL != _buffer );
         }
 
-        virtual void clear()
+        inline virtual void clear()
         {
             _size = 0;
             _pos  = 0;
         }
 
-        virtual bool write(const void *data, size_t size)
+        inline virtual bool write(const void *data, size_t size)
         {
             if ((NULL == data) || (0 == size))
             {
@@ -823,18 +1008,32 @@ namespace HOBIO
                 return set_good(false);
             }
 
+#if 1
             memcpy(&_buffer[_size], data, size);
 
             _size += size;
+#else
+            for (const uint8_t *from = static_cast<const uint8_t*>(data);
+                 size>0;
+                 size--)
+            {
+                _buffer[_size++] = *(from++);
+            }
+#endif
 
             return true;
         }
 
-        virtual bool read(void *data, size_t size)
+        inline virtual bool read(void *data, size_t size)
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
+            }
+
+            if ((NULL == data) || (size < 1))
+            {
+                return false;
             }
 
             if ((_pos + size) > _size)
@@ -849,9 +1048,9 @@ namespace HOBIO
             return true;
         }
 
-        virtual bool get(uint8_t &v)
+        inline virtual bool get(uint8_t &v)
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
             }
@@ -866,9 +1065,9 @@ namespace HOBIO
             return true;
         }
 
-        virtual bool unget(const uint8_t &v)
+        inline virtual bool unget(const uint8_t &v)
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
             }
@@ -883,9 +1082,9 @@ namespace HOBIO
             return true;
         }
 
-        virtual bool seek(ssize_t offset, int whence)
+        inline virtual bool seek(ssize_t offset, int whence)
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
             }
@@ -937,10 +1136,12 @@ namespace HOBIO
             return true;
         }
 
-        virtual ssize_t tell()
+        inline virtual ssize_t tell()
         {
-            if (NULL == _buffer)
+            if (!good() || (NULL == _buffer))
             {
+                set_good(false);
+
                 return -1;
             }
 

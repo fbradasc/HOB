@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 on_file() {
     ./test_message_on_file -w out.dat

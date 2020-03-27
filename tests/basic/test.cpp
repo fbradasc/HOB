@@ -659,6 +659,7 @@ int main(int argc, char *argv[])
 
         while (*is >> m) // same of (m << *is)
         {
+LOG(m);
             handle_message(m);
 
             if (m == m_AnotherStruct)
