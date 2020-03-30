@@ -610,6 +610,7 @@ namespace HOBIO
 
         inline virtual bool write(const void *data, size_t size)
         {
+#if 1
             if ((NULL == data) || (0 == size))
             {
                 return true;
@@ -620,19 +621,10 @@ namespace HOBIO
                 return set_good( false );
             }
 
-#if 1
             memcpy(&_buffer[_size], data, size);
 
             _size += size;
-#else
-            for (const uint8_t *from = static_cast<const uint8_t*>(data);
-                 size>0;
-                 size--)
-            {
-                _buffer[_size++] = *(from++);
-            }
 #endif
-
             return true;
         }
 
@@ -765,6 +757,12 @@ namespace HOBIO
             }
 
             return set_good( NULL != _buffer );
+        }
+
+        inline virtual void rewind()
+        {
+            set_good(true);
+            _pos = 0;
         }
 
         inline virtual void clear()
@@ -990,6 +988,12 @@ namespace HOBIO
             return set_good( NULL != _buffer );
         }
 
+        inline virtual void rewind()
+        {
+            set_good(true);
+            _pos = 0;
+        }
+
         inline virtual void clear()
         {
             _size = 0;
@@ -1008,18 +1012,9 @@ namespace HOBIO
                 return set_good(false);
             }
 
-#if 1
             memcpy(&_buffer[_size], data, size);
 
             _size += size;
-#else
-            for (const uint8_t *from = static_cast<const uint8_t*>(data);
-                 size>0;
-                 size--)
-            {
-                _buffer[_size++] = *(from++);
-            }
-#endif
 
             return true;
         }

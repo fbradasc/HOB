@@ -16,7 +16,35 @@
 #include "cpp_magic.h"
 #include "hobio.hpp"
 
-// #define FLOAT_TO_INTEGER_SERIALIZATION
+#define USE_VARINT
+
+/*
+ * Define some byte ordering macros
+ */
+#if defined(WIN32) || defined(_WIN32)
+    #define HOB_BIG_ENDIAN_ENCODE_16(v) _byteswap_ushort(v)
+    #define HOB_BIG_ENDIAN_ENCODE_32(v) _byteswap_ulong(v)
+    #define HOB_BIG_ENDIAN_ENCODE_64(v) _byteswap_uint64(v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) (v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) (v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) (v)
+#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    #define HOB_BIG_ENDIAN_ENCODE_16(v) __builtin_bswap16(v)
+    #define HOB_BIG_ENDIAN_ENCODE_32(v) __builtin_bswap32(v)
+    #define HOB_BIG_ENDIAN_ENCODE_64(v) __builtin_bswap64(v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) (v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) (v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) (v)
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) __builtin_bswap16(v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) __builtin_bswap32(v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) __builtin_bswap64(v)
+    #define HOB_BIG_ENDIAN_ENCODE_16(v) (v)
+    #define HOB_BIG_ENDIAN_ENCODE_32(v) (v)
+    #define HOB_BIG_ENDIAN_ENCODE_64(v) (v)
+#else
+    #error "Byte Ordering of platform not determined. Set __BYTE_ORDER__ manually before including this file."
+#endif
 
 #define M_LOG(...)            printf("%s:%s:%d: ",        \
                                      __FILE__,            \
@@ -60,22 +88,10 @@
 
 #define HASH(x)               (static_cast<uint64_t>((x)^((x)>>32)))
 
-#define ZIGZAG_DECODE(value)  static_cast<uint64_t>(              \
-                                  ((value) >> 1) ^ -((value) & 1) \
-                              )
-
-#define ZIGZAG_ENCODE(value)  static_cast<uint64_t>(              \
-                                  (                               \
-                                      static_cast<int64_t>(value) \
-                                      <<                          \
-                                      1                           \
-                                  )                               \
-                                  ^                               \
-                                  (                               \
-                                      static_cast<int64_t>(value) \
-                                      >>                          \
-                                      ((sizeof(int64_t)*8)-1)     \
-                                  )                               \
+#define ZIGZAG_ENCODE(value)  static_cast<uint64_t>(                    \
+                                  ( static_cast<int64_t>(value) <<  1 ) \
+                                  ^                                     \
+                                  ( static_cast<int64_t>(value) >> 63 ) \
                               )
 
 // |--------------------------------|
@@ -191,9 +207,9 @@ public:
             return true;
         }
 
-        size_t payload = _l();
+        size_t payload;
 
-        os.alloc(_l(_id)+((payload>0)?(_l(payload)+payload):0));
+        os.alloc(_get_size(payload));
 
         if (!_w(os, _id))
         {
@@ -227,9 +243,9 @@ public:
 
     operator size_t() const
     {
-        size_t sz = _l();
+        size_t sz;
 
-        return _l(_id) + ((sz > 0) ? ( _l(sz) + sz ) : 0); // ( _ep - _sp );
+        return _get_size(sz);
     }
 
     inline virtual bool rewind()
@@ -266,100 +282,43 @@ public:
     }
 
 protected:
-    //========================================================================
-    //
-    // Variable integer (VARINT) are packed in 1 to 9 bytes
-    //
-    // The MSb bits in the MSB byte identify how many bytes are required
-    // to store the numeric value.
-    //
-    // x: single bit
-    // X: single byte (8 bits)
-    //
-    // 1 byte  [numeric value encoded in  7 bits]: 0xxxxxxx
-    // 2 bytes [numeric value encoded in 14 bits]: 10xxxxxx.X
-    // 3 bytes [numeric value encoded in 21 bits]: 110xxxxx.X.X
-    // 4 bytes [numeric value encoded in 28 bits]: 1110xxxx.X.X.X
-    // 5 bytes [numeric value encoded in 35 bits]: 11110xxx.X.X.X.X
-    // 6 bytes [numeric value encoded in 42 bits]: 111110xx.X.X.X.X.X
-    // 7 bytes [numeric value encoded in 49 bits]: 1111110x.X.X.X.X.X.X
-    // 8 bytes [numeric value encoded in 56 bits]: 11111110.X.X.X.X.X.X.X
-    // 9 bytes [numeric value encoded in 64 bits]: 11111111.X.X.X.X.X.X.X.X
-    //
-    // Signed Integer values are zigzag encoded by mapping negative values
-    // to positive values while going back and forth:
-    //
-    // (0=0, -1=1, 1=2, -2=3, 2=4, -3=5, 3=6 ...)
-    //
-    //========================================================================
-
     static inline bool _w(HOBIO::AbstractWriter &os, const uint8_t &v)
     {
-        return _w(os, static_cast<const uint64_t &>(v));
+        return _varint_pack(os, v);
     }
 
     static inline bool _w(HOBIO::AbstractWriter &os, const uint16_t &v)
     {
-        return _w(os, static_cast<const uint64_t &>(v));
+        return _varint_pack(os, v);
     }
 
     static inline bool _w(HOBIO::AbstractWriter &os, const uint32_t &v)
     {
-        return _w(os, static_cast<const uint64_t &>(v));
+        return _varint_pack(os, v);
     }
-
-    // VARINT packing
-    //
     static inline bool _w(HOBIO::AbstractWriter &os, const uint64_t &v)
     {
-        uint8_t d[9];
-
-        uint8_t b = (v <= 0x000000000000007fllu) ? 1 :
-                    (v <= 0x0000000000003fffllu) ? 2 :
-                    (v <= 0x00000000001fffffllu) ? 3 :
-                    (v <= 0x000000000fffffffllu) ? 4 :
-                    (v <= 0x00000007ffffffffllu) ? 5 :
-                    (v <= 0x000003ffffffffffllu) ? 6 :
-                    (v <= 0x0001ffffffffffffllu) ? 7 :
-                    (v <= 0x00ffffffffffffffllu) ? 8 : 9;
-
-        uint8_t  m = 0xff;
-        uint32_t c = 0xfffffe00;
-
-        for (uint8_t i=0; i<b; i++)
-        {
-            d[b-i-1] = static_cast<uint8_t>( ( v >> (8*i) ) & 0xff );
-
-            c >>= 1;
-            m >>= 1;
-        }
-
-        d[0] &= static_cast<uint8_t>(m & 0xff);
-        d[0] |= static_cast<uint8_t>(c & 0xff);
-
-        return os.write(d,b);
+        return _varint_pack(os, v);
     }
 
     static inline bool _w(HOBIO::AbstractWriter &os, const int8_t &v)
     {
-        return _w(os, static_cast<int64_t>(v));
+        return _varint_pack(os, v);
     }
 
     static inline bool _w(HOBIO::AbstractWriter &os, const int16_t &v)
     {
-        return _w(os, static_cast<int64_t>(v));
+        return _varint_pack(os, v);
     }
 
     static inline bool _w(HOBIO::AbstractWriter &os, const int32_t &v)
     {
-        return _w(os, static_cast<int64_t>(v));
+        return _varint_pack(os, v);
     }
 
-    // ZIGZAG encoding
-    //
     static inline bool _w(HOBIO::AbstractWriter &os, const int64_t &v)
     {
-        return _w(os, ZIGZAG_ENCODE(v));
+        return _varint_pack(os, v);
     }
 
     static inline bool _w(HOBIO::AbstractWriter &os, const bool &v)
@@ -369,20 +328,12 @@ protected:
 
     static inline bool _w(HOBIO::AbstractWriter &os, const float &v)
     {
-#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
-        return _w(os, *reinterpret_cast<const uint32_t*>(&v));
-#else // !FLOAT_TO_INTEGER_SERIALIZATION
         return os.write(&v,sizeof(v));
-#endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
     static inline bool _w(HOBIO::AbstractWriter &os, const double &v)
     {
-#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
-        return _w(os, *reinterpret_cast<const uint64_t*>(&v));
-#else // !FLOAT_TO_INTEGER_SERIALIZATION
         return os.write(&v,sizeof(v));
-#endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
     static inline bool _w(HOBIO::AbstractWriter &os, const long double &v)
@@ -514,42 +465,42 @@ protected:
 
     inline bool _r(HOBIO::AbstractReader &is_, uint8_t &v, ssize_t field=-1)
     {
-        return _u<uint8_t>(is_,v,field);
+        return _varint_unpack<uint8_t>(is_,v,field);
     }
 
     inline bool _r(HOBIO::AbstractReader &is_, uint16_t &v, ssize_t field=-1)
     {
-        return _u<uint16_t>(is_,v,field);
+        return _varint_unpack<uint16_t>(is_,v,field);
     }
 
     inline bool _r(HOBIO::AbstractReader &is_, uint32_t &v, ssize_t field=-1)
     {
-        return _u<uint32_t>(is_,v,field);
+        return _varint_unpack<uint32_t>(is_,v,field);
     }
 
     inline bool _r(HOBIO::AbstractReader &is_, uint64_t &v, ssize_t field=-1)
     {
-        return _u<uint64_t>(is_, v, field);
+        return _varint_unpack<uint64_t>(is_, v, field);
     }
 
     inline bool _r(HOBIO::AbstractReader &is_, int8_t &v, ssize_t field=-1)
     {
-        return _u/*_z*/<int8_t>(is_,v,field);
+        return _varint_unpack<int8_t>(is_,v,field);
     }
 
     inline bool _r(HOBIO::AbstractReader &is_, int16_t &v, ssize_t field=-1)
     {
-        return _u/*_z*/<int16_t>(is_,v,field);
+        return _varint_unpack<int16_t>(is_,v,field);
     }
 
     inline bool _r(HOBIO::AbstractReader &is_, int32_t &v, ssize_t field=-1)
     {
-        return _u/*_z*/<int32_t>(is_,v,field);
+        return _varint_unpack<int32_t>(is_,v,field);
     }
 
     inline bool _r(HOBIO::AbstractReader &is_, int64_t &v, ssize_t field=-1)
     {
-        return _u/*_z*/<int64_t>(is_,v,field);
+        return _varint_unpack<int64_t>(is_,v,field);
     }
 
     bool _r(HOBIO::AbstractReader &is_, bool &v, ssize_t field=-1)
@@ -572,11 +523,7 @@ protected:
     {
         float rv;
 
-#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
-        if (!_r(is_, *reinterpret_cast<uint32_t*>(&rv)))
-#else // !FLOAT_TO_INTEGER_SERIALIZATION
         if (!is_.read(&rv, sizeof(v)))
-#endif // !FLOAT_TO_INTEGER_SERIALIZATION
         {
             return false;
         }
@@ -592,11 +539,7 @@ protected:
     {
         double rv;
 
-#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
-        if (!_r(is_, *reinterpret_cast<uint64_t*>(&rv)))
-#else // !FLOAT_TO_INTEGER_SERIALIZATION
         if (!is_.read(&rv, sizeof(v)))
-#endif // !FLOAT_TO_INTEGER_SERIALIZATION
         {
             return false;
         }
@@ -870,53 +813,42 @@ protected:
 
     static inline size_t _l(const uint8_t &v)
     {
-        return _l(static_cast<const uint64_t &>(v));
+        return _get_varint_size(v);
     }
 
     static inline size_t _l(const uint16_t &v)
     {
-        return _l(static_cast<const uint64_t &>(v));
+        return _get_varint_size(v);
     }
 
     static inline size_t _l(const uint32_t &v)
     {
-        return _l(static_cast<const uint64_t &>(v));
+        return _get_varint_size(v);
     }
 
-    // VARINT packing
-    //
     static inline size_t _l(const uint64_t &v)
     {
-        return (v <= 0x000000000000007fllu) ? 1 :
-               (v <= 0x0000000000003fffllu) ? 2 :
-               (v <= 0x00000000001fffffllu) ? 3 :
-               (v <= 0x000000000fffffffllu) ? 4 :
-               (v <= 0x00000007ffffffffllu) ? 5 :
-               (v <= 0x000003ffffffffffllu) ? 6 :
-               (v <= 0x0001ffffffffffffllu) ? 7 :
-               (v <= 0x00ffffffffffffffllu) ? 8 : 9;
+        return _get_varint_size(v);
     }
 
     static inline size_t _l(const int8_t &v)
     {
-        return _l(static_cast<int64_t>(v));
+        return _get_varint_size(v);
     }
 
     static inline size_t _l(const int16_t &v)
     {
-        return _l(static_cast<int64_t>(v));
+        return _get_varint_size(v);
     }
 
     static inline size_t _l(const int32_t &v)
     {
-        return _l(static_cast<int64_t>(v));
+        return _get_varint_size(v);
     }
 
-    // ZIGZAG encoding
-    //
     static inline size_t _l(const int64_t &v)
     {
-        return _l(ZIGZAG_ENCODE(v));
+        return _get_varint_size(v);
     }
 
     static inline size_t _l(const bool &v)
@@ -926,20 +858,12 @@ protected:
 
     static inline size_t _l(const float &v)
     {
-#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
-        return _l(*reinterpret_cast<const uint32_t*>(&v));
-#else // !FLOAT_TO_INTEGER_SERIALIZATION
         return sizeof(v);
-#endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
     static inline size_t _l(const double &v)
     {
-#if defined(FLOAT_TO_INTEGER_SERIALIZATION)
-        return _l(*reinterpret_cast<const uint64_t*>(&v));
-#else // !FLOAT_TO_INTEGER_SERIALIZATION
         return sizeof(v);
-#endif // !FLOAT_TO_INTEGER_SERIALIZATION
     }
 
     static inline size_t _l(const long double &v)
@@ -1526,78 +1450,151 @@ private:
     ssize_t                _ep;
     ssize_t                _np;
 
-    // VARINT unpacking and ZIGZAG decoding
+    //========================================================================
     //
+    // Variable integer (VARINT) are packed in 1 to 9 bytes
+    //
+    // The MSb bits in the MSB byte identify how many bytes are required
+    // to store the numeric value.
+    //
+    // x: single bit
+    // X: single byte (8 bits)
+    //
+    // 1 byte  [numeric value encoded in  7 bits]: 0xxxxxxx
+    // 2 bytes [numeric value encoded in 14 bits]: 10xxxxxx.X
+    // 3 bytes [numeric value encoded in 21 bits]: 110xxxxx.X.X
+    // 4 bytes [numeric value encoded in 28 bits]: 1110xxxx.X.X.X
+    // 5 bytes [numeric value encoded in 35 bits]: 11110xxx.X.X.X.X
+    // 6 bytes [numeric value encoded in 42 bits]: 111110xx.X.X.X.X.X
+    // 7 bytes [numeric value encoded in 49 bits]: 1111110x.X.X.X.X.X.X
+    // 8 bytes [numeric value encoded in 56 bits]: 11111110.X.X.X.X.X.X.X
+    // 9 bytes [numeric value encoded in 64 bits]: 11111111.X.X.X.X.X.X.X.X
+    //
+    // Signed Integer values are zigzag encoded by mapping negative values
+    // to positive values while going back and forth:
+    //
+    // (0=0, -1=1, 1=2, -2=3, 2=4, -3=5, 3=6 ...)
+    //
+    //========================================================================
+
     template <class T>
-    inline bool _u(HOBIO::AbstractReader &is_, T &v, ssize_t field=-1)
+    static inline size_t _get_varint_size(const T &v)
     {
-        uint8_t d[9];
+        uint64_t rv;
+
+        return _get_varint_size_and_value<T>(v,rv);
+    }
+
+    template <class T>
+    static inline size_t _get_varint_size_and_value(const T &v, uint64_t &rv)
+    {
+#if defined(USE_VARINT)
+        rv = static_cast<uint64_t>
+             (
+                 (std::numeric_limits<T>::is_signed)
+                 ?
+                     // ZIGZAG encoding
+                     //
+                     (static_cast<int64_t>(v) << 1)
+                     ^
+                     (static_cast<int64_t>(v) >> 63)
+                 :
+                     v
+             );
+
+        return (rv <= 0x000000000000007fllu) ? 1 :
+               (rv <= 0x0000000000003fffllu) ? 2 :
+               (rv <= 0x00000000001fffffllu) ? 3 :
+               (rv <= 0x000000000fffffffllu) ? 4 :
+               (rv <= 0x00000007ffffffffllu) ? 5 :
+               (rv <= 0x000003ffffffffffllu) ? 6 :
+               (rv <= 0x0001ffffffffffffllu) ? 7 :
+               (rv <= 0x00ffffffffffffffllu) ? 8 : 9;
+#else
+        rv = static_cast<uint64_t>(v);
+
+        return sizeof(T);
+#endif
+    }
+
+    template <class T>
+    static inline bool _varint_pack(HOBIO::AbstractWriter &os, const T &v)
+    {
+#if defined(USE_VARINT)
+        uint8_t  d[9];
+        uint64_t rv;
+        uint8_t  b = _get_varint_size_and_value<T>(v, rv);
+        uint8_t  m = 0xff       >> b;
+        uint32_t c = 0xfffffe00 >> b;
+
+        *reinterpret_cast<uint64_t*>(&d[1]) = HOB_BIG_ENDIAN_ENCODE_64(rv);
+
+        d[9-b] &= static_cast<uint8_t>(m & 0xff);
+        d[9-b] |= static_cast<uint8_t>(c & 0xff);
+
+        return os.write(&d[9-b],b);
+#else
+        return os.write(&v,sizeof(T));
+#endif
+    }
+
+    template <class T>
+    inline bool _varint_unpack(HOBIO::AbstractReader &is_,
+                               T &v,
+                               ssize_t field=-1)
+    {
+#if defined(USE_VARINT)
+        uint8_t d[16] = { 0 };
         uint8_t b = 0;
         uint8_t c;
         uint8_t m;
 
-        if (!is_.read(&d[0], sizeof(uint8_t)))
+        if (!is_.read(&d[7], sizeof(uint8_t)))
         {
             return false;
         }
 
-        for (b=1; b<=8; b++)
+        for (c=0x80, b=1; (b <= 8) && ((d[7] & c) != 0); b++)
         {
-            m = (0xff << (8-b));
-            c = (0x01 << (8-b));
-
-            if ((d[0] & c) == 0)
-            {
-                break;
-            }
+            c >>= 1;
         }
+
+        m = (0xff << (8-b));
 
         if (b > 1)
         {
-            if (!is_.read(&d[1], b-1))
+            if (!is_.read(&d[8], b-1))
             {
                 return false;
             }
         }
 
-        uint64_t r = (b < 9) ? d[0] & ~m : 0;
-
-        for (uint8_t i=1; i<b; i++)
+        if (b < 9)
         {
-            r <<= 8;
-            r |= static_cast<uint64_t>(d[i] & 0xff);
+            d[7] &= ~m;
         }
+
+        uint64_t r = HOB_BIG_ENDIAN_ENCODE_64
+        (
+             *reinterpret_cast<uint64_t*>(&d[b-1])
+        );
 
         if (std::numeric_limits<T>::is_signed)
         {
             // ZIGZAG decoding
             //
-            r = ZIGZAG_DECODE(r);
+            r = (r >> 1) ^ -(r & 1);
         }
 
         T rv = static_cast<T>(r & (static_cast<T>(-1)));
+#else
+        T rv;
 
-        set_changed(field, v != rv);
-
-        v = rv;
-
-        return true;
-    }
-
-#if 0
-    // ZIGZAG decoding
-    //
-    template<class T>
-    bool _z(HOBIO::AbstractReader &is_, T &v, ssize_t field=-1)
-    {
-        uint64_t r;
-
-        if (!_r(is_, r))
+        if (!is_.read(&rv,sizeof(T)))
         {
             return false;
         }
-
-        T rv = static_cast<T>(ZIGZAG_DECODE(r) & (static_cast<const T>(-1)));
+#endif
 
         set_changed(field, v != rv);
 
@@ -1605,7 +1602,13 @@ private:
 
         return true;
     }
-#endif
+
+    inline size_t _get_size(size_t &payload) const
+    {
+        payload = _l();
+
+        return _l(_id) + ((payload > 0) ? (_l(payload) + payload) : 0); // ( _ep - _sp );
+    }
 
     static bool parse(HOBIO::AbstractReader &is, HOBIO::AbstractWriter &os, uint8_t t)
     {
@@ -1787,17 +1790,29 @@ private:
                                 {
                                     // signed integer values
 
-                                    int64_t v_value = strtoll(value.c_str(),NULL,10);
+                                    int64_t v = strtoll(value.c_str(),NULL,10);
 
-                                    ASSERT_DUMP(os, v_value);
+                                    if ("C" == token) { ASSERT_DUMP(os, static_cast<int8_t >(v)); }
+                                    else
+                                    if ("S" == token) { ASSERT_DUMP(os, static_cast<int16_t>(v)); }
+                                    else
+                                    if ("I" == token) { ASSERT_DUMP(os, static_cast<int32_t>(v)); }
+                                    else
+                                    if ("L" == token) { ASSERT_DUMP(os, static_cast<int64_t>(v)); }
                                 }
                                 else
                                 {
                                     // unsigned integer values
 
-                                    uint64_t v_value = strtoull(value.c_str(),NULL,10);
+                                    uint64_t v = strtoull(value.c_str(),NULL,10);
 
-                                    ASSERT_DUMP(os, v_value);
+                                    if ("C" == token) { ASSERT_DUMP(os, static_cast<uint8_t >(v)); }
+                                    else
+                                    if ("S" == token) { ASSERT_DUMP(os, static_cast<uint16_t>(v)); }
+                                    else
+                                    if ("I" == token) { ASSERT_DUMP(os, static_cast<uint32_t>(v)); }
+                                    else
+                                    if ("L" == token) { ASSERT_DUMP(os, static_cast<uint64_t>(v)); }
                                 }
                             }
                             else
@@ -2227,12 +2242,7 @@ protected:                                                                     \
                 SCAN_FIELDS(FIELD_SIZE, FIRST(__VA_ARGS__))                    \
                 SCAN_FIELDS(FIELD_SIZE, REMAIN(__VA_ARGS__)));                 \
     }                                                                          \
-/*                                                                             \
-    virtual bool rewind()                                                      \
-    {                                                                          \
-        return HOB::rewind();                                                  \
-    }                                                                          \
-*/                                                                             \
+                                                                               \
     virtual void set_changed(ssize_t f, bool v)                                \
     {                                                                          \
         (void)f;                                                               \
