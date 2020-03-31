@@ -70,7 +70,10 @@ namespace HOBIO
 
         virtual void ignore(size_t size)
         {
-            for (uint8_t v; (size>0) && get(v); size--);
+            if (!seek(size,SEEK_CUR))
+            {
+                for (uint8_t v; (size>0) && get(v); size--);
+            }
         }
     };
 
