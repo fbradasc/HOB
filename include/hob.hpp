@@ -12,39 +12,9 @@
 #include <climits>
 #include <iostream>
 #include <iomanip>
-#include "optional.hpp"
 #include "cpp_magic.h"
+#include "optional.hpp"
 #include "hobio.hpp"
-
-#define USE_VARINT
-
-/*
- * Define some byte ordering macros
- */
-#if defined(WIN32) || defined(_WIN32)
-    #define HOB_BIG_ENDIAN_ENCODE_16(v) _byteswap_ushort(v)
-    #define HOB_BIG_ENDIAN_ENCODE_32(v) _byteswap_ulong(v)
-    #define HOB_BIG_ENDIAN_ENCODE_64(v) _byteswap_uint64(v)
-    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) (v)
-    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) (v)
-    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) (v)
-#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    #define HOB_BIG_ENDIAN_ENCODE_16(v) __builtin_bswap16(v)
-    #define HOB_BIG_ENDIAN_ENCODE_32(v) __builtin_bswap32(v)
-    #define HOB_BIG_ENDIAN_ENCODE_64(v) __builtin_bswap64(v)
-    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) (v)
-    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) (v)
-    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) (v)
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) __builtin_bswap16(v)
-    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) __builtin_bswap32(v)
-    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) __builtin_bswap64(v)
-    #define HOB_BIG_ENDIAN_ENCODE_16(v) (v)
-    #define HOB_BIG_ENDIAN_ENCODE_32(v) (v)
-    #define HOB_BIG_ENDIAN_ENCODE_64(v) (v)
-#else
-    #error "Byte Ordering of platform not determined. Set __BYTE_ORDER__ manually before including this file."
-#endif
 
 #define M_LOG(...)            printf("%s:%s:%d: ",        \
                                      __FILE__,            \
@@ -53,7 +23,7 @@
                               printf(__VA_ARGS__);        \
                               printf("\n");
 
-#define ASSERT_DUMP(os, ...)  if (!HOB::_w(os, __VA_ARGS__)) { return false; }
+#define ASSERT_DUMP(os, ...)  if (!os.write(__VA_ARGS__)) { return false; }
 
 #define INDENT(l)             string(((indent >= 0)?(indent + (l)):0)*4,' ')
 
@@ -88,18 +58,6 @@
 
 #define HASH(x)               (static_cast<uint64_t>((x)^((x)>>32)))
 
-#define ZIGZAG_ENCODE(value)  static_cast<uint64_t>(                    \
-                                  ( static_cast<int64_t>(value) <<  1 ) \
-                                  ^                                     \
-                                  ( static_cast<int64_t>(value) >> 63 ) \
-                              )
-
-// |--------------------------------|
-// |0..............................31|
-//
-// |----------------------------------------------------------------|
-// |0..............................................................63|
-//
 #if defined(ENABLE_CPP_HASH)
 #if defined(ENABLE_CPP_MAX_SIZE_HASH)
 #define HUPDATE(s)   update_id(static_cast<uint64_t>( \
@@ -118,6 +76,7 @@ using namespace std;
 using namespace nonstd;
 
 class HOB
+    : public HOBIO::Serializeable
 {
 public:
     typedef uint64_t UID;
@@ -131,7 +90,8 @@ public:
     };
 
     HOB()
-        : _id(UNDEFINED)
+        : HOBIO::Serializeable()
+        , _id(UNDEFINED)
         , _is(     NULL)
         , _sp(        0)
         , _ep(        0)
@@ -139,7 +99,8 @@ public:
     { }
 
     HOB(const UID &id_)
-        : _id(   0)
+        : HOBIO::Serializeable()
+        , _id(   0)
         , _is(NULL)
         , _sp(   0)
         , _ep(   0)
@@ -149,7 +110,8 @@ public:
     }
 
     HOB(const char *id_)
-        : _id(   0)
+        : HOBIO::Serializeable()
+        , _id(   0)
         , _is(NULL)
         , _sp(   0)
         , _ep(   0)
@@ -159,7 +121,8 @@ public:
     }
 
     HOB(const string &id_)
-        : _id(   0)
+        : HOBIO::Serializeable()
+        , _id(   0)
         , _is(NULL)
         , _sp(   0)
         , _ep(   0)
@@ -169,6 +132,7 @@ public:
     }
 
     HOB(const HOB &ref)
+        : HOBIO::Serializeable()
     {
         *this = ref;
     }
@@ -192,36 +156,26 @@ public:
     {
         flush_pending();
 
-        return _r(is_);
+        return __read(is_);
     }
 
     inline bool operator<<(HOB & ref)
     {
-        return ((_id == ref._id) && _r(ref));
+        return ((_id == ref._id) && __read(ref));
     }
 
-    bool operator>>(HOBIO::AbstractWriter &os) const
+    virtual bool operator>>(HOBIO::AbstractWriter &os) const
     {
         if (UNDEFINED == _id)
         {
             return true;
         }
 
-        size_t payload;
+        os.alloc(__size_of(_id));
 
-        os.alloc(_get_size(payload));
-
-        if (!_w(os, _id))
+        if (!os.write(_id))
         {
             return false;
-        }
-
-        if (payload > 0)
-        {
-            if (!_w(os,payload) || !_w(os))
-            {
-                return false;
-            }
         }
 
         return true;
@@ -241,11 +195,9 @@ public:
         return rv;
     }
 
-    operator size_t() const
+    inline virtual operator size_t() const
     {
-        size_t sz;
-
-        return _get_size(sz);
+        return __size_of(_id);
     }
 
     inline virtual bool rewind()
@@ -255,14 +207,14 @@ public:
 
     inline operator HOBIO::AbstractReader &() { return (NULL != _is) ? *_is : _ss; }
 
-    inline operator bool() const
+    inline virtual operator bool() const
     {
-        return is_changed();
+        return __is_changed();
     }
 
     inline void operator~()
     {
-        reset_changes();
+        __reset_changes();
     }
 
     const string operator()(const Dump &dump = TEXT) const
@@ -276,325 +228,9 @@ public:
         return ss.str();
     }
 
-    static bool parse(HOBIO::AbstractReader &is, HOBIO::AbstractWriter &os)
-    {
-        return parse(is,os,'\0');
-    }
-
-protected:
-    static inline bool _w(HOBIO::AbstractWriter &os, const uint8_t &v)
-    {
-        return _varint_pack(os, v);
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const uint16_t &v)
-    {
-        return _varint_pack(os, v);
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const uint32_t &v)
-    {
-        return _varint_pack(os, v);
-    }
-    static inline bool _w(HOBIO::AbstractWriter &os, const uint64_t &v)
-    {
-        return _varint_pack(os, v);
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const int8_t &v)
-    {
-        return _varint_pack(os, v);
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const int16_t &v)
-    {
-        return _varint_pack(os, v);
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const int32_t &v)
-    {
-        return _varint_pack(os, v);
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const int64_t &v)
-    {
-        return _varint_pack(os, v);
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const bool &v)
-    {
-        return os.write(&v,sizeof(v));
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const float &v)
-    {
-        return os.write(&v,sizeof(v));
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const double &v)
-    {
-        return os.write(&v,sizeof(v));
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const long double &v)
-    {
-        return os.write(&v,sizeof(v));
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, const string &v)
-    {
-        return _w(os,v.size(),v.data());
-    }
-
-    static inline bool _w(HOBIO::AbstractWriter &os, size_t size_, const void *v)
-    {
-        if (!_w(os, size_))
-        {
-            return false;
-        }
-
-        return os.write(v,size_);
-    }
-
-    static bool _w(HOBIO::AbstractWriter &os, const HOB &v)
-    {
-        return (v >> os);
-    }
-
-    template<size_t N>
-    static bool _w(HOBIO::AbstractWriter &os, const std::bitset<N>& v)
-    {
-        uint8_t bits[(N+7)>>3];
-
-        memset(bits, 0, ((N+7)>>3));
-
-        for (size_t j=0; j<size_t(N); j++)
-        {
-            bits[j>>3] |= (v[j]<<(j&7));
-        }
-
-        return _w(os, ((N+7)>>3), bits);
-    }
-
-    template<class T>
-    static bool _w(HOBIO::AbstractWriter &os, const vector<T> &v)
-    {
-        if (!_w(os, v.size()))
-        {
-            return false;
-        }
-
-        for (size_t i=0; i<v.size(); i++)
-        {
-            if (!_w(os, static_cast<const T &>(v[i])))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    static bool _w(HOBIO::AbstractWriter &os, const vector<bool> &v, bool dump_size=true)
-    {
-        if (dump_size && !_w(os, v.size()))
-        {
-            return false;
-        }
-
-        uint8_t bits[(v.size()+7)>>3];
-
-        memset(bits, 0, ((v.size()+7)>>3));
-
-        for (size_t j=0; j<v.size(); j++)
-        {
-            bits[j>>3] |= (v[j]<<(j&7));
-        }
-
-        return _w(os, ((v.size()+7)>>3), bits);
-    }
-
-    template<class T>
-    static bool _w(HOBIO::AbstractWriter &os, const optional<T> &v)
-    {
-        if (!_w(os, static_cast<bool>(v)))
-        {
-            return false;
-        }
-
-        if (static_cast<bool>(v))
-        {
-            if (!_w(os, static_cast<const T &>(*v)))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    template<class K, class V>
-    static bool _w(HOBIO::AbstractWriter &os, const map<K,V> &v)
-    {
-        size_t len = v.size();
-
-        if (!_w(os, len))
-        {
-            return false;
-        }
-
-        for (typename map<K,V>::const_iterator ci = v.begin();
-             (len > 0) && (ci != v.end());
-             ++ci)
-        {
-            if (!_w(os, static_cast<const K &>((*ci).first)))
-            {
-                return false;
-            }
-
-            if (!_w(os, static_cast<const V &>((*ci).second)))
-            {
-                return false;
-            }
-
-            len--;
-        }
-
-        return true;
-    }
-
-    inline bool _r(HOBIO::AbstractReader &is_, uint8_t &v, ssize_t field=-1)
-    {
-        return _varint_unpack<uint8_t>(is_,v,field);
-    }
-
-    inline bool _r(HOBIO::AbstractReader &is_, uint16_t &v, ssize_t field=-1)
-    {
-        return _varint_unpack<uint16_t>(is_,v,field);
-    }
-
-    inline bool _r(HOBIO::AbstractReader &is_, uint32_t &v, ssize_t field=-1)
-    {
-        return _varint_unpack<uint32_t>(is_,v,field);
-    }
-
-    inline bool _r(HOBIO::AbstractReader &is_, uint64_t &v, ssize_t field=-1)
-    {
-        return _varint_unpack<uint64_t>(is_, v, field);
-    }
-
-    inline bool _r(HOBIO::AbstractReader &is_, int8_t &v, ssize_t field=-1)
-    {
-        return _varint_unpack<int8_t>(is_,v,field);
-    }
-
-    inline bool _r(HOBIO::AbstractReader &is_, int16_t &v, ssize_t field=-1)
-    {
-        return _varint_unpack<int16_t>(is_,v,field);
-    }
-
-    inline bool _r(HOBIO::AbstractReader &is_, int32_t &v, ssize_t field=-1)
-    {
-        return _varint_unpack<int32_t>(is_,v,field);
-    }
-
-    inline bool _r(HOBIO::AbstractReader &is_, int64_t &v, ssize_t field=-1)
-    {
-        return _varint_unpack<int64_t>(is_,v,field);
-    }
-
-    bool _r(HOBIO::AbstractReader &is_, bool &v, ssize_t field=-1)
-    {
-        bool rv;
-
-        if (!is_.read(&rv, sizeof(v)))
-        {
-            return false;
-        }
-
-        set_changed(field, v != rv);
-
-        v = rv;
-
-        return true;
-    }
-
-    bool _r(HOBIO::AbstractReader &is_, float &v, ssize_t field=-1)
-    {
-        float rv;
-
-        if (!is_.read(&rv, sizeof(v)))
-        {
-            return false;
-        }
-
-        set_changed(field, v != rv);
-
-        v = rv;
-
-        return true;
-    }
-
-    bool _r(HOBIO::AbstractReader &is_, double &v, ssize_t field=-1)
-    {
-        double rv;
-
-        if (!is_.read(&rv, sizeof(v)))
-        {
-            return false;
-        }
-
-        set_changed(field, v != rv);
-
-        v = rv;
-
-        return true;
-    }
-
-    bool _r(HOBIO::AbstractReader &is_, long double &v, ssize_t field=-1)
-    {
-        long double rv;
-
-        if (!is_.read(&rv, sizeof(v)))
-        {
-            return false;
-        }
-
-        set_changed(field, v != rv);
-
-        v = rv;
-
-        return true;
-    }
-
-    bool _r(HOBIO::AbstractReader &is_, string &v, ssize_t field=-1)
-    {
-        size_t len;
-
-        if (!_r(is_, len))
-        {
-            return false;
-        }
-
-        vector<char> tmp(len);
-
-        if (!is_.read(tmp.data(), len))
-        {
-            return false;
-        }
-
-        string rv;
-
-        rv.assign(tmp.data(),len);
-
-        set_changed(field, v != rv);
-
-        v = rv;
-
-        return true;
-    }
-
-    bool _r(HOBIO::AbstractReader &is_, HOB &v, ssize_t field=-1)
+    virtual bool __deserialize(HOBIO::AbstractReader &is_,
+                               Serializeable &v,
+                               ssize_t field=-1)
     {
         HOB m;
 
@@ -604,7 +240,7 @@ protected:
 
             if ( v << static_cast<HOBIO::AbstractReader&>(m) )
             {
-                set_changed(field, v);
+                __set_changed(field, v.__is_changed());
 
                 return true;
             }
@@ -613,336 +249,12 @@ protected:
         return false;
     }
 
-    template<size_t N>
-    bool _r(HOBIO::AbstractReader &is_, bitset<N> &v, ssize_t field=-1)
+    static bool parse(HOBIO::AbstractReader &is, HOBIO::AbstractWriter &os)
     {
-        size_t len;
-
-        if (!_r(is_, len) || (len != ((N + 7) >> 3)))
-        {
-            return false;
-        }
-
-        uint8_t bits[len];
-
-        memset(bits, 0, len);
-
-        if (!is_.read(bits, len))
-        {
-            return false;
-        }
-
-        bitset<N> rv;
-
-        for (size_t j=0; j<size_t(N); j++)
-        {
-            rv[j] = ((bits[j>>3]>>(j&7)) & 1);
-        }
-
-        set_changed(field, v != rv);
-
-        v = rv;
-
-        return true;
+        return parse(is,os,'\0');
     }
 
-    template<class T>
-    bool _r(HOBIO::AbstractReader &is_, vector<T> &v, ssize_t field=-1)
-    {
-        size_t len;
-
-        if (!_r(is_, len))
-        {
-            return false;
-        }
-
-        if (len > 0)
-        {
-            vector<T> tmp(len);
-
-            for (size_t i=0; i<len; i++)
-            {
-                if (!_r(is_, static_cast<T&>(tmp[i])))
-                {
-                    return false;
-                }
-            }
-
-            set_changed(field, v != tmp);
-
-            v = tmp;
-        }
-        else
-        {
-            set_changed(field, !v.empty());
-
-            v = vector<T>();
-        }
-
-        return true;
-    }
-
-    bool _r(HOBIO::AbstractReader &is_, vector<bool> &v, ssize_t field=-1)
-    {
-        size_t count;
-
-        if (!_r(is_, count))
-        {
-            return false;
-        }
-
-        if (count > 0)
-        {
-            size_t len;
-
-            if (!_r(is_, len) || (len != ((count + 7) >> 3)))
-            {
-                return false;
-            }
-
-            uint8_t bits[len];
-
-            memset(bits, 0, len);
-
-            if (!is_.read(bits, len))
-            {
-                return false;
-            }
-
-            vector<bool> rv;
-
-            for (size_t j=0; j<count; j++)
-            {
-                rv.push_back((bits[j>>3]>>(j&7)) & 1);
-            }
-
-            set_changed(field, v != rv);
-
-            v = rv;
-
-            return true;
-        }
-        else
-        {
-            set_changed(field, !v.empty());
-
-            v = vector<bool>();
-        }
-
-        return true;
-    }
-
-    template<class T>
-    bool _r(HOBIO::AbstractReader &is_, optional<T> &v, ssize_t field=-1)
-    {
-        bool has_field;
-
-        if (!_r(is_, has_field))
-        {
-            return false;
-        }
-
-        if (has_field)
-        {
-            T tmp;
-
-            if (!_r(is_, static_cast<T&>(tmp)))
-            {
-                return false;
-            }
-
-            set_changed(field, v != tmp);
-
-            v = tmp;
-        }
-        else
-        {
-            set_changed(field, v.has_value());
-
-            v = optional<T>();
-        }
-
-        return true;
-    }
-
-    template<class K, class V>
-    bool _r(HOBIO::AbstractReader &is_, map<K,V> &v_, ssize_t field=-1)
-    {
-        size_t len;
-
-        if (!_r(is_, len))
-        {
-            return false;
-        }
-
-        if (len > 0)
-        {
-            map<K,V> tmp;
-
-            for (size_t i=0; i<len; i++)
-            {
-                K k;
-                V v;
-
-                if (!_r(is_, static_cast<K&>(k)))
-                {
-                    return false;
-                }
-
-                if (!_r(is_, static_cast<V&>(v)))
-                {
-                    return false;
-                }
-
-                tmp[k] = v;
-            }
-
-            set_changed(field, v_ != tmp);
-
-            v_ = tmp;
-        }
-        else
-        {
-            set_changed(field, !v_.empty());
-
-            v_ = map<K,V>();
-        }
-
-        return true;
-    }
-
-    static inline size_t _l(const uint8_t &v)
-    {
-        return _get_varint_size(v);
-    }
-
-    static inline size_t _l(const uint16_t &v)
-    {
-        return _get_varint_size(v);
-    }
-
-    static inline size_t _l(const uint32_t &v)
-    {
-        return _get_varint_size(v);
-    }
-
-    static inline size_t _l(const uint64_t &v)
-    {
-        return _get_varint_size(v);
-    }
-
-    static inline size_t _l(const int8_t &v)
-    {
-        return _get_varint_size(v);
-    }
-
-    static inline size_t _l(const int16_t &v)
-    {
-        return _get_varint_size(v);
-    }
-
-    static inline size_t _l(const int32_t &v)
-    {
-        return _get_varint_size(v);
-    }
-
-    static inline size_t _l(const int64_t &v)
-    {
-        return _get_varint_size(v);
-    }
-
-    static inline size_t _l(const bool &v)
-    {
-        return sizeof(v);
-    }
-
-    static inline size_t _l(const float &v)
-    {
-        return sizeof(v);
-    }
-
-    static inline size_t _l(const double &v)
-    {
-        return sizeof(v);
-    }
-
-    static inline size_t _l(const long double &v)
-    {
-        return sizeof(v);
-    }
-
-    static inline size_t _l(const string &v)
-    {
-        return _l(v.size()) + v.size();
-    }
-
-    static inline size_t _l(size_t size_, const void *v)
-    {
-        return _l(size_) + size_;
-    }
-
-    static size_t _l(const HOB &v)
-    {
-        return v;
-    }
-
-    template<size_t N>
-    static size_t _l(const std::bitset<N>& v)
-    {
-        return _l((N+7)>>3) + ((N+7)>>3);
-    }
-
-    template<class T>
-    static size_t _l(const vector<T> &v)
-    {
-        size_t retval = _l(v.size());
-
-        for (size_t i=0; i<v.size(); i++)
-        {
-            retval += _l(static_cast<const T &>(v[i]));
-        }
-
-        return retval;
-    }
-
-    static size_t _l(const vector<bool> &v, bool dump_size=true)
-    {
-        size_t sz = v.size();
-        return ((dump_size) ? _l(sz) : 0) + _l((sz+7)>>3) + ((sz+7)>>3);
-    }
-
-    template<class T>
-    static size_t _l(const optional<T> &v)
-    {
-        size_t retval = _l(static_cast<bool>(v));
-
-        if (static_cast<bool>(v))
-        {
-            retval += _l(static_cast<const T &>(*v));
-        }
-
-        return retval;
-    }
-
-    template<class K, class V>
-    static size_t _l(const map<K,V> &v)
-    {
-        size_t len = v.size();
-        size_t retval = _l(len);
-
-        for (typename map<K,V>::const_iterator ci = v.begin();
-             (len > 0) && (ci != v.end());
-             ++ci)
-        {
-            retval += _l(static_cast<const K &>((*ci).first ));
-            retval += _l(static_cast<const V &>((*ci).second));
-
-            len--;
-        }
-
-        return retval;
-    }
-
+protected:
 #if !defined(BINARY_ONLY)
     static void _t(ostream &o, const uint8_t &v, int indent = -1)
     {
@@ -1277,9 +589,9 @@ protected:
         o << dec << setw(0);
     }
 
-    virtual bool _r(HOB &ref) { (void)ref; return true; }
+    virtual bool __read(HOB &ref) { (void)ref; return true; }
 
-    virtual bool _r(HOBIO::AbstractReader &is_)
+    virtual bool __read(HOBIO::AbstractReader &is_)
     {
         uint64_t id_;
 
@@ -1288,14 +600,14 @@ protected:
         _sp = 0;
         _ep = 0;
 
-        if (!_r(is_, id_))
+        if (!is_.read(*this, id_))
         {
             return false;
         }
 
         size_t sz_ = 0;
 
-        if (has_payload(id_) && !_r(is_, sz_))
+        if (has_payload(id_) && !is_.read(*this, sz_))
         {
             return false;
         }
@@ -1327,9 +639,7 @@ protected:
         return success;
     }
 
-    virtual bool _w(HOBIO::AbstractWriter &os) const { (void)os; return true; }
-
-    virtual size_t _l() const { return 0; }
+    virtual size_t get_payload_size() const { return 0; }
 
     inline const uint64_t& get_id() const
     {
@@ -1390,17 +700,17 @@ protected:
         return ( id & 1 );
     }
 
-    virtual void reset_changes()
+    virtual void __reset_changes()
     {
         return;
     }
 
-    virtual bool is_changed() const
+    virtual bool __is_changed() const
     {
         return false;
     }
 
-    virtual void set_changed(ssize_t f, bool v)
+    virtual void __set_changed(ssize_t f, bool v)
     {
         (void)f;
         (void)v;
@@ -1449,166 +759,6 @@ private:
     ssize_t                _sp;
     ssize_t                _ep;
     ssize_t                _np;
-
-    //========================================================================
-    //
-    // Variable integer (VARINT) are packed in 1 to 9 bytes
-    //
-    // The MSb bits in the MSB byte identify how many bytes are required
-    // to store the numeric value.
-    //
-    // x: single bit
-    // X: single byte (8 bits)
-    //
-    // 1 byte  [numeric value encoded in  7 bits]: 0xxxxxxx
-    // 2 bytes [numeric value encoded in 14 bits]: 10xxxxxx.X
-    // 3 bytes [numeric value encoded in 21 bits]: 110xxxxx.X.X
-    // 4 bytes [numeric value encoded in 28 bits]: 1110xxxx.X.X.X
-    // 5 bytes [numeric value encoded in 35 bits]: 11110xxx.X.X.X.X
-    // 6 bytes [numeric value encoded in 42 bits]: 111110xx.X.X.X.X.X
-    // 7 bytes [numeric value encoded in 49 bits]: 1111110x.X.X.X.X.X.X
-    // 8 bytes [numeric value encoded in 56 bits]: 11111110.X.X.X.X.X.X.X
-    // 9 bytes [numeric value encoded in 64 bits]: 11111111.X.X.X.X.X.X.X.X
-    //
-    // Signed Integer values are zigzag encoded by mapping negative values
-    // to positive values while going back and forth:
-    //
-    // (0=0, -1=1, 1=2, -2=3, 2=4, -3=5, 3=6 ...)
-    //
-    //========================================================================
-
-    template <class T>
-    static inline size_t _get_varint_size(const T &v)
-    {
-        uint64_t rv;
-
-        return _get_varint_size_and_value<T>(v,rv);
-    }
-
-    template <class T>
-    static inline size_t _get_varint_size_and_value(const T &v, uint64_t &rv)
-    {
-#if defined(USE_VARINT)
-        rv = static_cast<uint64_t>
-             (
-                 (std::numeric_limits<T>::is_signed)
-                 ?
-                     // ZIGZAG encoding
-                     //
-                     (static_cast<int64_t>(v) << 1)
-                     ^
-                     (static_cast<int64_t>(v) >> 63)
-                 :
-                     v
-             );
-
-        return (rv <= 0x000000000000007fllu) ? 1 :
-               (rv <= 0x0000000000003fffllu) ? 2 :
-               (rv <= 0x00000000001fffffllu) ? 3 :
-               (rv <= 0x000000000fffffffllu) ? 4 :
-               (rv <= 0x00000007ffffffffllu) ? 5 :
-               (rv <= 0x000003ffffffffffllu) ? 6 :
-               (rv <= 0x0001ffffffffffffllu) ? 7 :
-               (rv <= 0x00ffffffffffffffllu) ? 8 : 9;
-#else
-        rv = static_cast<uint64_t>(v);
-
-        return sizeof(T);
-#endif
-    }
-
-    template <class T>
-    static inline bool _varint_pack(HOBIO::AbstractWriter &os, const T &v)
-    {
-#if defined(USE_VARINT)
-        uint8_t  d[9];
-        uint64_t rv;
-        uint8_t  b = _get_varint_size_and_value<T>(v, rv);
-        uint8_t  m = 0xff       >> b;
-        uint32_t c = 0xfffffe00 >> b;
-
-        *reinterpret_cast<uint64_t*>(&d[1]) = HOB_BIG_ENDIAN_ENCODE_64(rv);
-
-        d[9-b] &= static_cast<uint8_t>(m & 0xff);
-        d[9-b] |= static_cast<uint8_t>(c & 0xff);
-
-        return os.write(&d[9-b],b);
-#else
-        return os.write(&v,sizeof(T));
-#endif
-    }
-
-    template <class T>
-    inline bool _varint_unpack(HOBIO::AbstractReader &is_,
-                               T &v,
-                               ssize_t field=-1)
-    {
-#if defined(USE_VARINT)
-        uint8_t d[16] = { 0 };
-        uint8_t b = 0;
-        uint8_t c;
-        uint8_t m;
-
-        if (!is_.read(&d[7], sizeof(uint8_t)))
-        {
-            return false;
-        }
-
-        for (c=0x80, b=1; (b <= 8) && ((d[7] & c) != 0); b++)
-        {
-            c >>= 1;
-        }
-
-        m = (0xff << (8-b));
-
-        if (b > 1)
-        {
-            if (!is_.read(&d[8], b-1))
-            {
-                return false;
-            }
-        }
-
-        if (b < 9)
-        {
-            d[7] &= ~m;
-        }
-
-        uint64_t r = HOB_BIG_ENDIAN_ENCODE_64
-        (
-             *reinterpret_cast<uint64_t*>(&d[b-1])
-        );
-
-        if (std::numeric_limits<T>::is_signed)
-        {
-            // ZIGZAG decoding
-            //
-            r = (r >> 1) ^ -(r & 1);
-        }
-
-        T rv = static_cast<T>(r & (static_cast<T>(-1)));
-#else
-        T rv;
-
-        if (!is_.read(&rv,sizeof(T)))
-        {
-            return false;
-        }
-#endif
-
-        set_changed(field, v != rv);
-
-        v = rv;
-
-        return true;
-    }
-
-    inline size_t _get_size(size_t &payload) const
-    {
-        payload = _l();
-
-        return _l(_id) + ((payload > 0) ? (_l(payload) + payload) : 0); // ( _ep - _sp );
-    }
 
     static bool parse(HOBIO::AbstractReader &is, HOBIO::AbstractWriter &os, uint8_t t)
     {
@@ -1937,9 +1087,9 @@ inline bool operator>>(HOBIO::AbstractReader &i, HOBIO::AbstractWriter &o)
 #define DECLARE_ENUM(t, n, ...)  _ ## n,
 #define DECLARE_FIELD(t, n, ...) t n;
 #define INIT_FIELD(t, n, ...)    IF(HAS_ARGS(__VA_ARGS__) )(n = __VA_ARGS__;)
-#define READ_FIELD(t, n, ...)    && HOB::_r(is_, n, _ ## n)
-#define WRITE_FIELD(t, n, ...)   && HOB::_w(os, n)
-#define FIELD_SIZE(t, n, ...)    + HOB::_l(n)
+#define READ_FIELD(t, n, ...)    && is_.read(*this, n, _ ## n)
+#define WRITE_FIELD(t, n, ...)   && os.write(n)
+#define FIELD_SIZE(t, n, ...)    + HOB::__size_of(n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
 #define UPDATE_NP(t, n, ...)     update_id("");
@@ -1975,17 +1125,7 @@ inline bool operator>>(HOBIO::AbstractReader &i, HOBIO::AbstractWriter &o)
         }
 
 #define ASCII_DUMP(name_,value_,...)                                           \
-        size_t sz = _l(); /* 0;                                                \
-                                                                               \
-        if (has_payload(get_id()))                                             \
-        {                                                                      \
-            stringstream ss;                                                   \
-                                                                               \
-            if (_w(ss))                                                        \
-            {                                                                  \
-                sz = ss.str().size();                                          \
-            }                                                                  \
-        } */                                                                   \
+        size_t sz = get_payload_size(); /* 0; */                               \
                                                                                \
         o << noshowpos << "{";                                                 \
                                                                                \
@@ -2155,23 +1295,65 @@ public:                                                                        \
                                                                                \
     void operator-=(const Fields & f)                                          \
     {                                                                          \
-        reset_changes(f);                                                      \
+        __reset_changes(f);                                                    \
     }                                                                          \
                                                                                \
     bool operator&(const Fields &f) const                                      \
     {                                                                          \
-        return is_changed(f);                                                  \
+        return __is_changed(f);                                                \
+    }                                                                          \
+                                                                               \
+    virtual bool operator>>(HOBIO::AbstractWriter &os) const                   \
+    {                                                                          \
+        if (UNDEFINED == get_id())                                             \
+        {                                                                      \
+            return true;                                                       \
+        }                                                                      \
+                                                                               \
+        size_t payload = get_payload_size();                                   \
+                                                                               \
+        os.alloc(__size_of(get_id())                                           \
+                 +                                                             \
+                 (payload>0) ? __size_of(payload) + payload : 0);              \
+                                                                               \
+        if (!os.write(get_id()))                                               \
+        {                                                                      \
+            return false;                                                      \
+        }                                                                      \
+                                                                               \
+        if ((payload > 0) && !os.write(payload))                               \
+        {                                                                      \
+            return false;                                                      \
+        }                                                                      \
+                                                                               \
+        return (true                                                           \
+                SCAN_FIELDS(WRITE_FIELD, FIRST(__VA_ARGS__))                   \
+                SCAN_FIELDS(WRITE_FIELD, REMAIN(__VA_ARGS__)));                \
+    }                                                                          \
+                                                                               \
+    inline virtual operator size_t() const                                     \
+    {                                                                          \
+        size_t payload = get_payload_size();                                   \
+                                                                               \
+        return (__size_of(get_id())                                            \
+                +                                                              \
+                ((payload>0) ? __size_of(payload) + payload : 0));             \
+    }                                                                          \
+                                                                               \
+    inline virtual operator bool() const                                       \
+    {                                                                          \
+        return __is_changed();                                                 \
     }                                                                          \
                                                                                \
 protected:                                                                     \
-    void reset_changes(const Fields & f)                                       \
+    void __reset_changes(const Fields & f)                                     \
     {                                                                          \
         (void)f;                                                               \
                                                                                \
         IF(HAS_ARGS(__VA_ARGS__))(RESET_CHANGES(name_,f))                      \
     }                                                                          \
                                                                                \
-    bool is_changed(const Fields &f) const                                     \
+    bool __is_changed(const Fields &f) const                                   \
     {                                                                          \
         (void)f;                                                               \
                                                                                \
@@ -2180,23 +1362,23 @@ protected:                                                                     \
         return false;                                                          \
     }                                                                          \
                                                                                \
-    virtual void reset_changes()                                               \
+    virtual void __reset_changes()                                             \
     {                                                                          \
-        reset_changes(_FIELDS_COUNT_);                                         \
+        __reset_changes(_FIELDS_COUNT_);                                       \
     }                                                                          \
                                                                                \
-    virtual bool is_changed() const                                            \
+    virtual bool __is_changed() const                                          \
     {                                                                          \
-        return is_changed(_FIELDS_COUNT_);                                     \
+        return __is_changed(_FIELDS_COUNT_);                                   \
     }                                                                          \
                                                                                \
-    bool _r(HOB &ref)                                                          \
+    bool __read(HOB &ref)                                                      \
     {                                                                          \
-        reset_changes();                                                       \
+        __reset_changes();                                                     \
                                                                                \
         ref.rewind();                                                          \
                                                                                \
-        if (!_r(static_cast<HOBIO::AbstractReader&>(ref)))                     \
+        if (!__read(static_cast<HOBIO::AbstractReader&>(ref)))                 \
         {                                                                      \
             return false;                                                      \
         }                                                                      \
@@ -2206,7 +1388,7 @@ protected:                                                                     \
         return true;                                                           \
     }                                                                          \
                                                                                \
-    bool _r(HOBIO::AbstractReader &is_)                                        \
+    bool __read(HOBIO::AbstractReader &is_)                                    \
     {                                                                          \
         (void)is_;                                                             \
                                                                                \
@@ -2227,23 +1409,14 @@ protected:                                                                     \
         return false;                                                          \
     }                                                                          \
                                                                                \
-    bool _w(HOBIO::AbstractWriter &os) const                                   \
-    {                                                                          \
-        (void)os;                                                              \
-                                                                               \
-        return (true                                                           \
-                SCAN_FIELDS(WRITE_FIELD, FIRST(__VA_ARGS__))                   \
-                SCAN_FIELDS(WRITE_FIELD, REMAIN(__VA_ARGS__)));                \
-    }                                                                          \
-                                                                               \
-    size_t _l() const                                                          \
+    size_t get_payload_size() const                                            \
     {                                                                          \
         return (0                                                              \
                 SCAN_FIELDS(FIELD_SIZE, FIRST(__VA_ARGS__))                    \
                 SCAN_FIELDS(FIELD_SIZE, REMAIN(__VA_ARGS__)));                 \
     }                                                                          \
                                                                                \
-    virtual void set_changed(ssize_t f, bool v)                                \
+    virtual void __set_changed(ssize_t f, bool v)                              \
     {                                                                          \
         (void)f;                                                               \
         (void)v;                                                               \

@@ -2,9 +2,276 @@
 #define __HOB_IO_HPP__
 
 #include <unistd.h>
+#include <vector>
+#include <map>
+#include <limits>
+#include <bitset>
+#include <string>
+#include <sstream>
+#include <cstring>
+#include <climits>
+#include <iostream>
+#include <iomanip>
+#include "optional.hpp"
+
+using namespace std;
+using namespace nonstd;
+
+class HOB;
+
+#define USE_VARINT
+
+/*
+ * Define some byte ordering macros
+ */
+#if defined(WIN32) || defined(_WIN32)
+    #define HOB_BIG_ENDIAN_ENCODE_16(v) _byteswap_ushort(v)
+    #define HOB_BIG_ENDIAN_ENCODE_32(v) _byteswap_ulong(v)
+    #define HOB_BIG_ENDIAN_ENCODE_64(v) _byteswap_uint64(v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) (v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) (v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) (v)
+#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    #define HOB_BIG_ENDIAN_ENCODE_16(v) __builtin_bswap16(v)
+    #define HOB_BIG_ENDIAN_ENCODE_32(v) __builtin_bswap32(v)
+    #define HOB_BIG_ENDIAN_ENCODE_64(v) __builtin_bswap64(v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) (v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) (v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) (v)
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    #define HOB_LITTLE_ENDIAN_ENCODE_16(v) __builtin_bswap16(v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_32(v) __builtin_bswap32(v)
+    #define HOB_LITTLE_ENDIAN_ENCODE_64(v) __builtin_bswap64(v)
+    #define HOB_BIG_ENDIAN_ENCODE_16(v) (v)
+    #define HOB_BIG_ENDIAN_ENCODE_32(v) (v)
+    #define HOB_BIG_ENDIAN_ENCODE_64(v) (v)
+#else
+    #error "Byte Ordering of platform not determined. Set __BYTE_ORDER__ manually before including this file."
+#endif
 
 namespace HOBIO
 {
+    class AbstractReader;
+    class AbstractWriter;
+
+    class Serializeable
+    {
+    public:
+        virtual bool operator<<(AbstractReader &is)             = 0;
+        virtual bool operator>>(AbstractWriter &os) const       = 0;
+        virtual operator size_t() const                         = 0;
+        virtual operator bool() const                           = 0;
+        virtual void __reset_changes()                          = 0;
+        virtual bool __is_changed() const                       = 0;
+        virtual void __set_changed(ssize_t f, bool v)           = 0;
+        virtual bool __deserialize(HOBIO::AbstractReader &is_,
+                                   Serializeable &v,
+                                   ssize_t field=-1)            = 0;
+
+        static inline size_t __size_of(const uint8_t &v)
+        {
+            return __get_varint_size(v);
+        }
+
+        static inline size_t __size_of(const uint16_t &v)
+        {
+            return __get_varint_size(v);
+        }
+
+        static inline size_t __size_of(const uint32_t &v)
+        {
+            return __get_varint_size(v);
+        }
+
+        static inline size_t __size_of(const uint64_t &v)
+        {
+            return __get_varint_size(v);
+        }
+
+        static inline size_t __size_of(const int8_t &v)
+        {
+            return __get_varint_size(v);
+        }
+
+        static inline size_t __size_of(const int16_t &v)
+        {
+            return __get_varint_size(v);
+        }
+
+        static inline size_t __size_of(const int32_t &v)
+        {
+            return __get_varint_size(v);
+        }
+
+        static inline size_t __size_of(const int64_t &v)
+        {
+            return __get_varint_size(v);
+        }
+
+        static inline size_t __size_of(const bool &v)
+        {
+            return sizeof(v);
+        }
+
+        static inline size_t __size_of(const float &v)
+        {
+            return sizeof(v);
+        }
+
+        static inline size_t __size_of(const double &v)
+        {
+            return sizeof(v);
+        }
+
+        static inline size_t __size_of(const long double &v)
+        {
+            return sizeof(v);
+        }
+
+        static inline size_t __size_of(const string &v)
+        {
+            return __size_of(v.size()) + v.size();
+        }
+
+        static inline size_t __size_of(size_t size_, const void *v)
+        {
+            return __size_of(size_) + size_;
+        }
+
+        static size_t __size_of(const Serializeable &v)
+        {
+            return v;
+        }
+
+        template<size_t N>
+        static size_t __size_of(const std::bitset<N>& v)
+        {
+            return __size_of((N+7)>>3) + ((N+7)>>3);
+        }
+
+        template<class T>
+        static size_t __size_of(const vector<T> &v)
+        {
+            size_t retval = __size_of(v.size());
+
+            for (size_t i=0; i<v.size(); i++)
+            {
+                retval += __size_of(static_cast<const T &>(v[i]));
+            }
+
+            return retval;
+        }
+
+        static size_t __size_of(const vector<bool> &v, bool dump_size=true)
+        {
+            size_t sz = v.size();
+            return ((dump_size) ? __size_of(sz) : 0) + __size_of((sz+7)>>3) + ((sz+7)>>3);
+        }
+
+        template<class T>
+        static size_t __size_of(const optional<T> &v)
+        {
+            size_t retval = __size_of(static_cast<bool>(v));
+
+            if (static_cast<bool>(v))
+            {
+                retval += __size_of(static_cast<const T &>(*v));
+            }
+
+            return retval;
+        }
+
+        template<class K, class V>
+        static size_t __size_of(const map<K,V> &v)
+        {
+            size_t len = v.size();
+            size_t retval = __size_of(len);
+
+            for (typename map<K,V>::const_iterator ci = v.begin();
+                 (len > 0) && (ci != v.end());
+                 ++ci)
+            {
+                retval += __size_of(static_cast<const K &>((*ci).first ));
+                retval += __size_of(static_cast<const V &>((*ci).second));
+
+                len--;
+            }
+
+            return retval;
+        }
+
+    private:
+        //========================================================================
+        //
+        // Variable integer (VARINT) are packed in 1 to 9 bytes
+        //
+        // The MSb bits in the MSB byte identify how many bytes are required
+        // to store the numeric value.
+        //
+        // x: single bit
+        // X: single byte (8 bits)
+        //
+        // 1 byte  [numeric value encoded in  7 bits]: 0xxxxxxx
+        // 2 bytes [numeric value encoded in 14 bits]: 10xxxxxx.X
+        // 3 bytes [numeric value encoded in 21 bits]: 110xxxxx.X.X
+        // 4 bytes [numeric value encoded in 28 bits]: 1110xxxx.X.X.X
+        // 5 bytes [numeric value encoded in 35 bits]: 11110xxx.X.X.X.X
+        // 6 bytes [numeric value encoded in 42 bits]: 111110xx.X.X.X.X.X
+        // 7 bytes [numeric value encoded in 49 bits]: 1111110x.X.X.X.X.X.X
+        // 8 bytes [numeric value encoded in 56 bits]: 11111110.X.X.X.X.X.X.X
+        // 9 bytes [numeric value encoded in 64 bits]: 11111111.X.X.X.X.X.X.X.X
+        //
+        // Signed Integer values are zigzag encoded by mapping negative values
+        // to positive values while going back and forth:
+        //
+        // (0=0, -1=1, 1=2, -2=3, 2=4, -3=5, 3=6 ...)
+        //
+        //========================================================================
+
+        template <class T>
+        static inline size_t __get_varint_size(const T &v)
+        {
+            uint64_t rv;
+
+            return __get_varint_unzigzaged_size<T>(v,rv);
+        }
+
+        friend class AbstractWriter;
+
+        template <class T>
+        static inline size_t __get_varint_unzigzaged_size(const T &v,
+                                                          uint64_t &rv)
+        {
+#if defined(USE_VARINT)
+            rv = static_cast<uint64_t>
+                 (
+                     (std::numeric_limits<T>::is_signed)
+                     ?
+                         // ZIGZAG encoding
+                         //
+                         (static_cast<int64_t>(v) << 1)
+                         ^
+                         (static_cast<int64_t>(v) >> 63)
+                     :
+                         v
+                 );
+
+            return (rv <= 0x000000000000007fllu) ? 1 :
+                   (rv <= 0x0000000000003fffllu) ? 2 :
+                   (rv <= 0x00000000001fffffllu) ? 3 :
+                   (rv <= 0x000000000fffffffllu) ? 4 :
+                   (rv <= 0x00000007ffffffffllu) ? 5 :
+                   (rv <= 0x000003ffffffffffllu) ? 6 :
+                   (rv <= 0x0001ffffffffffffllu) ? 7 :
+                   (rv <= 0x00ffffffffffffffllu) ? 8 : 9;
+#else
+            rv = static_cast<uint64_t>(v);
+
+            return sizeof(T);
+#endif
+        }
+    };
+
     class BaseIO
     {
     public:
@@ -22,11 +289,231 @@ namespace HOBIO
     class AbstractWriter
     {
     public:
-        AbstractWriter() { }
+        AbstractWriter()
+        {
+        }
 
-        virtual      ~AbstractWriter()                     {}
-        virtual bool  alloc(const size_t &s)               { return true; }
-        virtual bool  write(const void *data, size_t size) { return true; }
+        virtual ~AbstractWriter()
+        {
+        }
+
+        inline bool write(const uint8_t &v)
+        {
+            return varint_pack(v);
+        }
+
+        inline bool write(const uint16_t &v)
+        {
+            return varint_pack(v);
+        }
+
+        inline bool write(const uint32_t &v)
+        {
+            return varint_pack(v);
+        }
+        inline bool write(const uint64_t &v)
+        {
+            return varint_pack(v);
+        }
+
+        inline bool write(const int8_t &v)
+        {
+            return varint_pack(v);
+        }
+
+        inline bool write(const int16_t &v)
+        {
+            return varint_pack(v);
+        }
+
+        inline bool write(const int32_t &v)
+        {
+            return varint_pack(v);
+        }
+
+        inline bool write(const int64_t &v)
+        {
+            return varint_pack(v);
+        }
+
+        inline bool write(const bool &v)
+        {
+            return write(&v,sizeof(v));
+        }
+
+        inline bool write(const float &v)
+        {
+            return write(&v,sizeof(v));
+        }
+
+        inline bool write(const double &v)
+        {
+            return write(&v,sizeof(v));
+        }
+
+        inline bool write(const long double &v)
+        {
+            return write(&v,sizeof(v));
+        }
+
+        inline bool write(const string &v)
+        {
+            return write(v.size(),v.data());
+        }
+
+        inline bool write(size_t size_, const void *v)
+        {
+            if (!write(size_))
+            {
+                return false;
+            }
+
+            return write(v,size_);
+        }
+
+        inline bool write(const Serializeable &v)
+        {
+            return (v >> *this);
+        }
+
+        template<size_t N>
+        bool write(const std::bitset<N>& v)
+        {
+            uint8_t bits[(N+7)>>3];
+
+            memset(bits, 0, ((N+7)>>3));
+
+            for (size_t j=0; j<size_t(N); j++)
+            {
+                bits[j>>3] |= (v[j]<<(j&7));
+            }
+
+            return write(((N+7)>>3), bits);
+        }
+
+        template<class T>
+        bool write(const vector<T> &v)
+        {
+            if (!write(v.size()))
+            {
+                return false;
+            }
+
+            for (size_t i=0; i<v.size(); i++)
+            {
+                if (!write(static_cast<const T &>(v[i])))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        bool write(const vector<bool> &v, bool dump_size=true)
+        {
+            if (dump_size && !write(v.size()))
+            {
+                return false;
+            }
+
+            uint8_t bits[(v.size()+7)>>3];
+
+            memset(bits, 0, ((v.size()+7)>>3));
+
+            for (size_t j=0; j<v.size(); j++)
+            {
+                bits[j>>3] |= (v[j]<<(j&7));
+            }
+
+            return write(((v.size()+7)>>3), bits);
+        }
+
+        template<class T>
+        bool write(const optional<T> &v)
+        {
+            if (!write(static_cast<bool>(v)))
+            {
+                return false;
+            }
+
+            if (static_cast<bool>(v))
+            {
+                if (!write(static_cast<const T &>(*v)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        template<class K, class V>
+        bool write(const map<K,V> &v)
+        {
+            size_t len = v.size();
+
+            if (!write(len))
+            {
+                return false;
+            }
+
+            for (typename map<K,V>::const_iterator ci = v.begin();
+                 (len > 0) && (ci != v.end());
+                 ++ci)
+            {
+                if (!write(static_cast<const K &>((*ci).first)))
+                {
+                    return false;
+                }
+
+                if (!write(static_cast<const V &>((*ci).second)))
+                {
+                    return false;
+                }
+
+                len--;
+            }
+
+            return true;
+        }
+
+        virtual bool alloc(const size_t &s)
+        {
+            (void)s;
+
+            return true;
+        }
+
+    protected:
+        virtual bool write(const void *data, size_t size)
+        {
+            (void)data;
+            (void)size;
+
+            return true;
+        }
+
+        template <class T>
+        inline bool varint_pack(const T &v)
+        {
+#if defined(USE_VARINT)
+            uint8_t  d[9];
+            uint64_t rv;
+            uint8_t  b = Serializeable::__get_varint_unzigzaged_size<T>(v, rv);
+            uint8_t  m = 0xff       >> b;
+            uint32_t c = 0xfffffe00 >> b;
+
+            *reinterpret_cast<uint64_t*>(&d[1]) = HOB_BIG_ENDIAN_ENCODE_64(rv);
+
+            d[9-b] &= static_cast<uint8_t>(m & 0xff);
+            d[9-b] |= static_cast<uint8_t>(c & 0xff);
+
+            return write(&d[9-b],b);
+#else
+            return write(&v,sizeof(T));
+#endif
+        }
     };
 
     class AbstractReader
@@ -38,11 +525,335 @@ namespace HOBIO
         {
         }
 
-        virtual bool read(void *data, size_t size)
+        inline bool read(Serializeable &is_, uint8_t &v, ssize_t field=-1)
         {
-            if ((NULL == data) || (size < 1))
+            return varint_unpack<uint8_t>(is_,v,field);
+        }
+
+        inline bool read(Serializeable &is_, uint16_t &v, ssize_t field=-1)
+        {
+            return varint_unpack<uint16_t>(is_,v,field);
+        }
+
+        inline bool read(Serializeable &is_, uint32_t &v, ssize_t field=-1)
+        {
+            return varint_unpack<uint32_t>(is_,v,field);
+        }
+
+        inline bool read(Serializeable &is_, uint64_t &v, ssize_t field=-1)
+        {
+            return varint_unpack<uint64_t>(is_, v, field);
+        }
+
+        inline bool read(Serializeable &is_, int8_t &v, ssize_t field=-1)
+        {
+            return varint_unpack<int8_t>(is_,v,field);
+        }
+
+        inline bool read(Serializeable &is_, int16_t &v, ssize_t field=-1)
+        {
+            return varint_unpack<int16_t>(is_,v,field);
+        }
+
+        inline bool read(Serializeable &is_, int32_t &v, ssize_t field=-1)
+        {
+            return varint_unpack<int32_t>(is_,v,field);
+        }
+
+        inline bool read(Serializeable &is_, int64_t &v, ssize_t field=-1)
+        {
+            return varint_unpack<int64_t>(is_,v,field);
+        }
+
+        bool read(Serializeable &is_, bool &v, ssize_t field=-1)
+        {
+            bool rv;
+
+            if (!read(&rv, sizeof(v)))
             {
                 return false;
+            }
+
+            is_.__set_changed(field, v != rv);
+
+            v = rv;
+
+            return true;
+        }
+
+        bool read(Serializeable &is_, float &v, ssize_t field=-1)
+        {
+            float rv;
+
+            if (!read(&rv, sizeof(v)))
+            {
+                return false;
+            }
+
+            is_.__set_changed(field, v != rv);
+
+            v = rv;
+
+            return true;
+        }
+
+        bool read(Serializeable &is_, double &v, ssize_t field=-1)
+        {
+            double rv;
+
+            if (!read(&rv, sizeof(v)))
+            {
+                return false;
+            }
+
+            is_.__set_changed(field, v != rv);
+
+            v = rv;
+
+            return true;
+        }
+
+        bool read(Serializeable &is_, long double &v, ssize_t field=-1)
+        {
+            long double rv;
+
+            if (!read(&rv, sizeof(v)))
+            {
+                return false;
+            }
+
+            is_.__set_changed(field, v != rv);
+
+            v = rv;
+
+            return true;
+        }
+
+        bool read(Serializeable &is_, string &v, ssize_t field=-1)
+        {
+            size_t len;
+
+            if (!read(is_, len))
+            {
+                return false;
+            }
+
+            vector<char> tmp(len);
+
+            if (!read(tmp.data(), len))
+            {
+                return false;
+            }
+
+            string rv;
+
+            rv.assign(tmp.data(),len);
+
+            is_.__set_changed(field, v != rv);
+
+            v = rv;
+
+            return true;
+        }
+
+        bool read(Serializeable &is_, Serializeable &v, ssize_t field=-1)
+        {
+            return is_.__deserialize(*this,v,field);
+        }
+
+        template<size_t N>
+        bool read(Serializeable &is_, bitset<N> &v, ssize_t field=-1)
+        {
+            size_t len;
+
+            if (!read(is_, len) || (len != ((N + 7) >> 3)))
+            {
+                return false;
+            }
+
+            uint8_t bits[len];
+
+            memset(bits, 0, len);
+
+            if (!read(bits, len))
+            {
+                return false;
+            }
+
+            bitset<N> rv;
+
+            for (size_t j=0; j<size_t(N); j++)
+            {
+                rv[j] = ((bits[j>>3]>>(j&7)) & 1);
+            }
+
+            is_.__set_changed(field, v != rv);
+
+            v = rv;
+
+            return true;
+        }
+
+        template<class T>
+        bool read(Serializeable &is_, vector<T> &v, ssize_t field=-1)
+        {
+            size_t len;
+
+            if (!read(is_, len))
+            {
+                return false;
+            }
+
+            if (len > 0)
+            {
+                vector<T> tmp(len);
+
+                for (size_t i=0; i<len; i++)
+                {
+                    if (!read(is_, static_cast<T&>(tmp[i])))
+                    {
+                        return false;
+                    }
+                }
+
+                is_.__set_changed(field, v != tmp);
+
+                v = tmp;
+            }
+            else
+            {
+                is_.__set_changed(field, !v.empty());
+
+                v = vector<T>();
+            }
+
+            return true;
+        }
+
+        bool read(Serializeable &is_, vector<bool> &v, ssize_t field=-1)
+        {
+            size_t count;
+
+            if (!read(is_, count))
+            {
+                return false;
+            }
+
+            if (count > 0)
+            {
+                size_t len;
+
+                if (!read(is_, len) || (len != ((count + 7) >> 3)))
+                {
+                    return false;
+                }
+
+                uint8_t bits[len];
+
+                memset(bits, 0, len);
+
+                if (!read(bits, len))
+                {
+                    return false;
+                }
+
+                vector<bool> rv;
+
+                for (size_t j=0; j<count; j++)
+                {
+                    rv.push_back((bits[j>>3]>>(j&7)) & 1);
+                }
+
+                is_.__set_changed(field, v != rv);
+
+                v = rv;
+
+                return true;
+            }
+            else
+            {
+                is_.__set_changed(field, !v.empty());
+
+                v = vector<bool>();
+            }
+
+            return true;
+        }
+
+        template<class T>
+        bool read(Serializeable &is_, optional<T> &v, ssize_t field=-1)
+        {
+            bool has_field;
+
+            if (!read(is_, has_field))
+            {
+                return false;
+            }
+
+            if (has_field)
+            {
+                T tmp;
+
+                if (!read(is_, static_cast<T&>(tmp)))
+                {
+                    return false;
+                }
+
+                is_.__set_changed(field, v != tmp);
+
+                v = tmp;
+            }
+            else
+            {
+                is_.__set_changed(field, v.has_value());
+
+                v = optional<T>();
+            }
+
+            return true;
+        }
+
+        template<class K, class V>
+        bool read(Serializeable &is_, map<K,V> &v_, ssize_t field=-1)
+        {
+            size_t len;
+
+            if (!read(is_, len))
+            {
+                return false;
+            }
+
+            if (len > 0)
+            {
+                map<K,V> tmp;
+
+                for (size_t i=0; i<len; i++)
+                {
+                    K k;
+                    V v;
+
+                    if (!read(is_, static_cast<K&>(k)))
+                    {
+                        return false;
+                    }
+
+                    if (!read(is_, static_cast<V&>(v)))
+                    {
+                        return false;
+                    }
+
+                    tmp[k] = v;
+                }
+
+                is_.__set_changed(field, v_ != tmp);
+
+                v_ = tmp;
+            }
+            else
+            {
+                is_.__set_changed(field, !v_.empty());
+
+                v_ = map<K,V>();
             }
 
             return true;
@@ -74,6 +885,82 @@ namespace HOBIO
             {
                 for (uint8_t v; (size>0) && get(v); size--);
             }
+        }
+
+        virtual bool read(void *data, size_t size)
+        {
+            if ((NULL == data) || (size < 1))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+    protected:
+        template <class T>
+        inline bool varint_unpack(Serializeable &is_,
+                                  T &v,
+                                  ssize_t field=-1)
+        {
+#if defined(USE_VARINT)
+            uint8_t d[16] = { 0 };
+            uint8_t b = 0;
+            uint8_t c;
+            uint8_t m;
+
+            if (!read(&d[7], sizeof(uint8_t)))
+            {
+                return false;
+            }
+
+            for (c=0x80, b=1; (b <= 8) && ((d[7] & c) != 0); b++)
+            {
+                c >>= 1;
+            }
+
+            m = (0xff << (8-b));
+
+            if (b > 1)
+            {
+                if (!read(&d[8], b-1))
+                {
+                    return false;
+                }
+            }
+
+            if (b < 9)
+            {
+                d[7] &= ~m;
+            }
+
+            uint64_t r = HOB_BIG_ENDIAN_ENCODE_64
+            (
+                 *reinterpret_cast<uint64_t*>(&d[b-1])
+            );
+
+            if (std::numeric_limits<T>::is_signed)
+            {
+                // ZIGZAG decoding
+                //
+                r = (r >> 1) ^ -(r & 1);
+            }
+
+            T rv = static_cast<T>(r & (static_cast<T>(-1)));
+#else
+            T rv;
+
+            if (!read(&rv,sizeof(T)))
+            {
+                return false;
+            }
+#endif
+
+            is_.__set_changed(field, v != rv);
+
+            v = rv;
+
+            return true;
         }
     };
 
