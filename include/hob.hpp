@@ -152,11 +152,11 @@ public:
         return *this;
     }
 
-    inline bool operator<<(HOBIO::AbstractReader &is_)
+    inline bool operator<<(HOBIO::AbstractReader &is)
     {
         flush_pending();
 
-        return __read(is_);
+        return __read(is);
     }
 
     inline bool operator<<(HOB & ref)
@@ -228,13 +228,13 @@ public:
         return ss.str();
     }
 
-    virtual bool __deserialize(HOBIO::AbstractReader &is_,
+    virtual bool __deserialize(HOBIO::AbstractReader &is,
                                Serializeable &v,
                                ssize_t field=-1)
     {
         HOB m;
 
-        if (m << is_)
+        if (m << is)
         {
             v = m;
 
@@ -591,7 +591,7 @@ protected:
 
     virtual bool __read(HOB &ref) { (void)ref; return true; }
 
-    virtual bool __read(HOBIO::AbstractReader &is_)
+    virtual bool __read(HOBIO::AbstractReader &is)
     {
         uint64_t id_;
 
@@ -600,27 +600,27 @@ protected:
         _sp = 0;
         _ep = 0;
 
-        if (!is_.read(*this, id_))
+        if (!is.read(*this, id_))
         {
             return false;
         }
 
         size_t sz_ = 0;
 
-        if (has_payload(id_) && !is_.read(*this, sz_))
+        if (has_payload(id_) && !is.read(*this, sz_))
         {
             return false;
         }
 
         bool success = true;
 
-        _is = &is_;
+        _is = &is;
 
         if ((sz_ > 0) && (static_cast<HOBIO::AbstractReader&>(*this).tell() < 0))
         {
             success = false;
 
-            if (_ss.load(is_,sz_))
+            if (_ss.load(is,sz_))
             {
                 _is     = NULL;
                 success = true;
@@ -1087,7 +1087,7 @@ inline bool operator>>(HOBIO::AbstractReader &i, HOBIO::AbstractWriter &o)
 #define DECLARE_ENUM(t, n, ...)  _ ## n,
 #define DECLARE_FIELD(t, n, ...) t n;
 #define INIT_FIELD(t, n, ...)    IF(HAS_ARGS(__VA_ARGS__) )(n = __VA_ARGS__;)
-#define READ_FIELD(t, n, ...)    && is_.read(*this, n, _ ## n)
+#define READ_FIELD(t, n, ...)    && is.read(*this, n, _ ## n)
 #define WRITE_FIELD(t, n, ...)   && os.write(n)
 #define FIELD_SIZE(t, n, ...)    + HOB::__size_of(n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
@@ -1388,9 +1388,9 @@ protected:                                                                     \
         return true;                                                           \
     }                                                                          \
                                                                                \
-    bool __read(HOBIO::AbstractReader &is_)                                    \
+    bool __read(HOBIO::AbstractReader &is)                                     \
     {                                                                          \
-        (void)is_;                                                             \
+        (void)is;                                                              \
                                                                                \
         /* Read mandatory fields : fail on error */                            \
                                                                                \
