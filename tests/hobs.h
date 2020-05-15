@@ -1,18 +1,24 @@
 #if !defined(__HOBS_H__)
 #define __HOBS_H__
 
-#include <inttypes.h>
-#include <stdio.h>
-#include "hob.hpp"
+#include "hob/hob.hpp"
 
-extern HOB::Dump dump_mode;
+#if 1
+#define LOG(hob_) { \
+    hobio::ostream _os_; \
+    hobio::json::encoder _out_(_os_, true); \
+    printf("Size: %ld: ", hob_.size(_out_)); \
+    hob_ >> _out_; \
+    printf("\n"); \
+}
+#else
+#define LOG(hob_)
+#endif
 
-#define LOG(hob_) printf("Size: %ld: %s\n", static_cast<size_t>(hob_), hob_(dump_mode).c_str())
-
-HOBSTRUCT(Hello, HOB::UID(0), (uint32_t, my_id))
-HOBSTRUCT(Put  , HOB::UID(1), (uint32_t, my_id) (string, data))
-HOBSTRUCT(Get  , HOB::UID(2), (uint32_t, my_id) (string, data))
-HOBSTRUCT(Bye  , HOB::UID(3), (uint32_t, my_id))
+HOBSTRUCT(Hello, hob::UID(0), (uint32_t, my_id))
+HOBSTRUCT(Put  , hob::UID(1), (uint32_t, my_id) (string, data))
+HOBSTRUCT(Get  , hob::UID(2), (uint32_t, my_id) (string, data))
+HOBSTRUCT(Bye  , hob::UID(3), (uint32_t, my_id))
 
 #if defined(MINIMAL)
 
@@ -103,9 +109,9 @@ HOBSTRUCT(ComplexStruct, "COMPLEX_STRUCT",
 
 HOBSTRUCT(NoParamMessage, "NO_PARAMS")
 
-HOBSTRUCT(NumericNoParamMessage, HOB::UID(42))
+HOBSTRUCT(NumericNoParamMessage, hob::UID(42))
 
-HOBSTRUCT(NumericMessage, HOB::UID(42),
+HOBSTRUCT(NumericMessage, hob::UID(42),
      (bool              , valid, false)
      /*(long double       , bignum, 1.23456789123456789)*/
      (string            , text , "1Po'DiMaiuscoleMinuscole&Numeri")
@@ -118,7 +124,7 @@ HOBSTRUCT(NumericMessage, HOB::UID(42),
      (vector<MyStruct>  , structs)
 )
 
-HOBSTRUCT(NumericExtraParameters, HOB::UID(43),
+HOBSTRUCT(NumericExtraParameters, hob::UID(43),
      ,
      (bool, extra, true)
 )

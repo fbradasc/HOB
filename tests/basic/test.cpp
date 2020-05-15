@@ -64,13 +64,16 @@ diff3 f.txt i.txt s.txt
 #include <stdio.h>
 #include <stdlib.h>
 #include <fstream>
-#include "hob.hpp"
+#include <iostream>
 #include <inttypes.h>
 #include <limits.h>
 #include <getopt.h>
 #include "../hobs.h"
-
-HOB::Dump dump_mode = HOB::JSON;
+#include "hob/codec/flib.hpp"
+#include "hob/codec/json.hpp"
+#include "hob/codec/vlib.hpp"
+#include "hob/io/buffer.hpp"
+#include "hob/io/stream.hpp"
 
 MyStruct               m_MyStruct              ;
 AnotherStruct          m_AnotherStruct         ;
@@ -85,8 +88,7 @@ static struct option const long_options[] =
     // These options set a flag
     {"write"     , required_argument, 0, 'w'},
     {"read"      , optional_argument, 0, 'r'},
-    {"inport"    , optional_argument, 0, 'i'},
-    {"dump"      , optional_argument, 0, 'd'},
+    {"format"    , optional_argument, 0, 'f'},
     {"help"      , no_argument      , 0, 'h'},
 
     {0           , 0                , 0,   0}
@@ -94,8 +96,10 @@ static struct option const long_options[] =
 
 char * dump_modes[] =
 {
-    [HOB::JSON] = (char []){ 'j', 's', 'o', 'n', '\0' },
-    [HOB::TEXT] = (char []){ 't', 'e', 'x', 't', '\0' },
+    (char []){ 'j', 's', 'o', 'n', '\0' },
+    (char []){ 't', 'e', 'x', 't', '\0' },
+    (char []){ 'f', 'l', 'i', 'b', '\0' },
+    (char []){ 'v', 'l', 'i', 'b', '\0' },
     NULL
 };
 
@@ -103,10 +107,14 @@ void help(const char *my_name)
 {
     static const char * const descr_options[] =
     {
-        "<output_file>\n\n\twrite HOBs to binary <output_file>",
-        "<input_file|->\n\n\tread HOBs from binary <input_file> or from standard input <->",
-        "<input_file|->\n\n\tinport HOBs from text/json <input_file> or from standard input <->",
-        "<text|json>\n\n\tdump HOBs in plain <text> or <json> format",
+        "<output_file>\n\n\twrite HOBs to <output_file>",
+        "<input_file|->\n\n\tread HOBs from <input_file> or from standard input <->",
+        "<text|json|flib|vlib>\n\n"
+            "\tHOBs format:\n"
+            "\t\tplain <text>\n"
+            "\t\t<json> text\n"
+            "\t\t<f>ixed <l>enght <i>nteger <b>inary\n"
+            "\t\t<v>ariable <l>enght <i>nteger <b>inary\n"
         "\n\n\tthis help",
     };
 
@@ -145,7 +153,7 @@ int main(int argc, char *argv[])
 }
 #else // MINIMAL
 
-bool handle_message(HOB &m)
+bool handle_message(hob &m)
 {
 
     bool handled = true;
@@ -290,7 +298,6 @@ bool handle_message(HOB &m)
 
                         m_AnotherStruct.dat -= MyStruct::_optional;
                     }
-
                     if (m_AnotherStruct.dat & MyStruct::_anEnum)
                     {
                         printf("dat.anEnum still changed\n");
@@ -362,11 +369,14 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-#if defined(OUTPUT_ON_FILE)
+    hobio::iobuffer *io = NULL;
+    hobio::writer   *os = NULL;
+    hobio::reader   *is = NULL;
+
     bool do_read   = false;
     bool do_write  = false;
-    bool do_inport = false;
     bool from_file = false;
+    int  dump_mode = -1;
     string in_file;
 
     int  file_arg  = 0;
@@ -382,7 +392,7 @@ int main(int argc, char *argv[])
     {
         c = getopt_long(argc,
                         argv,
-                        "w:r:i:d:h",
+                        ":w::r::f:h",
                         long_options,
                         &option_index);
 
@@ -397,13 +407,9 @@ int main(int argc, char *argv[])
                 {
                     do_write = true;
 
-                    if (NULL != optarg)
+                    if (optarg)
                     {
-                        in_file  = optarg;
-                    }
-                    else
-                    {
-                        help(argv[0]);
+                        os = new hobio::ostream(optarg);
                     }
                 }
                 break;
@@ -412,30 +418,9 @@ int main(int argc, char *argv[])
                 {
                     do_read = true;
 
-                    if (NULL != optarg)
+                    if (optarg)
                     {
-                        in_file = optarg;
-
-                        if (!in_file.empty() && in_file != "-")
-                        {
-                            from_file = true;
-                        }
-                    }
-                }
-                break;
-
-            case 'i':
-                {
-                    do_inport = true;
-
-                    if (NULL != optarg)
-                    {
-                        in_file = optarg;
-
-                        if (!in_file.empty() && in_file != "-")
-                        {
-                            from_file = true;
-                        }
+                        is = new hobio::istream(optarg);
                     }
                 }
                 break;
@@ -446,54 +431,91 @@ int main(int argc, char *argv[])
                 }
                 break;
 
-            case 'd':
+            case 'f':
                 {
                     subopts = optarg;
 
                     while ((NULL != subopts) && (*subopts != '\0') && !errfnd)
                     {
-                        switch (getsubopt(&subopts, dump_modes, &value))
+                        dump_mode = getsubopt(&subopts, dump_modes, &value);
+
+                        if (dump_mode > 3)
                         {
-                            case HOB::JSON:
-                                dump_mode = HOB::JSON;
-                                break;
-
-                            case HOB::TEXT:
-                                dump_mode = HOB::TEXT;
-                                break;
-
-                            default:
-                                errfnd = 1;
-                                break;
+                            errfnd = 1;
                         }
                     }
                 }
                 break;
 
+            case ':':
+                switch (optopt)
+                {
+                    case 'w':
+                        do_write = true;
+                        break;
+
+                    case 'r':
+                        do_read = true;
+                        break;
+                    default:
+                        break;
+                }
+                break;
             default:
                 break;
         }
     }
 
-    if (!do_read && !do_write && !do_inport)
+    if (!do_read && !do_write && (NULL == os) && (NULL == is))
     {
-        help(argv[0]);
+        io = new hobio::iobuffer();
+        os = static_cast<hobio::writer*>(io);
+        is = static_cast<hobio::reader*>(io);
+
+        do_read = do_write = true;
+    }
+    else
+    if (do_write && !do_read && (NULL == os) && (NULL == is))
+    {
+        os = new hobio::ostream();
+    }
+    else
+    if (!do_write && do_read && (NULL == os) && (NULL == is))
+    {
+        is = new hobio::istream();
     }
 
     if (do_write)
     {
-        HOBIO::FileWriter ofs(in_file.c_str());
-#else // !OUTPUT_ON_FILE
-#if defined(SEPARATE_IN_AND_OUT_STRING_STREAMS)
-        HOBIO::BufferWriter ofs;
-#else // SEPARATE_IN_AND_OUT_STRING_STREAMS
-        HOBIO::BufferReaderWriter ofs;
-#endif // SEPARATE_IN_AND_OUT_STRING_STREAMS
-#endif // OUTPUT_ON_FILE
+        if (NULL == os)
+        {
+            os = new hobio::obuffer();
+        }
+
+        hob::encoder *ps = NULL;
+
+        switch (dump_mode)
+        {
+            case 0:
+                ps = new hobio::json::encoder(*os,true);
+                break;
+
+            case 1:
+                ps = new hobio::json::encoder(*os,false);
+                break;
+
+            case 2:
+                ps = new hobio::flib::encoder(*os);
+                break;
+
+            default:
+                ps = new hobio::vlib::encoder(*os);
+                break;
+        }
 
         printf("------------------[ WRITING HOBS ]------------------\n\n");
 
-        { MyStruct               m; m >> ofs; LOG(m); }
+        { MyStruct               m; m >> *ps; LOG(m); }
         {
             AnotherStruct m;
 
@@ -514,7 +536,7 @@ int main(int argc, char *argv[])
             m.aMap[3] = "tre";
             m.aMap[7] = "sette";
 
-            m >> ofs;
+            m >> *ps;
 
             LOG(m);
 
@@ -523,13 +545,13 @@ int main(int argc, char *argv[])
             m.bar        = 1.21;
             m.dat.anEnum = static_cast<uint32_t>(enThree);
 
-            m >> ofs;
+            m >> *ps;
 
             LOG(m);
         }
-        { NoParamMessage         m; m >> ofs; LOG(m); }
-        { NumericNoParamMessage  m; m >> ofs; LOG(m); }
-        { NumericExtraParameters m; m >> ofs; LOG(m); }
+        { NoParamMessage         m; m >> *ps; LOG(m); }
+        { NumericNoParamMessage  m; m >> *ps; LOG(m); }
+        { NumericExtraParameters m; m >> *ps; LOG(m); }
         {
             NumericMessage m;
 
@@ -572,7 +594,7 @@ int main(int argc, char *argv[])
 
             m.opt_struct = s;
 
-            m >> ofs;
+            m >> *ps;
 
             LOG(m);
         }
@@ -619,45 +641,49 @@ int main(int argc, char *argv[])
             m.root.aMap[7]  = "quinto";
             m.root.aMap[11] = "sesto";
 
-            m >> ofs;
+            m >> *ps;
 
             LOG(m);
         }
 
-#if defined(OUTPUT_ON_FILE)
-        ofs.close();
+        delete ps;
     }
 
-    if (do_read || do_inport)
+    if (do_read)
     {
-        HOBIO::FileReader ifile;
-        HOBIO::AbstractReader *is = &ifile;
-        HOBIO::BufferReaderWriter os;
-
-        if (from_file)
+        if (NULL == is)
         {
-            ifile.open(in_file.c_str(), !do_inport);
+            if (NULL == os)
+            {
+                help(argv[0]);
+            }
+
+            is = new hobio::ibuffer(static_cast<const hobio::obuffer&>(*os));
         }
 
-        if (do_inport && (*is >> os)) // same of HOB::parse(src, os)
-        {
-            is = &os;
-        }
+        hob::decoder *pp = NULL;
 
-#else // OUTPUT_ON_FILE
-#if defined(SEPARATE_IN_AND_OUT_STRING_STREAMS)
-        HOBIO::BufferReader ifs(ofs);
-#else // SEPARATE_IN_AND_OUT_STRING_STREAMS
-        HOBIO::BufferReaderWriter & ifs = ofs;
-#endif // SEPARATE_IN_AND_OUT_STRING_STREAMS
-        HOBIO::AbstractReader *is = &ifs;
-#endif // OUTPUT_ON_FILE
+        switch (dump_mode)
+        {
+            case 0:
+            case 1:
+                pp = new hobio::json::decoder(*is);
+                break;
+
+            case 2:
+                pp = new hobio::flib::decoder(*is);
+                break;
+
+            default:
+                pp = new hobio::vlib::decoder(*is);
+                break;
+        }
 
         printf("------------------[ READING HOBS ]------------------\n\n");
 
-        HOB m;
+        hob m;
 
-        while (*is >> m) // same of (m << *is)
+        while (*pp >> m) // same of (m << *is)
         {
 LOG(m);
             handle_message(m);
@@ -673,15 +699,27 @@ LOG(m);
             handle_message(m);
         }
 
-#if defined(OUTPUT_ON_FILE)
-        if (from_file)
-        {
-            HOBIO::FileReader *pifs = (do_inport) ? &ifile
-                                           : static_cast<HOBIO::FileReader *>(is);
-
-            pifs->close();
-        }
+        delete pp;
     }
-#endif // OUTPUT_ON_FILE
+
+    if (NULL != io)
+    {
+        delete io;
+        io = NULL;
+        is = NULL;
+        os = NULL;
+    }
+
+    if (NULL != is)
+    {
+         delete is;
+         is = NULL;
+    }
+
+    if (NULL != os)
+    {
+         delete os;
+         os = NULL;
+    }
 }
 #endif // MINIMAL

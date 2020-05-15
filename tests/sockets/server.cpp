@@ -9,10 +9,12 @@
 #include <cstring>
 #include <iostream>
 #include <list>
-#include <thread.hpp>
+#include "hob/codec/vlib.hpp"
+#include "hob/codec/json.hpp"
+#include "hob/io/handle.hpp"
+#include "hob/io/stream.hpp"
+#include "hob/std/thread.hpp"
 #include "../hobs.h"
-
-HOB::Dump dump_mode = HOB::JSON;
 
 Hello                  m_hi                    ;
 Put                    m_put                   ;
@@ -26,39 +28,42 @@ NumericMessage         m_NumericMessage        ;
 NumericExtraParameters m_NumericExtraParameters;
 ComplexStruct          m_ComplexStruct         ;
 
-static std::list<HOBIO::FdReaderWriter *> streamList;
+static std::list<hob::encoder *> streamList;
 
-static void wall(HOB &m, HOBIO::FdReaderWriter *s)
+static void wall(hob &m, hob::encoder *s)
 {
+    hobio::ostream os;
+    hobio::json::encoder out(os,true);
+
     // for (auto s : streamList)
     {
         if (m >> m_hi)
         {
-            (*s) << m_hi; std::cout << "Sending: " << m_hi(HOB::JSON) << std::endl;
+            (*s) << m_hi; std::cout << "Sending: "; m_hi >> out; std::cout << std::endl;
         }
         else
         if (m >> m_put)
         {
             m_get.data = "recv some data";
 
-            (*s) << m_get; std::cout << "Sending: " << m_get(HOB::JSON) << std::endl;
+            (*s) << m_get; std::cout << "Sending: "; m_get >> out; std::cout << std::endl;
         }
         else
         if (m >> m_get)
         {
             m_put.data = "sent some data";
 
-            (*s) << m_put; std::cout << "Sending: " << m_put(HOB::JSON) << std::endl;
+            (*s) << m_put; std::cout << "Sending: "; m_put >> out; std::cout << std::endl;
         }
         else
         if (m >> m_bye)
         {
-            (*s) << m_bye; std::cout << "Sending: " << m_bye(HOB::JSON) << std::endl;
+            (*s) << m_bye; std::cout << "Sending: "; m_bye >> out; std::cout << std::endl;
         }
     }
 }
 
-bool handle_message(HOB &m)
+bool handle_message(hob &m)
 {
     bool handled = true;
 
@@ -281,43 +286,49 @@ public:
 
 static void handleClient(Client client)
 {
-    HOBIO::FdReaderWriter io(client.fd);
-    streamList.push_back(&io);
+    hobio::iohandle io(client.fd);
+    hobio::vlib::decoder dec(io);
+    hobio::vlib::encoder enc(io);
 
-    HOB m;
+    hobio::ostream os;
+    hobio::json::encoder out(os,true);
 
-    while (io >> m)
+    streamList.push_back(&enc);
+
+    hob m;
+
+    while (dec >> m)
     {
         std::cout << "Received: ";
 
         if (m >> m_hi)
         {
-            std::cout << m_hi(HOB::JSON);
+            m_hi >> out;
         }
         else
         if (m >> m_put)
         {
-            std::cout << m_put(HOB::JSON);
+            m_put >> out;
         }
         else
         if (m >> m_get)
         {
-            std::cout << m_get(HOB::JSON);
+            m_get >> out;
         }
         else
         if (m >> m_bye)
         {
-            std::cout << m_bye(HOB::JSON);
+            m_bye >> out;
         }
-        else 
+        else
         if (!handle_message(m))
         {
-            std::cout << "Unknown HOB: " << m(HOB::JSON);
+            std::cout << "Unknown HOB: "; m >> out;
         }
 
         std::cout << std::endl;
 
-        wall(m, &io);
+        wall(m, &enc);
 
         if (m == m_bye)
         {
@@ -325,7 +336,7 @@ static void handleClient(Client client)
         }
     }
 
-    streamList.remove(&io);
+    streamList.remove(&enc);
     close(client.fd);
     std::cout << "Disconnect from " << client.remote << std::endl;
 }

@@ -6,19 +6,24 @@
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
-#include <thread.hpp>
+#include "hob/codec/vlib.hpp"
+#include "hob/codec/json.hpp"
+#include "hob/io/handle.hpp"
+#include "hob/io/stream.hpp"
+#include "hob/std/thread.hpp"
 #include "../hobs.h"
-
-HOB::Dump dump_mode = HOB::JSON;
 
 Hello m_hi;
 Put   m_put;
 Get   m_get;
 Bye   m_bye;
 
-static void handleServer(HOBIO::FdReaderWriter *io)
+hobio::ostream std_ostream;
+hobio::json::encoder enc_stdout(std_ostream,true);
+
+static void handleServer(hob::decoder *io)
 {
-    HOB m;
+    hob m;
 
     while ((*io) >> m)
     {
@@ -26,26 +31,28 @@ static void handleServer(HOBIO::FdReaderWriter *io)
 
         if (m >> m_hi)
         {
-            std::cout << m_hi(HOB::JSON);
+            m_hi >> enc_stdout;
         }
         else
         if (m >> m_put)
         {
-            std::cout << m_put(HOB::JSON);
+            m_put >> enc_stdout;
         }
         else
         if (m >> m_get)
         {
-            std::cout << m_get(HOB::JSON);
+            m_get >> enc_stdout;
         }
         else
         if (m >> m_bye)
         {
-            std::cout << m_bye(HOB::JSON);
+            m_bye >> enc_stdout;
         }
         else
         {
-            std::cout << "Unknown HOB: " << m(HOB::JSON);
+            std::cout << "Unknown HOB: ";
+
+            m >> enc_stdout;
         }
 
         std::cout << std::endl;
@@ -74,20 +81,24 @@ int main(int argc, char *argv[])
     hp = gethostbyname(argv[1]);
     std::memcpy(&dst.sin_addr, hp->h_addr, hp->h_length);
     connect(sockfd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst) );
-    HOBIO::FdReaderWriter io(sockfd);
-    std::thread<HOBIO::FdReaderWriter *> th1 = std::thread<HOBIO::FdReaderWriter *>(handleServer, &io);
+
+    hobio::iohandle io(sockfd);
+    hobio::vlib::decoder dec(io);
+    hobio::vlib::encoder enc(io);
+
+    std::thread<hob::decoder *> th1 = std::thread<hob::decoder *>(handleServer, &dec);
 
     srandom(time(NULL));
 
     m_hi.my_id = m_put.my_id = m_get.my_id = m_bye.my_id = random();
 
-    io << m_hi; std::cout << "Sending: " << m_hi(HOB::JSON) << std::endl;
+    m_hi >> enc; std::cout << "Sending: "; m_hi >> enc_stdout; std::cout << std::endl;
 
     while (io.good())
     {
         std::string data;
 
-        usleep(500000);
+        usleep(100000);
 
         std::cout << "Type a command (bye|put|get|msg): ";
 
@@ -106,16 +117,17 @@ int main(int argc, char *argv[])
 
             m_put.data = data;
 
-            io << m_put; std::cout << "Sending: " << m_put(HOB::JSON) << std::endl;
+            m_put >> enc; std::cout << "Sending: "; m_put >> enc_stdout; std::cout << std::endl;
         }
 
         if (data == "msg")
         {
             std::cout << "Enter text/json HOBs to send:" << endl;
 
-            HOBIO::FileReader src(stdin);
+            hobio::istream std_istream;
+            hobio::json::decoder dec_stdin(std_istream);
 
-            src >> io;
+            dec_stdin >> enc;
         }
 
         if (data == "get")
@@ -126,11 +138,11 @@ int main(int argc, char *argv[])
 
             m_get.data = data;
 
-            io << m_get; std::cout << "Sending: " << m_get(HOB::JSON) << std::endl;
+            m_get >> enc; std::cout << "Sending: "; m_get >> enc_stdout; std::cout << std::endl;
         }
     }
 
-    io << m_bye; std::cout << "Sending: " << m_bye(HOB::JSON) << std::endl;
+    m_bye >> enc; std::cout << "Sending: "; m_bye >> enc_stdout; std::cout << std::endl;
 
     th1.join();
 
