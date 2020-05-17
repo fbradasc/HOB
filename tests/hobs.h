@@ -6,7 +6,8 @@
 #if 1
 #define LOG(hob_) { \
     hobio::ostream _os_; \
-    hobio::json::encoder _out_(_os_, true); \
+    hobio::json::encoder _out_(_os_); \
+    _out_ << hobio::json::VERBOSE; \
     printf("Size: %ld: ", hob_.size(_out_)); \
     hob_ >> _out_; \
     printf("\n"); \

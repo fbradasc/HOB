@@ -4,3 +4,4 @@ output.dat
 test_*
 .vscode
 build*
+*_*

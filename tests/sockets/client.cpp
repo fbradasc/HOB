@@ -19,7 +19,7 @@ Get   m_get;
 Bye   m_bye;
 
 hobio::ostream std_ostream;
-hobio::json::encoder enc_stdout(std_ostream,true);
+hobio::json::encoder enc_stdout(std_ostream);
 
 static void handleServer(hob::decoder *io)
 {
@@ -85,6 +85,8 @@ int main(int argc, char *argv[])
     hobio::iohandle io(sockfd);
     hobio::vlib::decoder dec(io);
     hobio::vlib::encoder enc(io);
+
+    enc_stdout << hobio::json::VERBOSE;
 
     std::thread<hob::decoder *> th1 = std::thread<hob::decoder *>(handleServer, &dec);
 

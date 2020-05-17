@@ -385,14 +385,12 @@ namespace hobio
                 {
                     _bs = new hobio::iobuffer(stream(), size);
                 }
-#if 0
                 else
                 {
                     _bs->clear();
 
-                    // _bs->load(size);
+                    _bs->load(size);
                 }
-#endif
 
                 return ( (NULL != _bs) && _bs->good() );
             }

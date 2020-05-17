@@ -497,11 +497,29 @@ int main(int argc, char *argv[])
         switch (dump_mode)
         {
             case 0:
-                ps = new hobio::json::encoder(*os,true);
+                {
+                    hobio::json::encoder *js = new hobio::json::encoder(*os);
+
+                    if (NULL != js)
+                    {
+                        *js << hobio::json::VERBOSE;
+                    }
+
+                    ps = js;
+                }
                 break;
 
             case 1:
-                ps = new hobio::json::encoder(*os,false);
+                {
+                    hobio::json::encoder *js = new hobio::json::encoder(*os);
+
+                    if (NULL != js)
+                    {
+                        *js << hobio::json::COMPACT;
+                    }
+
+                    ps = js;
+                }
                 break;
 
             case 2:

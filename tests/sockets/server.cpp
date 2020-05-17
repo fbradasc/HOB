@@ -30,35 +30,35 @@ ComplexStruct          m_ComplexStruct         ;
 
 static std::list<hob::encoder *> streamList;
 
+hobio::ostream os;
+hobio::json::encoder std_out(os);
+
 static void wall(hob &m, hob::encoder *s)
 {
-    hobio::ostream os;
-    hobio::json::encoder out(os,true);
-
     // for (auto s : streamList)
     {
         if (m >> m_hi)
         {
-            (*s) << m_hi; std::cout << "Sending: "; m_hi >> out; std::cout << std::endl;
+            (*s) << m_hi; std::cout << "Sending: "; m_hi >> std_out; std::cout << std::endl;
         }
         else
         if (m >> m_put)
         {
             m_get.data = "recv some data";
 
-            (*s) << m_get; std::cout << "Sending: "; m_get >> out; std::cout << std::endl;
+            (*s) << m_get; std::cout << "Sending: "; m_get >> std_out; std::cout << std::endl;
         }
         else
         if (m >> m_get)
         {
             m_put.data = "sent some data";
 
-            (*s) << m_put; std::cout << "Sending: "; m_put >> out; std::cout << std::endl;
+            (*s) << m_put; std::cout << "Sending: "; m_put >> std_out; std::cout << std::endl;
         }
         else
         if (m >> m_bye)
         {
-            (*s) << m_bye; std::cout << "Sending: "; m_bye >> out; std::cout << std::endl;
+            (*s) << m_bye; std::cout << "Sending: "; m_bye >> std_out; std::cout << std::endl;
         }
     }
 }
@@ -290,9 +290,6 @@ static void handleClient(Client client)
     hobio::vlib::decoder dec(io);
     hobio::vlib::encoder enc(io);
 
-    hobio::ostream os;
-    hobio::json::encoder out(os,true);
-
     streamList.push_back(&enc);
 
     hob m;
@@ -303,27 +300,27 @@ static void handleClient(Client client)
 
         if (m >> m_hi)
         {
-            m_hi >> out;
+            m_hi >> std_out;
         }
         else
         if (m >> m_put)
         {
-            m_put >> out;
+            m_put >> std_out;
         }
         else
         if (m >> m_get)
         {
-            m_get >> out;
+            m_get >> std_out;
         }
         else
         if (m >> m_bye)
         {
-            m_bye >> out;
+            m_bye >> std_out;
         }
         else
         if (!handle_message(m))
         {
-            std::cout << "Unknown HOB: "; m >> out;
+            std::cout << "Unknown HOB: "; m >> std_out;
         }
 
         std::cout << std::endl;
@@ -345,6 +342,8 @@ int main(int argc, char *argv[])
 {
     int sockfd = socket(PF_INET, SOCK_STREAM, 0);
     struct sockaddr_in me;
+
+    std_out << hobio::json::VERBOSE;
 
     std::memset(&me, 0, sizeof(me) );
     me.sin_family = PF_INET;

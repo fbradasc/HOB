@@ -954,7 +954,7 @@ protected:
             return false;
         }
 
-        if (!is.bufferize(sz_))
+        if (update && !is.bufferize(sz_))
         {
             return false;
         }

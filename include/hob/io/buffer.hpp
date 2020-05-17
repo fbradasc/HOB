@@ -223,7 +223,8 @@ namespace hobio
 
         inline virtual void clear()
         {
-            _size = 0;
+            _size -= _pos;
+            memcpy(_buffer,&_buffer[_pos],_size);
             _pos  = 0;
         }
 
@@ -472,7 +473,9 @@ namespace hobio
 
         inline virtual void clear()
         {
-            _size = 0;
+            // _size = 0;
+            _size -= _pos;
+            memcpy(_buffer,&_buffer[_pos],_size);
             _pos  = 0;
         }
 

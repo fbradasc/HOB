@@ -14,19 +14,32 @@ namespace hobio
 {
     namespace json
     {
+        enum Format
+        {
+            VERBOSE,
+            COMPACT
+        };
+
         class encoder
             : public vlib::encoder
         {
         public:
-            encoder(hobio::writer &os, bool verbose=false)
+            encoder(hobio::writer &os)
                 : vlib::encoder(os)
-                , _verbose     (verbose)
+                , _format      (COMPACT)
                 , _has_payload (  false)
             {
             }
 
             virtual ~encoder()
             {
+            }
+
+            encoder & operator << (Format format)
+            {
+                _format = format;
+
+                return *this;
             }
 
             virtual bool encode_header(const char     *name ,
@@ -66,7 +79,7 @@ namespace hobio
 
                 _ss << noshowpos << "{";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     if (NULL != name)
                     {
@@ -88,7 +101,7 @@ namespace hobio
 
                 indentation(-1);
 
-                if (_verbose && (NULL != value))
+                if ((_format == VERBOSE) && (NULL != value))
                 {
                     _ss << ","
                         << endl
@@ -102,7 +115,7 @@ namespace hobio
                 {
                     _ss << ",";
 
-                    if (_verbose)
+                    if (_format == VERBOSE)
                     {
                         _ss << endl
                             << padding(1)
@@ -115,7 +128,7 @@ namespace hobio
 
                     indentation(-1);
 
-                    if (_verbose)
+                    if (_format == VERBOSE)
                     {
                         _ss << ","
                             << endl
@@ -134,7 +147,7 @@ namespace hobio
                 (void)type;
                 (void)name;
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << padding(2)
                         << "{"
@@ -175,7 +188,7 @@ namespace hobio
 
                 indentation(-3);
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl
                         << padding(2)
@@ -189,7 +202,7 @@ namespace hobio
 
             virtual inline bool encode_footer()
             {
-                if (_has_payload && _verbose)
+                if (_has_payload && (_format == VERBOSE))
                 {
                     _ss << padding(2)
                         << "null"
@@ -198,7 +211,7 @@ namespace hobio
                         << "]";
                 }
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                    _ss << endl;
                 }
@@ -394,7 +407,7 @@ namespace hobio
                 _ss << noshowpos
                     << "{";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -404,7 +417,7 @@ namespace hobio
                     << len
                     << ")\":[";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -426,12 +439,12 @@ namespace hobio
             {
                 indentation(-2);
 
-                if (_verbose && (i < (len-1)))
+                if ((_format == VERBOSE) && (i < (len-1)))
                 {
                     _ss << ",";
                 }
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -441,7 +454,7 @@ namespace hobio
             {
                 _ss << padding(1) << "]";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -473,7 +486,7 @@ namespace hobio
                 _ss << noshowpos
                     << "{";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -498,12 +511,12 @@ namespace hobio
 
             virtual bool encode_optional_end(const bool &has_value)
             {
-                if (!has_value && _verbose)
+                if (!has_value && (_format == VERBOSE))
                 {
                     _ss << "null";
                 }
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -518,7 +531,7 @@ namespace hobio
                 _ss << noshowpos
                     << "{";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -528,7 +541,7 @@ namespace hobio
                     << len
                     << ")\":[";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -541,7 +554,7 @@ namespace hobio
                 _ss << padding(2)
                     << "{";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                     _ss << padding(3)
@@ -560,7 +573,7 @@ namespace hobio
 
             virtual void encode_map_item_value_pre()
             {
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl
                         << padding(3)
@@ -574,7 +587,7 @@ namespace hobio
             {
                 indentation(-1);
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl
                         << padding(2);
@@ -582,7 +595,7 @@ namespace hobio
 
                 _ss << "}";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     if (remaining > 1)
                     {
@@ -597,7 +610,7 @@ namespace hobio
             {
                 _ss << padding(1) << "]";
 
-                if (_verbose)
+                if (_format == VERBOSE)
                 {
                     _ss << endl;
                 }
@@ -625,7 +638,7 @@ namespace hobio
 
         private:
             stringstream _ss;
-            bool         _verbose;
+            Format       _format;
             bool         _has_payload;
 
             inline int level(int count=0)
@@ -648,7 +661,7 @@ namespace hobio
 
             inline string padding(size_t p)
             {
-                return string(((_verbose)?(indentation() + (p)):0)*4,' ');
+                return string(((_format == VERBOSE)?(indentation() + (p)):0)*4,' ');
             }
         };
 
