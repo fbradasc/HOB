@@ -77,7 +77,24 @@ namespace hobio
                 return set_good( false );
             }
 
-            memcpy(&_buffer[_size], data, size);
+            switch (size)
+            {
+            case 1:
+                *reinterpret_cast<uint8_t*>(&_buffer[_size]) = *reinterpret_cast<const uint8_t *>(data);
+                break;
+            case 2:
+                *reinterpret_cast<uint16_t*>(&_buffer[_size]) = *reinterpret_cast<const uint16_t *>(data);
+                break;
+            case 4:
+                *reinterpret_cast<uint32_t*>(&_buffer[_size]) = *reinterpret_cast<const uint32_t *>(data);
+                break;
+            case 8:
+                *reinterpret_cast<long double*>(&_buffer[_size]) = *reinterpret_cast<const long double *>(data);
+                break;
+            default:
+                memcpy(&_buffer[_size], data, size);
+                break;
+            }
 
             _size += size;
 
@@ -491,7 +508,24 @@ namespace hobio
                 return set_good(false);
             }
 
-            memcpy(&_buffer[_size], data, size);
+            switch (size)
+            {
+            case 1:
+                *reinterpret_cast<uint8_t*>(&_buffer[_size]) = *reinterpret_cast<const uint8_t *>(data);
+                break;
+            case 2:
+                *reinterpret_cast<uint16_t*>(&_buffer[_size]) = *reinterpret_cast<const uint16_t *>(data);
+                break;
+            case 4:
+                *reinterpret_cast<uint32_t*>(&_buffer[_size]) = *reinterpret_cast<const uint32_t *>(data);
+                break;
+            case 8:
+                *reinterpret_cast<long double*>(&_buffer[_size]) = *reinterpret_cast<const long double *>(data);
+                break;
+            default:
+                memcpy(&_buffer[_size], data, size);
+                break;
+            }
 
             _size += size;
 

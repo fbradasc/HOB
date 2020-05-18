@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
-#include "hob/codec/vlib.hpp"
+#include "hob/codec/flat.hpp"
 #include "hob/codec/json.hpp"
 #include "hob/io/handle.hpp"
 #include "hob/io/stream.hpp"
@@ -83,10 +83,14 @@ int main(int argc, char *argv[])
     connect(sockfd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst) );
 
     hobio::iohandle io(sockfd);
-    hobio::vlib::decoder dec(io);
-    hobio::vlib::encoder enc(io);
+    hobio::flat::decoder dec(io);
+    hobio::flat::encoder enc(io);
+
+    dec << hobio::flat::VARINT;
+    enc << hobio::flat::VARINT;
 
     enc_stdout << hobio::json::VERBOSE;
+    enc_stdout << hobio::flat::VARINT;
 
     std::thread<hob::decoder *> th1 = std::thread<hob::decoder *>(handleServer, &dec);
 

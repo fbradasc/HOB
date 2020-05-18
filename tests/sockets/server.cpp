@@ -9,7 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <list>
-#include "hob/codec/vlib.hpp"
+#include "hob/codec/flat.hpp"
 #include "hob/codec/json.hpp"
 #include "hob/io/handle.hpp"
 #include "hob/io/stream.hpp"
@@ -287,8 +287,11 @@ public:
 static void handleClient(Client client)
 {
     hobio::iohandle io(client.fd);
-    hobio::vlib::decoder dec(io);
-    hobio::vlib::encoder enc(io);
+    hobio::flat::decoder dec(io);
+    hobio::flat::encoder enc(io);
+
+    dec << hobio::flat::VARINT;
+    enc << hobio::flat::VARINT;
 
     streamList.push_back(&enc);
 
@@ -344,6 +347,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in me;
 
     std_out << hobio::json::VERBOSE;
+    std_out << hobio::flat::VARINT;
 
     std::memset(&me, 0, sizeof(me) );
     me.sin_family = PF_INET;

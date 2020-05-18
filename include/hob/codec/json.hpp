@@ -6,7 +6,7 @@
 #include <sstream>
 #include <cstring>
 #include <iomanip>
-#include "hob/codec/vlib.hpp"
+#include "hob/codec/flat.hpp"
 
 using namespace std;
 
@@ -21,11 +21,11 @@ namespace hobio
         };
 
         class encoder
-            : public vlib::encoder
+            : public flat::encoder
         {
         public:
             encoder(hobio::writer &os)
-                : vlib::encoder(os)
+                : flat::encoder(os)
                 , _format      (COMPACT)
                 , _has_payload (  false)
             {
@@ -35,11 +35,16 @@ namespace hobio
             {
             }
 
-            encoder & operator << (Format format)
+            virtual encoder & operator << (json::Format format)
             {
                 _format = format;
 
                 return *this;
+            }
+
+            virtual flat::encoder & operator << (flat::Encoding format)
+            {
+                return (*static_cast<flat::encoder*>(this)) << format;
             }
 
             virtual bool encode_header(const char     *name ,
@@ -666,11 +671,11 @@ namespace hobio
         };
 
         class decoder
-            : public vlib::decoder
+            : public flat::decoder
         {
         public:
             decoder(hobio::reader &is)
-                : vlib::decoder(is)
+                : flat::decoder(is)
                 , _depth(-1)
             {
             }
@@ -697,7 +702,7 @@ namespace hobio
 
                     _depth = -1;
 
-                    vlib::encoder enc(*os);
+                    flat::encoder enc(*os, encoding());
 
                     return parse(enc,'\0');
                 }

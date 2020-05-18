@@ -1,51 +1,53 @@
 #!/bin/bash -x
 
+BINENC=${1}
+
 on_file() {
-    ./test_hob -wout.dat
-    ./test_hob -rout.dat
+    ./test_hob -wout.dat ${BINENC}
+    ./test_hob -rout.dat ${BINENC}
 }
 
 on_same_iobuffer() {
-    ./test_hob
+    ./test_hob ${BINENC}
 }
 
 on_separate_buffers() {
-    ./test_hob -w -r
+    ./test_hob -w -r ${BINENC}
 }
 
 from_cat() {
-    ./test_hob -wout.dat
-    cat out.dat | ./test_hob -r
+    ./test_hob -wout.dat ${BINENC}
+    cat out.dat | ./test_hob -r ${BINENC}
 }
 
 from_dd() {
-    ./test_hob -wout.dat
-    dd if=out.dat | ./test_hob -r
+    ./test_hob -wout.dat ${BINENC}
+    dd if=out.dat | ./test_hob -r ${BINENC}
 }
 
 from_pipe() {
-    ./test_hob -wout.dat
-    ./test_hob -r < ./out.dat
+    ./test_hob -wout.dat ${BINENC}
+    ./test_hob -r ${BINENC} < ./out.dat
 }
 
 from_text() {
-    ./test_hob -wdump.text -ftext
-    cat dump.text | ./test_hob -r -ftext
+    ./test_hob -wdump.text -ftext ${BINENC}
+    cat dump.text | ./test_hob -r -ftext ${BINENC}
 }
 
 from_json() {
-    ./test_hob -wdump.json -fjson
-    cat dump.json | ./test_hob -r -fjson
+    ./test_hob -wdump.json -fjson ${BINENC}
+    cat dump.json | ./test_hob -r -fjson ${BINENC}
 }
 
 from_text_file() {
-    ./test_hob -wdump.text -ftext
-    ./test_hob -rdump.text -ftext
+    ./test_hob -wdump.text -ftext ${BINENC}
+    ./test_hob -rdump.text -ftext ${BINENC}
 }
 
 from_json_file() {
-    ./test_hob -wdump.json -fjson
-    ./test_hob -rdump.json -ftext
+    ./test_hob -wdump.json -fjson ${BINENC}
+    ./test_hob -rdump.json -ftext ${BINENC}
 }
 
 on_file             > hobs_on_file.txt

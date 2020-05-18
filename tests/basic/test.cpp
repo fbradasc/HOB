@@ -69,9 +69,8 @@ diff3 f.txt i.txt s.txt
 #include <limits.h>
 #include <getopt.h>
 #include "../hobs.h"
-#include "hob/codec/flib.hpp"
+#include "hob/codec/flat.hpp"
 #include "hob/codec/json.hpp"
-#include "hob/codec/vlib.hpp"
 #include "hob/io/buffer.hpp"
 #include "hob/io/stream.hpp"
 
@@ -89,6 +88,7 @@ static struct option const long_options[] =
     {"write"     , required_argument, 0, 'w'},
     {"read"      , optional_argument, 0, 'r'},
     {"format"    , optional_argument, 0, 'f'},
+    {"encoding"  , optional_argument, 0, 'e'},
     {"help"      , no_argument      , 0, 'h'},
 
     {0           , 0                , 0,   0}
@@ -98,8 +98,14 @@ char * dump_modes[] =
 {
     (char []){ 'j', 's', 'o', 'n', '\0' },
     (char []){ 't', 'e', 'x', 't', '\0' },
-    (char []){ 'f', 'l', 'i', 'b', '\0' },
-    (char []){ 'v', 'l', 'i', 'b', '\0' },
+    (char []){ 'f', 'l', 'a', 't', '\0' },
+    NULL
+};
+
+char * flat_modes[] =
+{
+    (char []){ 'n', 'a', 't', 'i', 'v', 'e', '\0' },
+    (char []){ 'v', 'a', 'r', 'i', 'n', 't', '\0' },
     NULL
 };
 
@@ -109,12 +115,15 @@ void help(const char *my_name)
     {
         "<output_file>\n\n\twrite HOBs to <output_file>",
         "<input_file|->\n\n\tread HOBs from <input_file> or from standard input <->",
-        "<text|json|flib|vlib>\n\n"
+        "<text|json|flat>\n\n"
             "\tHOBs format:\n"
             "\t\tplain <text>\n"
             "\t\t<json> text\n"
-            "\t\t<f>ixed <l>enght <i>nteger <b>inary\n"
-            "\t\t<v>ariable <l>enght <i>nteger <b>inary\n"
+            "\t\t<flat> binary\n",
+        "<native|varint>\n\n"
+            "\tBinary encoding format:\n"
+            "\t\t<native> encoding\n"
+            "\t\t<varint> encoding\n",
         "\n\n\tthis help",
     };
 
@@ -377,6 +386,7 @@ int main(int argc, char *argv[])
     bool do_write  = false;
     bool from_file = false;
     int  dump_mode = -1;
+    int  flat_mode = -1;
     string in_file;
 
     int  file_arg  = 0;
@@ -392,7 +402,7 @@ int main(int argc, char *argv[])
     {
         c = getopt_long(argc,
                         argv,
-                        ":w::r::f:h",
+                        ":w::r::f:e:h",
                         long_options,
                         &option_index);
 
@@ -439,7 +449,23 @@ int main(int argc, char *argv[])
                     {
                         dump_mode = getsubopt(&subopts, dump_modes, &value);
 
-                        if (dump_mode > 3)
+                        if (dump_mode > 2)
+                        {
+                            errfnd = 1;
+                        }
+                    }
+                }
+                break;
+
+            case 'e':
+                {
+                    subopts = optarg;
+
+                    while ((NULL != subopts) && (*subopts != '\0') && !errfnd)
+                    {
+                        flat_mode = getsubopt(&subopts, flat_modes, &value);
+
+                        if (flat_mode > 1)
                         {
                             errfnd = 1;
                         }
@@ -503,6 +529,19 @@ int main(int argc, char *argv[])
                     if (NULL != js)
                     {
                         *js << hobio::json::VERBOSE;
+
+                        switch (flat_mode)
+                        {
+                            case 0:
+                                *js << hobio::flat::NATIVE;
+
+                                break;
+
+                            default:
+                                *js << hobio::flat::VARINT;
+
+                                break;
+                        }
                     }
 
                     ps = js;
@@ -516,18 +555,47 @@ int main(int argc, char *argv[])
                     if (NULL != js)
                     {
                         *js << hobio::json::COMPACT;
+
+                        switch (flat_mode)
+                        {
+                            case 0:
+                                *js << hobio::flat::NATIVE;
+
+                                break;
+
+                            default:
+                                *js << hobio::flat::VARINT;
+
+                                break;
+                        }
                     }
 
                     ps = js;
                 }
                 break;
 
-            case 2:
-                ps = new hobio::flib::encoder(*os);
-                break;
-
             default:
-                ps = new hobio::vlib::encoder(*os);
+                {
+                    hobio::flat::encoder *fe = new hobio::flat::encoder(*os);
+
+                    if (NULL != fe)
+                    {
+                        switch (flat_mode)
+                        {
+                            case 0:
+                                *fe << hobio::flat::NATIVE;
+
+                                break;
+
+                            default:
+                                *fe << hobio::flat::VARINT;
+
+                                break;
+                        }
+                    }
+
+                    ps = fe;
+                }
                 break;
         }
 
@@ -685,15 +753,51 @@ int main(int argc, char *argv[])
         {
             case 0:
             case 1:
-                pp = new hobio::json::decoder(*is);
-                break;
+                {
+                    hobio::json::decoder *js = new hobio::json::decoder(*is);
 
-            case 2:
-                pp = new hobio::flib::decoder(*is);
+                    if (NULL != js)
+                    {
+                        switch (flat_mode)
+                        {
+                            case 0:
+                                *js << hobio::flat::NATIVE;
+
+                                break;
+
+                            default:
+                                *js << hobio::flat::VARINT;
+
+                                break;
+                        }
+                    }
+
+                    pp = js;
+                }
                 break;
 
             default:
-                pp = new hobio::vlib::decoder(*is);
+                {
+                    hobio::flat::decoder *fd = new hobio::flat::decoder(*is);
+
+                    if (NULL != fd)
+                    {
+                        switch (flat_mode)
+                        {
+                            case 0:
+                                *fd << hobio::flat::NATIVE;
+
+                                break;
+
+                            default:
+                                *fd << hobio::flat::VARINT;
+
+                                break;
+                        }
+                    }
+
+                    pp = fd;
+                }
                 break;
         }
 
