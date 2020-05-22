@@ -20,8 +20,20 @@
 #ifndef CPP_MAGIC_H
 #define CPP_MAGIC_H
 
-#define XSTR(s) STR(s)
-#define STR(s) #s
+#define PP_XSTR(s) PP_STR(s)
+#define PP_STR(s) #s
+
+/**
+ * Macros which expand to common values
+ */
+#define PP_PASS(...) __VA_ARGS__
+#define PP_EMPTY()
+#define PP_COMMA() ,
+#define PP_PLUS() +
+#define PP_ZERO() 0
+#define PP_ONE() 1
+#define PP_SKIP(...)
+
 
 /**
  * Force the pre-processor to expand the macro a large number of times. Usage:
@@ -73,30 +85,18 @@
  * preprocessor making a large number of expansion passes over the given
  * expression.
  */
-#define EVAL(...) EVAL1024(__VA_ARGS__)
-#define EVAL1024(...) EVAL512(EVAL512(__VA_ARGS__))
-#define EVAL512(...) EVAL256(EVAL256(__VA_ARGS__))
-#define EVAL256(...) EVAL128(EVAL128(__VA_ARGS__))
-#define EVAL128(...) EVAL64(EVAL64(__VA_ARGS__))
-#define EVAL64(...) EVAL32(EVAL32(__VA_ARGS__))
-#define EVAL32(...) EVAL16(EVAL16(__VA_ARGS__))
-#define EVAL16(...) EVAL8(EVAL8(__VA_ARGS__))
-#define EVAL8(...) EVAL4(EVAL4(__VA_ARGS__))
-#define EVAL4(...) EVAL2(EVAL2(__VA_ARGS__))
-#define EVAL2(...) EVAL1(EVAL1(__VA_ARGS__))
-#define EVAL1(...) __VA_ARGS__
-
-
-/**
- * Macros which expand to common values
- */
-#define PASS(...) __VA_ARGS__
-#define EMPTY()
-#define COMMA() ,
-#define PLUS() +
-#define ZERO() 0
-#define ONE() 1
-#define SKIP(...)
+#define PP_EVAL(...)     PP_EVAL1024(__VA_ARGS__)
+#define PP_EVAL1024(...) PP_EVAL512(PP_EVAL512(__VA_ARGS__))
+#define PP_EVAL512(...)  PP_EVAL256(PP_EVAL256(__VA_ARGS__))
+#define PP_EVAL256(...)  PP_EVAL128(PP_EVAL128(__VA_ARGS__))
+#define PP_EVAL128(...)  PP_EVAL64(PP_EVAL64(__VA_ARGS__))
+#define PP_EVAL64(...)   PP_EVAL32(PP_EVAL32(__VA_ARGS__))
+#define PP_EVAL32(...)   PP_EVAL16(PP_EVAL16(__VA_ARGS__))
+#define PP_EVAL16(...)   PP_EVAL8(PP_EVAL8(__VA_ARGS__))
+#define PP_EVAL8(...)    PP_EVAL4(PP_EVAL4(__VA_ARGS__))
+#define PP_EVAL4(...)    PP_EVAL2(PP_EVAL2(__VA_ARGS__))
+#define PP_EVAL2(...)    PP_EVAL1(PP_EVAL1(__VA_ARGS__))
+#define PP_EVAL1(...)    __VA_ARGS__
 
 /**
  * Causes a function-style macro to require an additional pass to be expanded.
@@ -122,7 +122,7 @@
  * 3. At this point the macro expansion completes. If one more pass is made,
  *    IN_NEXT_PASS(args, to, the, macro) will be expanded as desired.
  */
-#define DEFER1(id) id EMPTY()
+#define PP_DEFER1(id) id PP_EMPTY()
 
 /**
  * As with DEFER1 except here n additional passes are required for DEFERn.
@@ -132,13 +132,13 @@
  * Note that there doesn't appear to be a way of combining DEFERn macros in
  * order to achieve exponentially increasing defers e.g. as is done by EVAL.
  */
-#define DEFER2(id) id EMPTY EMPTY()()
-#define DEFER3(id) id EMPTY EMPTY EMPTY()()()
-#define DEFER4(id) id EMPTY EMPTY EMPTY EMPTY()()()()
-#define DEFER5(id) id EMPTY EMPTY EMPTY EMPTY EMPTY()()()()()
-#define DEFER6(id) id EMPTY EMPTY EMPTY EMPTY EMPTY EMPTY()()()()()()
-#define DEFER7(id) id EMPTY EMPTY EMPTY EMPTY EMPTY EMPTY EMPTY()()()()()()()
-#define DEFER8(id) id EMPTY EMPTY EMPTY EMPTY EMPTY EMPTY EMPTY EMPTY()()()()()()()()
+#define PP_DEFER2(id) id PP_EMPTY PP_EMPTY()()
+#define PP_DEFER3(id) id PP_EMPTY PP_EMPTY PP_EMPTY()()()
+#define PP_DEFER4(id) id PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY()()()()
+#define PP_DEFER5(id) id PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY()()()()()
+#define PP_DEFER6(id) id PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY()()()()()()
+#define PP_DEFER7(id) id PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY()()()()()()()
+#define PP_DEFER8(id) id PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY PP_EMPTY()()()()()()()()
 
 
 /**
@@ -146,31 +146,31 @@
  * ensures that the arguments are expanded (once) before concatenation.
  */
 #if 1
-#define CAT(a, b)      CAT_I(a, b)
-#define CAT_I(a, b)    CAT_II(~, a ## b)
-#define CAT_II(p, res) res
+#define PP_CAT(a, b)      PP_CAT_I(a, b)
+#define PP_CAT_I(a, b)    PP_CAT_II(~, a ## b)
+#define PP_CAT_II(p, res) res
 #else
-#define CAT(a, ...) CAT_I(a, __VA_ARGS__)
-#define CAT_I(a, ...) a ## __VA_ARGS__
+#define PP_CAT(a, ...)    PP_CAT_I(a, __VA_ARGS__)
+#define PP_CAT_I(a, ...)  a ## __VA_ARGS__
 #endif
 
-#define CAT3(a, b, c) CAT(a, CAT(b, c))
+#define PP_CAT3(a, b, c)  PP_CAT(a, PP_CAT(b, c))
 
 
 /**
  * Get the first argument and ignore the rest.
  */
-#define FIRST(a, ...) a
+#define PP_FIRST(a, ...) a
 
 /**
  * Get the second argument and ignore the rest.
  */
-#define SECOND(a, b, ...) b
+#define PP_SECOND(a, b, ...) b
 
 /**
  * Get the remaining arguments and ignore the rest.
  */
-#define REMAIN(a, ...) __VA_ARGS__
+#define PP_REMAIN(a, ...) __VA_ARGS__
 
 /**
  * Expects a single input (not containing commas). Returns 1 if the input is
@@ -181,8 +181,8 @@
  * This macro abuses the fact that PROBE() contains a comma while other valid
  * inputs must not.
  */
-#define IS_PROBE(...) SECOND(__VA_ARGS__, 0)
-#define PROBE() ~, 1
+#define PP_IS_PROBE(...) PP_SECOND(__VA_ARGS__, 0)
+#define PP_PROBE() ~, 1
 
 
 /**
@@ -193,32 +193,32 @@
  * concatenated string will be produced. IS_PROBE then simply checks to see if
  * the PROBE was returned, cleanly converting the argument into a 1 or 0.
  */
-#define NOT(x) IS_PROBE(CAT(_NOT_, x))
-#define _NOT_0 PROBE()
+#define PP_NOT(x) PP_IS_PROBE(PP_CAT(_PP_NOT_, x))
+#define _PP_NOT_0 PP_PROBE()
 
 /**
  * Macro version of C's famous "cast to bool" operator (i.e. !!) which takes
  * anything and casts it to 0 if it is 0 and 1 otherwise.
  */
-#define BOOL(x) NOT(NOT(x))
+#define PP_BOOL(x) PP_NOT(PP_NOT(x))
 
 /**
  * Logical OR. Simply performs a lookup.
  */
-#define OR(a,b) CAT3(_OR_, a, b)
-#define _OR_00 0
-#define _OR_01 1
-#define _OR_10 1
-#define _OR_11 1
+#define PP_OR(a,b) PP_CAT3(_PP_OR_, a, b)
+#define _PP_OR_00 0
+#define _PP_OR_01 1
+#define _PP_OR_10 1
+#define _PP_OR_11 1
 
 /**
  * Logical AND. Simply performs a lookup.
  */
-#define AND(a,b) CAT3(_AND_, a, b)
-#define _AND_00 0
-#define _AND_01 0
-#define _AND_10 0
-#define _AND_11 1
+#define PP_AND(a,b) PP_CAT3(_PP_AND_, a, b)
+#define _PP_AND_00 0
+#define _PP_AND_01 0
+#define _PP_AND_10 0
+#define _PP_AND_11 1
 
 
 /**
@@ -236,10 +236,10 @@
  * 4. Note that the "true" clause is in the extra set of brackets; thus these
  *    become the arguments to _IF_0 or _IF_1 and thus a selection is made!
  */
-#define IF(c) _IF(BOOL(c))
-#define _IF(c) CAT(_IF_,c)
-#define _IF_0(...)
-#define _IF_1(...) __VA_ARGS__
+#define PP_IF(c) _PP_IF(PP_BOOL(c))
+#define _PP_IF(c) PP_CAT(_PP_IF_,c)
+#define _PP_IF_0(...)
+#define _PP_IF_1(...) __VA_ARGS__
 
 /**
  * Macro if/else statement. Usage:
@@ -251,10 +251,10 @@
  *
  * The mechanism is analogous to IF.
  */
-#define IF_ELSE(c) _IF_ELSE(BOOL(c))
-#define _IF_ELSE(c) CAT(_IF_ELSE_,c)
-#define _IF_ELSE_0(t,f) f
-#define _IF_ELSE_1(t,f) t
+#define PP_IF_ELSE(c) _PP_IF_ELSE(PP_BOOL(c))
+#define _PP_IF_ELSE(c) PP_CAT(_PP_IF_ELSE_,c)
+#define _PP_IF_ELSE_0(t,f) f
+#define _PP_IF_ELSE_1(t,f) t
 
 
 /**
@@ -278,8 +278,8 @@
  * 4. BOOL is used to force non-zero results into 1 giving the clean 0 or 1
  *    output required.
  */
-#define HAS_ARGS(...) BOOL(FIRST(_END_OF_ARGUMENTS_ __VA_ARGS__)(0))
-#define _END_OF_ARGUMENTS_(...) BOOL(FIRST(__VA_ARGS__))
+#define PP_HAS_ARGS(...) PP_BOOL(PP_FIRST(_PP_END_OF_ARGUMENTS_ __VA_ARGS__)(0))
+#define _PP_END_OF_ARGUMENTS_(...) PP_BOOL(PP_FIRST(__VA_ARGS__))
 
 
 /**
@@ -346,14 +346,14 @@
  *   _MAP_INNER as expanding to itself and thus it will still be expanded in
  *   future productions of itself.
  */
-#define MAP(...) \
-   IF(HAS_ARGS(__VA_ARGS__))(EVAL(MAP_INNER(__VA_ARGS__)))
-#define MAP_INNER(op,sep,cur_val, ...) \
+#define PP_MAP(...) \
+   PP_IF(PP_HAS_ARGS(__VA_ARGS__))(PP_EVAL(PP_MAP_INNER(__VA_ARGS__)))
+#define PP_MAP_INNER(op,sep,cur_val, ...) \
   op(cur_val) \
-  IF(HAS_ARGS(__VA_ARGS__))( \
-    sep() DEFER2(_MAP_INNER)()(op, sep, ##__VA_ARGS__) \
+  PP_IF(PP_HAS_ARGS(__VA_ARGS__))( \
+    sep() PP_DEFER2(_PP_MAP_INNER)()(op, sep, ##__VA_ARGS__) \
   )
-#define _MAP_INNER() MAP_INNER
+#define _PP_MAP_INNER() PP_MAP_INNER
 
 
 /**
@@ -378,14 +378,14 @@
  *
  * The mechanism is analogous to the MAP macro.
  */
-#define MAP_WITH_ID(op,sep,...) \
-  IF(HAS_ARGS(__VA_ARGS__))(EVAL(MAP_WITH_ID_INNER(op,sep,I, ##__VA_ARGS__)))
-#define MAP_WITH_ID_INNER(op,sep,id,cur_val, ...) \
+#define PP_MAP_WITH_ID(op,sep,...) \
+  PP_IF(PP_HAS_ARGS(__VA_ARGS__))(PP_EVAL(PP_MAP_WITH_ID_INNER(op,sep,I, ##__VA_ARGS__)))
+#define PP_MAP_WITH_ID_INNER(op,sep,id,cur_val, ...) \
   op(cur_val,id) \
-  IF(HAS_ARGS(__VA_ARGS__))( \
-    sep() DEFER2(_MAP_WITH_ID_INNER)()(op, sep, CAT(id,I), ##__VA_ARGS__) \
+  PP_IF(PP_HAS_ARGS(__VA_ARGS__))( \
+    sep() PP_DEFER2(_PP_MAP_WITH_ID_INNER)()(op, sep, PP_CAT(id,I), ##__VA_ARGS__) \
   )
-#define _MAP_WITH_ID_INNER() MAP_WITH_ID_INNER
+#define _PP_MAP_WITH_ID_INNER() PP_MAP_WITH_ID_INNER
 
 
 /**
@@ -408,14 +408,14 @@
  *
  * The mechanism is analogous to the MAP macro.
  */
-#define MAP_PAIRS(op,sep,...) \
-  IF(HAS_ARGS(__VA_ARGS__))(EVAL(MAP_PAIRS_INNER(op,sep,__VA_ARGS__)))
-#define MAP_PAIRS_INNER(op,sep,cur_val_1, cur_val_2, ...) \
+#define PP_MAP_PAIRS(op,sep,...) \
+  PP_IF(PP_HAS_ARGS(__VA_ARGS__))(PP_EVAL(PP_MAP_PAIRS_INNER(op,sep,__VA_ARGS__)))
+#define PP_MAP_PAIRS_INNER(op,sep,cur_val_1, cur_val_2, ...) \
   op(cur_val_1,cur_val_2) \
-  IF(HAS_ARGS(__VA_ARGS__))( \
-    sep() DEFER2(_MAP_PAIRS_INNER)()(op, sep, __VA_ARGS__) \
+  PP_IF(PP_HAS_ARGS(__VA_ARGS__))( \
+    sep() PP_DEFER2(_PP_MAP_PAIRS_INNER)()(op, sep, __VA_ARGS__) \
   )
-#define _MAP_PAIRS_INNER() MAP_PAIRS_INNER
+#define _PP_MAP_PAIRS_INNER() PP_MAP_PAIRS_INNER
 
 /**
  * This is a variant of the MAP macro which iterates over a two-element sliding
@@ -442,15 +442,15 @@
  *
  * The mechanism is analogous to the MAP macro.
  */
-#define MAP_SLIDE(op,last_op,sep,...) \
-  IF(HAS_ARGS(__VA_ARGS__))(EVAL(MAP_SLIDE_INNER(op,last_op,sep,__VA_ARGS__)))
-#define MAP_SLIDE_INNER(op,last_op,sep,cur_val, ...) \
-  IF(HAS_ARGS(__VA_ARGS__))(op(cur_val,FIRST(__VA_ARGS__))) \
-  IF(NOT(HAS_ARGS(__VA_ARGS__)))(last_op(cur_val)) \
-  IF(HAS_ARGS(__VA_ARGS__))( \
-    sep() DEFER2(_MAP_SLIDE_INNER)()(op, last_op, sep, __VA_ARGS__) \
+#define PP_MAP_SLIDE(op,last_op,sep,...) \
+  PP_IF(PP_HAS_ARGS(__VA_ARGS__))(PP_EVAL(PP_MAP_SLIDE_INNER(op,last_op,sep,__VA_ARGS__)))
+#define PP_MAP_SLIDE_INNER(op,last_op,sep,cur_val, ...) \
+  PP_IF(PP_HAS_ARGS(__VA_ARGS__))(op(cur_val,PP_FIRST(__VA_ARGS__))) \
+  PP_IF(PP_NOT(PP_HAS_ARGS(__VA_ARGS__)))(last_op(cur_val)) \
+  PP_IF(PP_HAS_ARGS(__VA_ARGS__))( \
+    sep() PP_DEFER2(_PP_MAP_SLIDE_INNER)()(op, last_op, sep, __VA_ARGS__) \
   )
-#define _MAP_SLIDE_INNER() MAP_SLIDE_INNER
+#define _PP_MAP_SLIDE_INNER() PP_MAP_SLIDE_INNER
 
 /**
  * This is a variant of the MAP macro which iterates over sequences rather than
@@ -476,8 +476,7 @@
 /**
  * Strip any excess commas from a set of arguments.
  */
-#define REMOVE_TRAILING_COMMAS(...) \
-	MAP(PASS, COMMA, __VA_ARGS__)
-
+#define PP_REMOVE_TRAILING_COMMAS(...) \
+	PP_MAP(PP_PASS, PP_COMMA, __VA_ARGS__)
 
 #endif

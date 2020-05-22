@@ -1077,13 +1077,13 @@ inline bool operator>>(hob::decoder &d, hob          &h) { return h << d; }
 inline bool operator>>(hob          &f, hob          &t) { return t << f; }
 
 #define SCAN_FIELDS(m, ...) \
-    SCAN_FIELDS_I(m CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
+    SCAN_FIELDS_I(m PP_CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
 
 #define FOR_EACH_FIELD_0(...) \
-    DEFER1(COMMA)()(__VA_ARGS__) FOR_EACH_FIELD_1
+    PP_DEFER1(PP_COMMA)()(__VA_ARGS__) FOR_EACH_FIELD_1
 
 #define FOR_EACH_FIELD_1(...) \
-    DEFER1(COMMA)()(__VA_ARGS__) FOR_EACH_FIELD_0
+    PP_DEFER1(PP_COMMA)()(__VA_ARGS__) FOR_EACH_FIELD_0
 
 #define FOR_EACH_FIELD_0_END
 #define FOR_EACH_FIELD_1_END
@@ -1092,266 +1092,266 @@ inline bool operator>>(hob          &f, hob          &t) { return t << f; }
     SCAN_FIELDS_II(__VA_ARGS__)
 
 #define SCAN_FIELDS_II(m, ...) \
-    IF(HAS_ARGS(__VA_ARGS__))(EVAL(SCAN_FIELDS_INNER(m, __VA_ARGS__)))
+    PP_IF(PP_HAS_ARGS(__VA_ARGS__))(PP_EVAL(SCAN_FIELDS_INNER(m, __VA_ARGS__)))
 
 #define SCAN_FIELDS_INNER(op, cur_val, ...) \
     op cur_val                              \
-    IF(HAS_ARGS(__VA_ARGS__))(DEFER2(SCAN_FIELDS_INNER_I)()(op, ## __VA_ARGS__))
+    PP_IF(PP_HAS_ARGS(__VA_ARGS__))(PP_DEFER2(SCAN_FIELDS_INNER_I)()(op, ## __VA_ARGS__))
 
 #define SCAN_FIELDS_INNER_I() SCAN_FIELDS_INNER
 
 #define DECLARE_ENUM(t, n, ...)  _ ## n,
 #define DECLARE_FIELD(t, n, ...) t n;
-#define INIT_FIELD(t, n, ...)    IF(HAS_ARGS(__VA_ARGS__) )(n = __VA_ARGS__;)
+#define INIT_FIELD(t, n, ...)    PP_IF(PP_HAS_ARGS(__VA_ARGS__) )(n = __VA_ARGS__;)
 #define DECODE_FIELD(t, n, ...)  && is.decode_field(n, &c) \
                                  && __set_changed(_ ## n, c)
-#define ENCODE_FIELD(t, n, ...)  && os.encode_field(n, STR(t), STR(n))
+#define ENCODE_FIELD(t, n, ...)  && os.encode_field(n, PP_STR(t), PP_STR(n))
 #define FIELD_SIZE(t, n, ...)    + os.field_size(n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
 #define UPDATE_NP(t, n, ...)     __update_id("");
-#define UPDATE_ID(t, n, ...)     HUPDATE(STR(name_)); \
-                                 HUPDATE(STR(t    )); \
-                                 HUPDATE(STR(n    ));
+#define UPDATE_ID(t, n, ...)     HUPDATE(PP_STR(name_)); \
+                                 HUPDATE(PP_STR(t    )); \
+                                 HUPDATE(PP_STR(n    ));
 
 #define CHANGED_FIELDS(n, ...) \
-    IF(HAS_ARGS(__VA_ARGS__))(EVAL(CHANGED_FIELDS_INNER(n, __VA_ARGS__)))
+    PP_IF(PP_HAS_ARGS(__VA_ARGS__))(PP_EVAL(CHANGED_FIELDS_INNER(n, __VA_ARGS__)))
 
-#define CHANGED_FIELDS_INNER(n, ...)                                           \
-    bitset<_FIELDS_COUNT_> __ ## n ## __changed__fields__;                     \
+#define CHANGED_FIELDS_INNER(n, ...)                                              \
+    bitset<_FIELDS_COUNT_> __ ## n ## __changed__fields__;                        \
 
-#define RESET_CHANGES(n,f)                                                     \
-    if (f == _FIELDS_COUNT_)                                                   \
-    {                                                                          \
-        __ ## n ## __changed__fields__.reset();                                \
-    }                                                                          \
-    else                                                                       \
-    if (f < _FIELDS_COUNT_)                                                    \
-    {                                                                          \
-        __ ## n ## __changed__fields__.reset(f);                               \
-    }                                                                          \
+#define RESET_CHANGES(n,f)                                                        \
+    if (f == _FIELDS_COUNT_)                                                      \
+    {                                                                             \
+        __ ## n ## __changed__fields__.reset();                                   \
+    }                                                                             \
+    else                                                                          \
+    if (f < _FIELDS_COUNT_)                                                       \
+    {                                                                             \
+        __ ## n ## __changed__fields__.reset(f);                                  \
+    }                                                                             \
 
-#define CHECK_CHANGES(n,f)                                                     \
-    if (f == _FIELDS_COUNT_)                                                   \
-    {                                                                          \
-        return __ ## n ## __changed__fields__.any();                           \
-    }                                                                          \
-    else                                                                       \
-    if (f < _FIELDS_COUNT_)                                                    \
-    {                                                                          \
-        return __ ## n ## __changed__fields__.test(f);                         \
-    }                                                                          \
+#define CHECK_CHANGES(n,f)                                                        \
+    if (f == _FIELDS_COUNT_)                                                      \
+    {                                                                             \
+        return __ ## n ## __changed__fields__.any();                              \
+    }                                                                             \
+    else                                                                          \
+    if (f < _FIELDS_COUNT_)                                                       \
+    {                                                                             \
+        return __ ## n ## __changed__fields__.test(f);                            \
+    }                                                                             \
 
-#define SET_CHANGED(n,f,v)                                                     \
-    if (f < _FIELDS_COUNT_)                                                    \
-    {                                                                          \
-        __ ## n ## __changed__fields__[f] = v;                                 \
-    }                                                                          \
+#define SET_CHANGED(n,f,v)                                                        \
+    if (f < _FIELDS_COUNT_)                                                       \
+    {                                                                             \
+        __ ## n ## __changed__fields__[f] = v;                                    \
+    }                                                                             \
 
-#define HOBSTRUCT(name_, value_, ...)                                          \
-class name_                                                                    \
-    : public hob                                                               \
-{                                                                              \
-public:                                                                        \
-    enum Fields                                                                \
-    {                                                                          \
-        SCAN_FIELDS(DECLARE_ENUM, FIRST(__VA_ARGS__))                          \
-        SCAN_FIELDS(DECLARE_ENUM, REMAIN(__VA_ARGS__))                         \
-        _FIELDS_COUNT_                                                         \
-    };                                                                         \
-                                                                               \
-    SCAN_FIELDS(DECLARE_FIELD, FIRST(__VA_ARGS__))                             \
-    SCAN_FIELDS(DECLARE_FIELD, REMAIN(__VA_ARGS__))                            \
-                                                                               \
-    name_() : hob(value_)                                                      \
-    {                                                                          \
-        SCAN_FIELDS(INIT_FIELD, FIRST(__VA_ARGS__))                            \
-        SCAN_FIELDS(INIT_FIELD, REMAIN(__VA_ARGS__))                           \
-                                                                               \
-        /* ID is evaluated on mandatory fields only */                         \
-        SCAN_FIELDS(UPDATE_ID, FIRST(__VA_ARGS__))                             \
-                                                                               \
-        /* Extra fields update parameters count */                             \
-        SCAN_FIELDS(UPDATE_NP, REMAIN(__VA_ARGS__))                            \
-                                                                               \
-        __update_id(static_cast<const char *>(NULL)); /* finalize hob ID */    \
-    }                                                                          \
-                                                                               \
-    name_(const hob & ref): hob(ref)                                           \
-    {                                                                          \
-        *this = ref;                                                           \
-    }                                                                          \
-                                                                               \
-    name_(const name_ & ref): hob(ref)                                         \
-    {                                                                          \
-        *this = ref;                                                           \
-    }                                                                          \
-                                                                               \
-    ~name_()                                                                   \
-    {                                                                          \
-    }                                                                          \
-                                                                               \
-    name_ & operator=(const hob & ref)                                         \
-    {                                                                          \
-        *static_cast<hob *>(this) = static_cast<const hob &>(ref);             \
-                                                                               \
-        return *this;                                                          \
-    }                                                                          \
-                                                                               \
-    name_ & operator=(const name_ & ref)                                       \
-    {                                                                          \
-        *static_cast<hob *>(this) = static_cast<const hob &>(ref);             \
-                                                                               \
-        SCAN_FIELDS(CLONE_FIELD, FIRST(__VA_ARGS__))                           \
-        SCAN_FIELDS(CLONE_FIELD, REMAIN(__VA_ARGS__))                          \
-                                                                               \
-        return *this;                                                          \
-    }                                                                          \
-                                                                               \
-    bool operator==(const name_ &ref) const                                    \
-    {                                                                          \
-        bool rv;                                                               \
-                                                                               \
-        rv = ((*static_cast<const hob*>(this) ==                               \
-                static_cast<const hob &>(ref))                                 \
-               SCAN_FIELDS(COMPARE_FIELD, FIRST(__VA_ARGS__))                  \
-               SCAN_FIELDS(COMPARE_FIELD, REMAIN(__VA_ARGS__)));               \
-                                                                               \
-        return rv;                                                             \
-    }                                                                          \
-                                                                               \
-    void operator-=(const Fields & f)                                          \
-    {                                                                          \
-        __reset_changes(f);                                                    \
-    }                                                                          \
-                                                                               \
-    bool operator&(const Fields &f) const                                      \
-    {                                                                          \
-        return __is_changed(f);                                                \
-    }                                                                          \
-                                                                               \
-    virtual bool operator>>(hob::encoder &os) const                            \
-    {                                                                          \
-        size_t payload = __payload(os);                                        \
-                                                                               \
-        return                                                                 \
-        (                                                                      \
-            (UNDEFINED == __get_id())                                          \
-            ||                                                                 \
-            (                                                                  \
-                os.encode_header(STR(name_),                                   \
-                                 value_,                                       \
-                                 __get_id(),                                   \
-                                 payload)                                      \
-                SCAN_FIELDS(ENCODE_FIELD, FIRST(__VA_ARGS__))                  \
-                SCAN_FIELDS(ENCODE_FIELD, REMAIN(__VA_ARGS__))                 \
-                &&                                                             \
-                os.encode_footer()                                             \
-            )                                                                  \
-        );                                                                     \
-    }                                                                          \
-                                                                               \
-protected:                                                                     \
-    void __reset_changes(const Fields & f)                                     \
-    {                                                                          \
-        (void)f;                                                               \
-                                                                               \
-        IF(HAS_ARGS(__VA_ARGS__))(RESET_CHANGES(name_,f))                      \
-    }                                                                          \
-                                                                               \
-    bool __is_changed(const Fields &f) const                                   \
-    {                                                                          \
-        (void)f;                                                               \
-                                                                               \
-        IF(HAS_ARGS(__VA_ARGS__))(CHECK_CHANGES(name_,f))                      \
-                                                                               \
-        return false;                                                          \
-    }                                                                          \
-                                                                               \
-    virtual void __reset_changes()                                             \
-    {                                                                          \
-        __reset_changes(_FIELDS_COUNT_);                                       \
-    }                                                                          \
-                                                                               \
-    virtual bool __is_changed() const                                          \
-    {                                                                          \
-        return __is_changed(_FIELDS_COUNT_);                                   \
-    }                                                                          \
-                                                                               \
-    bool __decode(hob &ref)                                                    \
-    {                                                                          \
-        hob::decoder *is = static_cast<hob::decoder*>(ref);                    \
-                                                                               \
-        if (NULL == is)                                                        \
-        {                                                                      \
-            return false;                                                      \
-        }                                                                      \
-                                                                               \
-        __reset_changes();                                                     \
-                                                                               \
-        ref.__rewind();                                                        \
-                                                                               \
-        if (!__decode(*is))                                                    \
-        {                                                                      \
-            return false;                                                      \
-        }                                                                      \
-                                                                               \
-        *this = ref;                                                           \
-                                                                               \
-        return true;                                                           \
-    }                                                                          \
-                                                                               \
-    bool __decode(hob::decoder &is, bool update=true)                          \
-    {                                                                          \
-        (void)is;                                                              \
-                                                                               \
-        bool c = false;                                                        \
-                                                                               \
-        /* Read mandatory fields : fail on error */                            \
-                                                                               \
-        if (true SCAN_FIELDS(DECODE_FIELD, FIRST(__VA_ARGS__)))                \
-        {                                                                      \
-            /* Read optional fields : ignore errors */                         \
-                                                                               \
-            if ((true SCAN_FIELDS(DECODE_FIELD, REMAIN(__VA_ARGS__))) || true) \
-            {                                                                  \
-                hob::__flush_pending();                                        \
-                                                                               \
-                return true;                                                   \
-            }                                                                  \
-        }                                                                      \
-                                                                               \
-        return false;                                                          \
-    }                                                                          \
-                                                                               \
-    virtual bool __set_changed(ssize_t f, bool v)                              \
-    {                                                                          \
-        (void)f;                                                               \
-        (void)v;                                                               \
-                                                                               \
-        if (f < 0)                                                             \
-        {                                                                      \
-            return false;                                                      \
-        }                                                                      \
-                                                                               \
-        IF(HAS_ARGS(__VA_ARGS__))(SET_CHANGED(name_,f,v))                      \
-                                                                               \
-        return true;                                                           \
-    }                                                                          \
-                                                                               \
-    virtual void __flush_pending()                                             \
-    {                                                                          \
-    }                                                                          \
-                                                                               \
-    virtual size_t __payload(hob::encoder &os) const                           \
-    {                                                                          \
-        return (0                                                              \
-                SCAN_FIELDS(FIELD_SIZE, FIRST(__VA_ARGS__))                    \
-                SCAN_FIELDS(FIELD_SIZE, REMAIN(__VA_ARGS__)));                 \
-    }                                                                          \
-                                                                               \
-private:                                                                       \
-    CHANGED_FIELDS(name_, __VA_ARGS__)                                         \
+#define HOBSTRUCT(name_, value_, ...)                                             \
+class name_                                                                       \
+    : public hob                                                                  \
+{                                                                                 \
+public:                                                                           \
+    enum Fields                                                                   \
+    {                                                                             \
+        SCAN_FIELDS(DECLARE_ENUM, PP_FIRST(__VA_ARGS__))                          \
+        SCAN_FIELDS(DECLARE_ENUM, PP_REMAIN(__VA_ARGS__))                         \
+        _FIELDS_COUNT_                                                            \
+    };                                                                            \
+                                                                                  \
+    SCAN_FIELDS(DECLARE_FIELD, PP_FIRST(__VA_ARGS__))                             \
+    SCAN_FIELDS(DECLARE_FIELD, PP_REMAIN(__VA_ARGS__))                            \
+                                                                                  \
+    name_() : hob(value_)                                                         \
+    {                                                                             \
+        SCAN_FIELDS(INIT_FIELD, PP_FIRST(__VA_ARGS__))                            \
+        SCAN_FIELDS(INIT_FIELD, PP_REMAIN(__VA_ARGS__))                           \
+                                                                                  \
+        /* ID is evaluated on mandatory fields only */                            \
+        SCAN_FIELDS(UPDATE_ID, PP_FIRST(__VA_ARGS__))                             \
+                                                                                  \
+        /* Extra fields update parameters count */                                \
+        SCAN_FIELDS(UPDATE_NP, PP_REMAIN(__VA_ARGS__))                            \
+                                                                                  \
+        __update_id(static_cast<const char *>(NULL)); /* finalize hob ID */       \
+    }                                                                             \
+                                                                                  \
+    name_(const hob & ref): hob(ref)                                              \
+    {                                                                             \
+        *this = ref;                                                              \
+    }                                                                             \
+                                                                                  \
+    name_(const name_ & ref): hob(ref)                                            \
+    {                                                                             \
+        *this = ref;                                                              \
+    }                                                                             \
+                                                                                  \
+    ~name_()                                                                      \
+    {                                                                             \
+    }                                                                             \
+                                                                                  \
+    name_ & operator=(const hob & ref)                                            \
+    {                                                                             \
+        *static_cast<hob *>(this) = static_cast<const hob &>(ref);                \
+                                                                                  \
+        return *this;                                                             \
+    }                                                                             \
+                                                                                  \
+    name_ & operator=(const name_ & ref)                                          \
+    {                                                                             \
+        *static_cast<hob *>(this) = static_cast<const hob &>(ref);                \
+                                                                                  \
+        SCAN_FIELDS(CLONE_FIELD, PP_FIRST(__VA_ARGS__))                           \
+        SCAN_FIELDS(CLONE_FIELD, PP_REMAIN(__VA_ARGS__))                          \
+                                                                                  \
+        return *this;                                                             \
+    }                                                                             \
+                                                                                  \
+    bool operator==(const name_ &ref) const                                       \
+    {                                                                             \
+        bool rv;                                                                  \
+                                                                                  \
+        rv = ((*static_cast<const hob*>(this) ==                                  \
+                static_cast<const hob &>(ref))                                    \
+               SCAN_FIELDS(COMPARE_FIELD, PP_FIRST(__VA_ARGS__))                  \
+               SCAN_FIELDS(COMPARE_FIELD, PP_REMAIN(__VA_ARGS__)));               \
+                                                                                  \
+        return rv;                                                                \
+    }                                                                             \
+                                                                                  \
+    void operator-=(const Fields & f)                                             \
+    {                                                                             \
+        __reset_changes(f);                                                       \
+    }                                                                             \
+                                                                                  \
+    bool operator&(const Fields &f) const                                         \
+    {                                                                             \
+        return __is_changed(f);                                                   \
+    }                                                                             \
+                                                                                  \
+    virtual bool operator>>(hob::encoder &os) const                               \
+    {                                                                             \
+        size_t payload = __payload(os);                                           \
+                                                                                  \
+        return                                                                    \
+        (                                                                         \
+            (UNDEFINED == __get_id())                                             \
+            ||                                                                    \
+            (                                                                     \
+                os.encode_header(PP_STR(name_),                                   \
+                                 value_,                                          \
+                                 __get_id(),                                      \
+                                 payload)                                         \
+                SCAN_FIELDS(ENCODE_FIELD, PP_FIRST(__VA_ARGS__))                  \
+                SCAN_FIELDS(ENCODE_FIELD, PP_REMAIN(__VA_ARGS__))                 \
+                &&                                                                \
+                os.encode_footer()                                                \
+            )                                                                     \
+        );                                                                        \
+    }                                                                             \
+                                                                                  \
+protected:                                                                        \
+    void __reset_changes(const Fields & f)                                        \
+    {                                                                             \
+        (void)f;                                                                  \
+                                                                                  \
+        PP_IF(PP_HAS_ARGS(__VA_ARGS__))(RESET_CHANGES(name_,f))                   \
+    }                                                                             \
+                                                                                  \
+    bool __is_changed(const Fields &f) const                                      \
+    {                                                                             \
+        (void)f;                                                                  \
+                                                                                  \
+        PP_IF(PP_HAS_ARGS(__VA_ARGS__))(CHECK_CHANGES(name_,f))                   \
+                                                                                  \
+        return false;                                                             \
+    }                                                                             \
+                                                                                  \
+    virtual void __reset_changes()                                                \
+    {                                                                             \
+        __reset_changes(_FIELDS_COUNT_);                                          \
+    }                                                                             \
+                                                                                  \
+    virtual bool __is_changed() const                                             \
+    {                                                                             \
+        return __is_changed(_FIELDS_COUNT_);                                      \
+    }                                                                             \
+                                                                                  \
+    bool __decode(hob &ref)                                                       \
+    {                                                                             \
+        hob::decoder *is = static_cast<hob::decoder*>(ref);                       \
+                                                                                  \
+        if (NULL == is)                                                           \
+        {                                                                         \
+            return false;                                                         \
+        }                                                                         \
+                                                                                  \
+        __reset_changes();                                                        \
+                                                                                  \
+        ref.__rewind();                                                           \
+                                                                                  \
+        if (!__decode(*is))                                                       \
+        {                                                                         \
+            return false;                                                         \
+        }                                                                         \
+                                                                                  \
+        *this = ref;                                                              \
+                                                                                  \
+        return true;                                                              \
+    }                                                                             \
+                                                                                  \
+    bool __decode(hob::decoder &is, bool update=true)                             \
+    {                                                                             \
+        (void)is;                                                                 \
+                                                                                  \
+        bool c = false;                                                           \
+                                                                                  \
+        /* Read mandatory fields : fail on error */                               \
+                                                                                  \
+        if (true SCAN_FIELDS(DECODE_FIELD, PP_FIRST(__VA_ARGS__)))                \
+        {                                                                         \
+            /* Read optional fields : ignore errors */                            \
+                                                                                  \
+            if ((true SCAN_FIELDS(DECODE_FIELD, PP_REMAIN(__VA_ARGS__))) || true) \
+            {                                                                     \
+                hob::__flush_pending();                                           \
+                                                                                  \
+                return true;                                                      \
+            }                                                                     \
+        }                                                                         \
+                                                                                  \
+        return false;                                                             \
+    }                                                                             \
+                                                                                  \
+    virtual bool __set_changed(ssize_t f, bool v)                                 \
+    {                                                                             \
+        (void)f;                                                                  \
+        (void)v;                                                                  \
+                                                                                  \
+        if (f < 0)                                                                \
+        {                                                                         \
+            return false;                                                         \
+        }                                                                         \
+                                                                                  \
+        PP_IF(PP_HAS_ARGS(__VA_ARGS__))(SET_CHANGED(name_,f,v))                   \
+                                                                                  \
+        return true;                                                              \
+    }                                                                             \
+                                                                                  \
+    virtual void __flush_pending()                                                \
+    {                                                                             \
+    }                                                                             \
+                                                                                  \
+    virtual size_t __payload(hob::encoder &os) const                              \
+    {                                                                             \
+        return (0                                                                 \
+                SCAN_FIELDS(FIELD_SIZE, PP_FIRST(__VA_ARGS__))                    \
+                SCAN_FIELDS(FIELD_SIZE, PP_REMAIN(__VA_ARGS__)));                 \
+    }                                                                             \
+                                                                                  \
+private:                                                                          \
+    CHANGED_FIELDS(name_, __VA_ARGS__)                                            \
 };
 
 #endif // __HOB_HPP__
