@@ -1,53 +1,57 @@
-#!/bin/bash -x
+#!/bin/bash
 
 BINENC=${1}
 
+run() {
+    ${*} # || >&2 strace ${*}
+}
+
 on_file() {
-    ./test_hob -wout.dat ${BINENC}
-    ./test_hob -rout.dat ${BINENC}
+    run ./test_hob -wout${BINENC}.dat ${BINENC}
+    run ./test_hob -rout${BINENC}.dat ${BINENC}
 }
 
 on_same_iobuffer() {
-    ./test_hob ${BINENC}
+    run ./test_hob ${BINENC}
 }
 
 on_separate_buffers() {
-    ./test_hob -w -r ${BINENC}
+    run ./test_hob -w -r ${BINENC}
 }
 
 from_cat() {
-    ./test_hob -wout.dat ${BINENC}
-    cat out.dat | ./test_hob -r ${BINENC}
+    run ./test_hob -wout${BINENC}.dat ${BINENC}
+    cat out${BINENC}.dat | run ./test_hob -r ${BINENC}
 }
 
 from_dd() {
-    ./test_hob -wout.dat ${BINENC}
-    dd if=out.dat | ./test_hob -r ${BINENC}
+    run ./test_hob -wout${BINENC}.dat ${BINENC}
+    dd if=out${BINENC}.dat | run ./test_hob -r ${BINENC}
 }
 
 from_pipe() {
-    ./test_hob -wout.dat ${BINENC}
-    ./test_hob -r ${BINENC} < ./out.dat
+    run ./test_hob -wout${BINENC}.dat ${BINENC}
+    run ./test_hob -r ${BINENC} < ./out${BINENC}.dat
 }
 
 from_text() {
-    ./test_hob -wdump.text -ftext ${BINENC}
-    cat dump.text | ./test_hob -r -ftext ${BINENC}
+    run ./test_hob -wdump${BINENC}.text -ftext ${BINENC}
+    cat dump${BINENC}.text | run ./test_hob -r -ftext ${BINENC}
 }
 
 from_json() {
-    ./test_hob -wdump.json -fjson ${BINENC}
-    cat dump.json | ./test_hob -r -fjson ${BINENC}
+    run ./test_hob -wdump${BINENC}.json -fjson ${BINENC}
+    cat dump${BINENC}.json | run ./test_hob -r -fjson ${BINENC}
 }
 
 from_text_file() {
-    ./test_hob -wdump.text -ftext ${BINENC}
-    ./test_hob -rdump.text -ftext ${BINENC}
+    run ./test_hob -wdump${BINENC}.text -ftext ${BINENC}
+    run ./test_hob -rdump${BINENC}.text -ftext ${BINENC}
 }
 
 from_json_file() {
-    ./test_hob -wdump.json -fjson ${BINENC}
-    ./test_hob -rdump.json -ftext ${BINENC}
+    run ./test_hob -wdump${BINENC}.json -fjson ${BINENC}
+    run ./test_hob -rdump${BINENC}.json -ftext ${BINENC}
 }
 
 on_file             > hobs_on_file.txt
@@ -60,5 +64,7 @@ from_text           > hobs_from_text.txt
 from_json           > hobs_from_json.txt
 from_text_file      > hobs_from_text_file.txt
 from_json_file      > hobs_from_json_file.txt
+
+echo
 
 md5sum hobs_*.txt

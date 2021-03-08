@@ -176,18 +176,18 @@ public:
 
         virtual bool encode_footer() = 0;
 
-        virtual inline size_t field_size(const uint8_t     &v) = 0;
-        virtual inline size_t field_size(const uint16_t    &v) = 0;
-        virtual inline size_t field_size(const uint32_t    &v) = 0;
-        virtual inline size_t field_size(const uint64_t    &v) = 0;
-        virtual inline size_t field_size(const int8_t      &v) = 0;
-        virtual inline size_t field_size(const int16_t     &v) = 0;
-        virtual inline size_t field_size(const int32_t     &v) = 0;
-        virtual inline size_t field_size(const int64_t     &v) = 0;
-        virtual inline size_t field_size(const bool        &v) = 0;
-        virtual inline size_t field_size(const float       &v) = 0;
-        virtual inline size_t field_size(const double      &v) = 0;
-        virtual inline size_t field_size(const long double &v) = 0;
+        virtual /* inline */ size_t field_size(const uint8_t     &v) = 0;
+        virtual /* inline */ size_t field_size(const uint16_t    &v) = 0;
+        virtual /* inline */ size_t field_size(const uint32_t    &v) = 0;
+        virtual /* inline */ size_t field_size(const uint64_t    &v) = 0;
+        virtual /* inline */ size_t field_size(const int8_t      &v) = 0;
+        virtual /* inline */ size_t field_size(const int16_t     &v) = 0;
+        virtual /* inline */ size_t field_size(const int32_t     &v) = 0;
+        virtual /* inline */ size_t field_size(const int64_t     &v) = 0;
+        virtual /* inline */ size_t field_size(const bool        &v) = 0;
+        virtual /* inline */ size_t field_size(const float       &v) = 0;
+        virtual /* inline */ size_t field_size(const double      &v) = 0;
+        virtual /* inline */ size_t field_size(const long double &v) = 0;
 
         inline size_t field_size(const string &v)
         {
@@ -196,6 +196,8 @@ public:
 
         inline size_t field_size(size_t size_, const void *v)
         {
+            (void)v;
+
             return field_size(size_) + size_;
         }
 
@@ -207,6 +209,8 @@ public:
         template<size_t N>
         size_t field_size(const std::bitset<N>& v)
         {
+            (void)v;
+
             return field_size((N+7)>>3) + ((N+7)>>3);
         }
 
@@ -412,6 +416,8 @@ public:
 
         virtual bool operator>>(encoder &enc)
         {
+            (void)enc;
+
             return false;
         }
 
@@ -874,7 +880,9 @@ public:
             (UNDEFINED == _id)
             ||
             (
-                os.encode_header((const char *)NULL, (const char *)NULL, _id, 0)
+                os.encode_header(static_cast<const char *>(NULL),
+                                 static_cast<const char *>(NULL),
+                                 _id, 0)
                 &&
                 os.encode_footer()
             )
@@ -1021,6 +1029,8 @@ protected:
 
     virtual size_t __payload(hob::encoder &os) const
     {
+        (void)os;
+
         return 0;
     }
 
@@ -1072,9 +1082,9 @@ private:
     ssize_t  _np;
 };
 
-inline bool operator<<(hob::encoder &e, hob          &h) { return h >> e; }
-inline bool operator>>(hob::decoder &d, hob          &h) { return h << d; }
-inline bool operator>>(hob          &f, hob          &t) { return t << f; }
+inline bool operator<<(hob::encoder &e, hob &h) { return h >> e; }
+inline bool operator>>(hob::decoder &d, hob &h) { return h << d; }
+inline bool operator>>(hob          &f, hob &t) { return t << f; }
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m PP_CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
@@ -1210,14 +1220,9 @@ public:                                                                         
                                                                                   \
     bool operator==(const name_ &ref) const                                       \
     {                                                                             \
-        bool rv;                                                                  \
-                                                                                  \
-        rv = ((*static_cast<const hob*>(this) ==                                  \
-                static_cast<const hob &>(ref))                                    \
-               SCAN_FIELDS(COMPARE_FIELD, PP_FIRST(__VA_ARGS__))                  \
-               SCAN_FIELDS(COMPARE_FIELD, PP_REMAIN(__VA_ARGS__)));               \
-                                                                                  \
-        return rv;                                                                \
+        return ((*static_cast<const hob*>(this) == static_cast<const hob &>(ref)) \
+                 SCAN_FIELDS(COMPARE_FIELD, PP_FIRST(__VA_ARGS__))                \
+                 SCAN_FIELDS(COMPARE_FIELD, PP_REMAIN(__VA_ARGS__)));             \
     }                                                                             \
                                                                                   \
     void operator-=(const Fields & f)                                             \
@@ -1304,8 +1309,11 @@ protected:                                                                      
     bool __decode(hob::decoder &is, bool update=true)                             \
     {                                                                             \
         (void)is;                                                                 \
+        (void)update;                                                             \
                                                                                   \
         bool c = false;                                                           \
+                                                                                  \
+        (void)c;                                                                  \
                                                                                   \
         /* Read mandatory fields : fail on error */                               \
                                                                                   \
@@ -1345,6 +1353,8 @@ protected:                                                                      
                                                                                   \
     virtual size_t __payload(hob::encoder &os) const                              \
     {                                                                             \
+        (void)os;                                                                 \
+                                                                                  \
         return (0                                                                 \
                 SCAN_FIELDS(FIELD_SIZE, PP_FIRST(__VA_ARGS__))                    \
                 SCAN_FIELDS(FIELD_SIZE, PP_REMAIN(__VA_ARGS__)));                 \

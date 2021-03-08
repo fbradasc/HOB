@@ -1,7 +1,6 @@
 #if !defined(__HOB_HANDLE_HPP__)
 #define __HOB_HANDLE_HPP__
 
-#include <unistd.h>
 #include "hob/io/common.hpp"
 
 namespace hobio
@@ -20,7 +19,7 @@ namespace hobio
 
         virtual ~ohandle()
         {
-            close();
+            ohandle::close();
         }
 
         virtual bool write(const void *data, size_t size)
@@ -62,7 +61,7 @@ namespace hobio
 
         virtual ~ihandle()
         {
-            close();
+            ihandle::close();
         }
 
         virtual bool read(void *data, size_t size)
@@ -166,7 +165,7 @@ namespace hobio
 
         virtual ~iohandle()
         {
-            close();
+            iohandle::close();
         }
 
         virtual bool write(const void *data, size_t size)

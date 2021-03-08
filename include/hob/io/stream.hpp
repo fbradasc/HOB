@@ -1,7 +1,8 @@
 #if !defined(__HOB_STREAM_HPP__)
 #define __HOB_STREAM_HPP__
 
-#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
 #include "hob/io/common.hpp"
 
 namespace hobio
@@ -33,17 +34,17 @@ namespace hobio
             , _pf(NULL)
             , _can_close(false)
         {
-            open(pathname, append);
+            ostream::open(pathname, append);
         }
 
         virtual ~ostream()
         {
-            close();
+            ostream::close();
         }
 
         bool open(const char *pathname, bool append = false)
         {
-            close();
+            ostream::close();
 
             if ((NULL == pathname) || (strcmp(pathname,"-") == 0))
             {
@@ -122,17 +123,17 @@ namespace hobio
             , reader()
             , _can_close(false)
         {
-            open(pathname);
+            istream::open(pathname);
         }
 
         virtual ~istream()
         {
-            close();
+            istream::close();
         }
 
         bool open(const char *pathname, bool binary=true)
         {
-            close();
+            istream::close();
 
             if ((NULL == pathname) || (strcmp(pathname,"-") == 0))
             {

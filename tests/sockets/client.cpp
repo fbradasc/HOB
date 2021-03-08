@@ -4,6 +4,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
 #include <cstring>
 #include <iostream>
 #include "hob/codec/flat.hpp"
@@ -33,18 +35,15 @@ static void handleServer(hob::decoder *io)
         {
             m_hi >> enc_stdout;
         }
-        else
-        if (m >> m_put)
+        else if (m >> m_put)
         {
             m_put >> enc_stdout;
         }
-        else
-        if (m >> m_get)
+        else if (m >> m_get)
         {
             m_get >> enc_stdout;
         }
-        else
-        if (m >> m_bye)
+        else if (m >> m_bye)
         {
             m_bye >> enc_stdout;
         }
@@ -80,7 +79,11 @@ int main(int argc, char *argv[])
     struct hostent *hp;
     hp = gethostbyname(argv[1]);
     std::memcpy(&dst.sin_addr, hp->h_addr, hp->h_length);
-    connect(sockfd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst) );
+
+    if (connect(sockfd, reinterpret_cast<struct sockaddr *>(&dst), sizeof(dst)))
+    {
+        std::cerr << "Connection error (" << errno << "): " << strerror(errno);
+    }
 
     hobio::iohandle io(sockfd);
     hobio::flat::decoder dec(io);

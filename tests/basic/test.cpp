@@ -74,6 +74,101 @@ diff3 f.txt i.txt s.txt
 #include "hob/io/buffer.hpp"
 #include "hob/io/stream.hpp"
 
+#define BACKTRACE
+#if defined(BACKTRACE)
+#include <execinfo.h>
+#include <signal.h>
+
+void handler(int sig) {
+  void *array[100];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 100);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}
+#endif // BACKTRACE
+
+#if defined(__ANDROID__)
+#include <stdlib.h>
+#include <string.h>
+
+/* Parse comma separated suboption from *OPTIONP and match against
+ * strings in TOKENS.  If found return index and set *VALUEP to
+ * optional value introduced by an equal sign.  If the suboption is
+ * not part of TOKENS return in *VALUEP beginning of unknown
+ * suboption.  On exit *OPTIONP is set to the beginning of the next
+ * token or at the terminating NUL character.
+ */
+int getsubopt(char **optionp, char *const *tokens, char **valuep)
+{
+    char *endp, *vstart;
+    int cnt;
+
+    if (**optionp == '\0')
+    {
+        return -1;
+    }
+
+    /* Find end of next token.
+     */
+    endp = strchr(*optionp, ',');
+
+    if (!endp)
+    {
+        endp = static_cast<char *>(*optionp) + strlen(*optionp);
+    }
+
+    /* Find start of value.
+     */
+    vstart = static_cast<char *>(memchr(*optionp, '=', endp - *optionp));
+
+    if (vstart == NULL)
+    {
+        vstart = endp;
+    }
+
+    /* Try to match the characters between *OPTIONP and VSTART against
+     * one of the TOKENS.
+     */
+    for (cnt = 0; tokens[cnt] != NULL; ++cnt)
+    {
+        if (!strncmp(*optionp, tokens[cnt], vstart - *optionp)
+            &&
+            tokens[cnt][vstart - *optionp] == '\0')
+        {
+            /* We found the current option in TOKENS.  */
+            *valuep = vstart != endp ? vstart + 1 : NULL;
+
+            if (*endp != '\0')
+            {
+                *endp++ = '\0';
+            }
+
+            *optionp = endp;
+
+            return cnt;
+        }
+    }
+
+    /* The current suboption does not match any option.  */
+    *valuep = *optionp;
+
+    if (*endp != '\0')
+    {
+        *endp++ = '\0';
+    }
+
+    *optionp = endp;
+
+    return -1;
+}
+#endif
+
 MyStruct               m_MyStruct              ;
 AnotherStruct          m_AnotherStruct         ;
 NoParamMessage         m_NoParamMessage        ;
@@ -202,8 +297,7 @@ bool handle_message(hob &m)
     {
         LOG(m_MyStruct);
     }
-    else
-    if (m >> m_AnotherStruct)
+    else if (m >> m_AnotherStruct)
     {
         LOG(m_AnotherStruct);
 
@@ -335,29 +429,24 @@ bool handle_message(hob &m)
             ~m_AnotherStruct;
         }
     }
-    else
-    if (m >> m_NoParamMessage)
+    else if (m >> m_NoParamMessage)
     {
         LOG(m_NoParamMessage);
     }
-    else
-    if (m >> m_NumericNoParamMessage)
+    else if (m >> m_NumericNoParamMessage)
     {
         LOG(m_NumericNoParamMessage);
     }
-    else
-    if (m >> m_NumericMessage)
+    else if (m >> m_NumericMessage)
     {
         LOG(m_NumericMessage);
     }
-    else
-    if (m >> m_ComplexStruct)
+    else if (m >> m_ComplexStruct)
     {
         LOG(m_ComplexStruct);
     }
 /*
-    else
-    if (m_NumericExtraParameters << m)
+    else if (m_NumericExtraParameters << m)
     {
         LOG(m_NumericExtraParameters);
     }
@@ -378,18 +467,19 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
+#if defined(BACKTRACE)
+    signal(SIGABRT, handler);
+#endif
+
     hobio::iobuffer *io = NULL;
     hobio::writer   *os = NULL;
     hobio::reader   *is = NULL;
 
     bool do_read   = false;
     bool do_write  = false;
-    bool from_file = false;
     int  dump_mode = -1;
     int  flat_mode = -1;
     string in_file;
-
-    int  file_arg  = 0;
 
     int  option_index = 0;
     int  c;
@@ -500,13 +590,11 @@ int main(int argc, char *argv[])
 
         do_read = do_write = true;
     }
-    else
-    if (do_write && !do_read && (NULL == os) && (NULL == is))
+    else if (do_write && !do_read && (NULL == os) && (NULL == is))
     {
         os = new hobio::ostream();
     }
-    else
-    if (!do_write && do_read && (NULL == os) && (NULL == is))
+    else if (!do_write && do_read && (NULL == os) && (NULL == is))
     {
         is = new hobio::istream();
     }

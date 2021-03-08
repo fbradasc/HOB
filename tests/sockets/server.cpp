@@ -102,8 +102,7 @@ bool handle_message(hob &m)
     {
         LOG(m_MyStruct);
     }
-    else
-    if (m >> m_AnotherStruct)
+    else if (m >> m_AnotherStruct)
     {
         LOG(m_AnotherStruct);
 
@@ -236,28 +235,23 @@ bool handle_message(hob &m)
             ~m_AnotherStruct;
         }
     }
-    else
-    if (m >> m_NoParamMessage)
+    else if (m >> m_NoParamMessage)
     {
         LOG(m_NoParamMessage);
     }
-    else
-    if (m >> m_NumericNoParamMessage)
+    else if (m >> m_NumericNoParamMessage)
     {
         LOG(m_NumericNoParamMessage);
     }
-    else
-    if (m >> m_NumericMessage)
+    else if (m >> m_NumericMessage)
     {
         LOG(m_NumericMessage);
     }
-    else
-    if (m >> m_ComplexStruct)
+    else if (m >> m_ComplexStruct)
     {
         LOG(m_ComplexStruct);
     }
-    else
-    if (m_NumericExtraParameters << m)
+    else if (m_NumericExtraParameters << m)
     {
         LOG(m_NumericExtraParameters);
     }
@@ -305,23 +299,19 @@ static void handleClient(Client client)
         {
             m_hi >> std_out;
         }
-        else
-        if (m >> m_put)
+        else if (m >> m_put)
         {
             m_put >> std_out;
         }
-        else
-        if (m >> m_get)
+        else if (m >> m_get)
         {
             m_get >> std_out;
         }
-        else
-        if (m >> m_bye)
+        else if (m >> m_bye)
         {
             m_bye >> std_out;
         }
-        else
-        if (!handle_message(m))
+        else if (!handle_message(m))
         {
             std::cout << "Unknown HOB: "; m >> std_out;
         }
@@ -343,6 +333,9 @@ static void handleClient(Client client)
 
 int main(int argc, char *argv[])
 {
+    (void)argc;
+    (void)argv;
+
     int sockfd = socket(PF_INET, SOCK_STREAM, 0);
     struct sockaddr_in me;
 

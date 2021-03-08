@@ -56,6 +56,8 @@
 
 #define thread_USES_STD_THREAD  ( (thread_CONFIG_SELECT_THREAD == thread_THREAD_STD) || ((thread_CONFIG_SELECT_THREAD == thread_THREAD_DEFAULT) && thread_HAVE_STD_THREAD) )
 
+#include <stdexcept>
+
 #if defined(HAVE_STD_THREAD)
 
 #include <thread>

@@ -79,10 +79,10 @@ namespace hobio
             : public hob::encoder
         {
         public:
-            encoder(hobio::writer &os, Encoding encoding=VARINT)
+            encoder(hobio::writer &os_, Encoding encoding_=VARINT)
                 : hob::encoder()
-                , _encoding(encoding)
-                , _os(os)
+                , _encoding(encoding_)
+                , _os(os_)
             {
             }
 
@@ -90,9 +90,9 @@ namespace hobio
             {
             }
 
-            encoder & operator << (Encoding encoding)
+            encoder & operator << (Encoding encoding_)
             {
-                _encoding = encoding;
+                _encoding = encoding_;
 
                 return *this;
             }
@@ -107,6 +107,9 @@ namespace hobio
                                        const hob::UID &id   ,
                                        const size_t   &payload)
             {
+                (void)name;
+                (void)value;
+
                 return encode_header(static_cast<const char*>(NULL),
                                      static_cast<const char*>(NULL),
                                      id,payload);
@@ -117,6 +120,9 @@ namespace hobio
                                        const hob::UID &id   ,
                                        const size_t   &payload)
             {
+                (void)name;
+                (void)value;
+
                 return encode_header(static_cast<const char*>(NULL),
                                      static_cast<const char*>(NULL),
                                      id,payload);
@@ -132,9 +138,9 @@ namespace hobio
 
                 if (!_os.alloc(field_size(id)
                                +
-                               (payload>0)
-                                   ? field_size(payload) + payload
-                                   : 0))
+                               ((payload>0)
+                                   ? (field_size(payload) + payload)
+                                   : 0)))
                 {
                     return false;
                 }
@@ -473,7 +479,7 @@ namespace hobio
             template <class T>
             inline bool encode_varint(const T &v)
             {
-                uint8_t  d[9];
+                uint8_t  d[9] = { 0 };
                 uint64_t rv;
                 uint8_t  b = get_varint_unzigzaged_size<T>(v, rv);
                 uint8_t  m = 0xff       >> b;
@@ -492,17 +498,17 @@ namespace hobio
             : public hob::decoder
         {
         public:
-            decoder(hobio::reader &is, Encoding encoding=VARINT)
+            decoder(hobio::reader &is_, Encoding encoding_=VARINT)
                 : hob::decoder()
-                , _encoding(encoding)
-                , _is(is)
+                , _encoding(encoding_)
+                , _is(is_)
                 , _bs(NULL)
             {
             }
 
-            virtual decoder & operator << (Encoding encoding)
+            virtual decoder & operator << (Encoding encoding_)
             {
-                _encoding = encoding;
+                _encoding = encoding_;
 
                 return *this;
             }
@@ -524,6 +530,8 @@ namespace hobio
 
             virtual bool load(bool update=true)
             {
+                (void)update;
+
                 return true;
             }
 
@@ -654,7 +662,7 @@ namespace hobio
             {
                 if (NATIVE == _encoding)
                 {
-                    T rv;
+                    T rv = T();
 
                     if (!read_field(&rv,sizeof(T)))
                     {

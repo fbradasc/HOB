@@ -715,12 +715,12 @@ namespace hobio
 
             bool parse(hob::encoder &os, uint8_t t)
             {
-                uint8_t c;
+                uint8_t c  = 0;
                 bool start = ('\0' == t);
                 bool group = ('}'  == t);
-                bool array = (']'  == t);
+                // bool array = (']'  == t);
                 bool kword = ('"'  == t);
-                bool skip  = false;
+                bool skip_  = false;
 
                 if (group)
                 {
@@ -729,7 +729,7 @@ namespace hobio
 
                 string token;
 
-                while ((_depth >= -1) && stream().get(c) && ((t != c) || skip))
+                while ((_depth >= -1) && stream().get(c) && ((t != c) || skip_))
                 {
                     if (start && ('{' != c))
                     {
@@ -738,20 +738,20 @@ namespace hobio
 
                     if (kword)
                     {
-                        if (!skip && ('\\' == c))
+                        if (!skip_ && ('\\' == c))
                         {
-                            skip = true;
+                            skip_ = true;
                         }
                         else
                         {
-                            skip = false;
+                            skip_ = false;
                             token += c;
                         }
                     }
                     else
                     if (!isspace(c))
                     {
-                        skip = false;
+                        skip_ = false;
 
                         switch (c)
                         {
@@ -794,55 +794,46 @@ namespace hobio
                             {
                                 dump = true;
                             }
-                            else
-                            if ("F" == token) // float
+                            else if ("F" == token) // float
                             {
                                 dump = true;
                             }
-                            else
-                            if ("D" == token) // double
+                            else if ("D" == token) // double
                             {
                                 dump = true;
                             }
-                            else
-                            if ("Q" == token) // long double
+                            else if ("Q" == token) // long double
                             {
                                 dump = true;
                             }
-                            else
-                            if ("B" == token) // bool / bitset<>
+                            else if ("B" == token) // bool / bitset<>
                             {
                                 dump = true;
                             }
-                            else
-                            if ("T" == token) // string / char*
+                            else if ("T" == token) // string / char*
                             {
                                 dump = true;
                             }
-                            else
-                            if (token.find("V(") == 0) // vector<>
+                            else if (token.find("V(") == 0) // vector<>
                             {
                                 dump      = true;
                                 has_value = false;
                                 count_pos = strlen("V(");
                             }
-                            else
-                            if (token.find("M(") == 0) // map<>
+                            else if (token.find("M(") == 0) // map<>
                             {
                                 dump      = true;
                                 has_value = false;
                                 count_pos = strlen("M(");
                             }
-                            else
-                            if (token.find("O(") == 0) // optional<>
+                            else if (token.find("O(") == 0) // optional<>
                             {
                                 dump        = true;
                                 has_value   = false;
                                 count_pos   = strlen("O(");
                                 is_optional = true;
                             }
-                            else
-                            if (token.find("B(") == 0) // vector<bool>
+                            else if (token.find("B(") == 0) // vector<bool>
                             {
                                 dump      = true;
                                 has_value = true;
@@ -855,24 +846,24 @@ namespace hobio
                                 {
                                     bool can_be_spaced = false;
 
-                                    skip = false;
+                                    skip_ = false;
 
                                     while (stream().get(c))
                                     {
                                         if (can_be_spaced || !isspace(c))
                                         {
-                                            if (!skip && ('"' == c))
+                                            if (!skip_ && ('"' == c))
                                             {
                                                 can_be_spaced = !can_be_spaced;
                                             }
                                             else
-                                            if (!skip && ('\\' == c))
+                                            if (!skip_ && ('\\' == c))
                                             {
-                                                skip = true;
+                                                skip_ = true;
                                             }
                                             else
                                             {
-                                                skip = false;
+                                                skip_ = false;
 
                                                 if ('}' == c)
                                                 {

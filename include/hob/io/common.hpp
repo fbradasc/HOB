@@ -2,6 +2,7 @@
 #define __HOB_COMMON_HPP__
 
 #include <unistd.h>
+#include <inttypes.h>
 
 namespace hobio
 {
@@ -52,6 +53,8 @@ namespace hobio
 
         virtual bool alloc(const size_t &s)
         {
+            (void)s;
+
             return true;
         }
 
@@ -67,16 +70,23 @@ namespace hobio
 
         virtual bool get(uint8_t &v)
         {
+            (void)v;
+
             return true;
         }
 
         virtual bool unget(const uint8_t &v)
         {
+            (void)v;
+
             return true;
         }
 
         virtual bool seek(ssize_t offset, int whence)
         {
+            (void)offset;
+            (void)whence;
+
             return true;
         }
 

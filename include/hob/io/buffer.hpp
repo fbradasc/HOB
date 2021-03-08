@@ -1,7 +1,7 @@
 #if !defined(__HOB_BUFFER_HPP__)
 #define __HOB_BUFFER_HPP__
 
-#include <unistd.h>
+#include <stdlib.h>
 #include "hob/io/common.hpp"
 #include "hob/hob.hpp"
 
@@ -21,7 +21,7 @@ namespace hobio
         {
             if (reserve_ > 0)
             {
-                alloc(reserve_);
+                obuffer::alloc(reserve_);
             }
         }
 
@@ -65,38 +65,38 @@ namespace hobio
             _size = 0;
         }
 
-        inline virtual bool write(const void *data, size_t size)
+        inline virtual bool write(const void *data_, size_t size_)
         {
-            if ((NULL == data) || (0 == size))
+            if ((NULL == data_) || (0 == size_))
             {
                 return true;
             }
 
-            if (!alloc(size))
+            if (!alloc(size_))
             {
                 return set_good( false );
             }
 
-            switch (size)
+            switch (size_)
             {
             case 1:
-                *reinterpret_cast<uint8_t*>(&_buffer[_size]) = *reinterpret_cast<const uint8_t *>(data);
+                *reinterpret_cast<uint8_t*>(&_buffer[_size]) = *reinterpret_cast<const uint8_t *>(data_);
                 break;
             case 2:
-                *reinterpret_cast<uint16_t*>(&_buffer[_size]) = *reinterpret_cast<const uint16_t *>(data);
+                *reinterpret_cast<uint16_t*>(&_buffer[_size]) = *reinterpret_cast<const uint16_t *>(data_);
                 break;
             case 4:
-                *reinterpret_cast<uint32_t*>(&_buffer[_size]) = *reinterpret_cast<const uint32_t *>(data);
+                *reinterpret_cast<uint32_t*>(&_buffer[_size]) = *reinterpret_cast<const uint32_t *>(data_);
                 break;
             case 8:
-                *reinterpret_cast<long double*>(&_buffer[_size]) = *reinterpret_cast<const long double *>(data);
+                *reinterpret_cast<long double*>(&_buffer[_size]) = *reinterpret_cast<const long double *>(data_);
                 break;
             default:
-                memcpy(&_buffer[_size], data, size);
+                memcpy(&_buffer[_size], data_, size_);
                 break;
             }
 
-            _size += size;
+            _size += size_;
 
             return true;
         }
@@ -164,7 +164,7 @@ namespace hobio
             set_good( NULL != _buffer );
         }
 
-        ibuffer(hobio::reader &ref, size_t size)
+        ibuffer(hobio::reader &ref, size_t size_)
             : common()
             , reader()
             , _buffer       (NULL)
@@ -173,7 +173,7 @@ namespace hobio
             , _pos          (0)
             , _reader       (&ref)
         {
-            load(size);
+            ibuffer::load(size_);
         }
 
         virtual ~ibuffer()
@@ -245,47 +245,47 @@ namespace hobio
             _pos  = 0;
         }
 
-        inline virtual bool load(size_t size)
+        inline virtual bool load(size_t size_)
         {
-            if (size > (_size-_pos))
+            if (size_ > (_size-_pos))
             {
-                size -= (_size-_pos);
+                size_ -= (_size-_pos);
 
                 if ((NULL == _reader)
                     ||
-                    ((size > 0) && !alloc(size))
+                    ((size_ > 0) && !alloc(size_))
                     ||
-                    !_reader->read(&_buffer[_size], size))
+                    !_reader->read(&_buffer[_size], size_))
                 {
                     return set_good(false);
                 }
 
-                _size += size;
+                _size += size_;
             }
 
             return true;
         }
 
-        inline virtual bool read(void *data, size_t size)
+        inline virtual bool read(void *data_, size_t size_)
         {
             if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
             }
 
-            if ((NULL == data) || (size < 1))
+            if ((NULL == data_) || (size_ < 1))
             {
                 return false;
             }
 
-            if (!load(size))
+            if (!load(size_))
             {
                 return false;
             }
 
-            memcpy(data, &_buffer[_pos], size);
+            memcpy(data_, &_buffer[_pos], size_);
 
-            _pos += size;
+            _pos += size_;
 
             return true;
         }
@@ -416,11 +416,11 @@ namespace hobio
         {
             if (reserve_ > 0)
             {
-                alloc(reserve_);
+                iobuffer::alloc(reserve_);
             }
         }
 
-        iobuffer(hobio::reader &ref, size_t size)
+        iobuffer(hobio::reader &ref, size_t size_)
             : common()
             , reader()
             , writer()
@@ -430,7 +430,7 @@ namespace hobio
             , _pos          (0)
             , _reader       (&ref)
         {
-            load(size);
+            iobuffer::load(size_);
         }
 
         virtual ~iobuffer()
@@ -496,62 +496,62 @@ namespace hobio
             _pos  = 0;
         }
 
-        inline virtual bool write(const void *data, size_t size)
+        inline virtual bool write(const void *data_, size_t size_)
         {
-            if ((NULL == data) || (0 == size))
+            if ((NULL == data_) || (0 == size_))
             {
                 return true;
             }
 
-            if (!alloc(size))
+            if (!alloc(size_))
             {
                 return set_good(false);
             }
 
-            switch (size)
+            switch (size_)
             {
             case 1:
-                *reinterpret_cast<uint8_t*>(&_buffer[_size]) = *reinterpret_cast<const uint8_t *>(data);
+                *reinterpret_cast<uint8_t*>(&_buffer[_size]) = *reinterpret_cast<const uint8_t *>(data_);
                 break;
             case 2:
-                *reinterpret_cast<uint16_t*>(&_buffer[_size]) = *reinterpret_cast<const uint16_t *>(data);
+                *reinterpret_cast<uint16_t*>(&_buffer[_size]) = *reinterpret_cast<const uint16_t *>(data_);
                 break;
             case 4:
-                *reinterpret_cast<uint32_t*>(&_buffer[_size]) = *reinterpret_cast<const uint32_t *>(data);
+                *reinterpret_cast<uint32_t*>(&_buffer[_size]) = *reinterpret_cast<const uint32_t *>(data_);
                 break;
             case 8:
-                *reinterpret_cast<long double*>(&_buffer[_size]) = *reinterpret_cast<const long double *>(data);
+                *reinterpret_cast<long double*>(&_buffer[_size]) = *reinterpret_cast<const long double *>(data_);
                 break;
             default:
-                memcpy(&_buffer[_size], data, size);
+                memcpy(&_buffer[_size], data_, size_);
                 break;
             }
 
-            _size += size;
+            _size += size_;
 
             return true;
         }
 
-        inline virtual bool read(void *data, size_t size)
+        inline virtual bool read(void *data_, size_t size_)
         {
             if (!good() || (NULL == _buffer))
             {
                 return set_good(false);
             }
 
-            if ((NULL == data) || (size < 1))
+            if ((NULL == data_) || (size_ < 1))
             {
                 return false;
             }
 
-            if (!load(size))
+            if (!load(size_))
             {
                 return false;
             }
 
-            memcpy(data, &_buffer[_pos], size);
+            memcpy(data_, &_buffer[_pos], size_);
 
-            _pos += size;
+            _pos += size_;
 
             return true;
         }
@@ -656,22 +656,22 @@ namespace hobio
             return _pos;
         }
 
-        inline virtual bool load(size_t size)
+        inline virtual bool load(size_t size_)
         {
-            if (size > (_size-_pos))
+            if (size_ > (_size-_pos))
             {
-                size -= (_size-_pos);
+                size_ -= (_size-_pos);
 
                 if ((NULL == _reader)
                     ||
-                    ((size > 0) && !alloc(size))
+                    ((size_ > 0) && !iobuffer::alloc(size_))
                     ||
-                    !_reader->read(&_buffer[_size], size))
+                    !_reader->read(&_buffer[_size], size_))
                 {
                     return set_good(false);
                 }
 
-                _size += size;
+                _size += size_;
             }
 
             return true;
