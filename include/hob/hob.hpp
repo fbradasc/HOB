@@ -1,14 +1,8 @@
 #if !defined(__HOB_HPP__)
 #define __HOB_HPP__
-// #include <stdint.h>
 #include <stdio.h>
-// #include <stdlib.h>
-// #include <limits>
-// #include <sstream>
 #include <cstring>
 #include <climits>
-// #include <iostream>
-// #include <iomanip>
 #include "utils/cpp_magic.h"
 
 //========================================================================
@@ -176,18 +170,18 @@ public:
 
         virtual bool encode_footer() = 0;
 
-        virtual /* inline */ size_t field_size(const uint8_t     &v) = 0;
-        virtual /* inline */ size_t field_size(const uint16_t    &v) = 0;
-        virtual /* inline */ size_t field_size(const uint32_t    &v) = 0;
-        virtual /* inline */ size_t field_size(const uint64_t    &v) = 0;
-        virtual /* inline */ size_t field_size(const int8_t      &v) = 0;
-        virtual /* inline */ size_t field_size(const int16_t     &v) = 0;
-        virtual /* inline */ size_t field_size(const int32_t     &v) = 0;
-        virtual /* inline */ size_t field_size(const int64_t     &v) = 0;
-        virtual /* inline */ size_t field_size(const bool        &v) = 0;
-        virtual /* inline */ size_t field_size(const float       &v) = 0;
-        virtual /* inline */ size_t field_size(const double      &v) = 0;
-        virtual /* inline */ size_t field_size(const long double &v) = 0;
+        virtual size_t field_size(const uint8_t     &v) = 0;
+        virtual size_t field_size(const uint16_t    &v) = 0;
+        virtual size_t field_size(const uint32_t    &v) = 0;
+        virtual size_t field_size(const uint64_t    &v) = 0;
+        virtual size_t field_size(const int8_t      &v) = 0;
+        virtual size_t field_size(const int16_t     &v) = 0;
+        virtual size_t field_size(const int32_t     &v) = 0;
+        virtual size_t field_size(const int64_t     &v) = 0;
+        virtual size_t field_size(const bool        &v) = 0;
+        virtual size_t field_size(const float       &v) = 0;
+        virtual size_t field_size(const double      &v) = 0;
+        virtual size_t field_size(const long double &v) = 0;
 
         inline size_t field_size(const string &v)
         {
