@@ -1,8 +1,8 @@
 # Header Only Buffer
 
-**Header Only Buffer** (**HOB** for short) is a single C++ header implementation
+**Header Only Buffer** (**HOB** for short) is a C++ header only implementation
 preprocessor macro to define C++ structured buffers classes which can be binary
-and text/JSON serializable over a std::iostream.
+and text/JSON serializable over a memory area, a file or a stream.
 
 ## The HOBSTRUCT macro
 
@@ -78,8 +78,8 @@ not supported) and can be any of the following types:
 
 #### Base types
 
-    int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, boot,
-    float, double
+    int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
+    boot, float, double
 
 #### Complex types
 
@@ -131,7 +131,23 @@ MyMessageT myMessage;
 
 ### Serialization
 
-**HOBs** can be serialized over a C++ STL ostream or iostream derived object:
+**HOBs** can be serialized/de-serialized over a memory buffer, a file stream or a
+file descriptor (i.e. a socket) by means of dedicated input / output objects:
+
+| R/W  | memory buffer   | file stream    | file descriptor |
+| :--- | :---            | :---           | :---            |
+|  R   | hobio::ibuffer  | hobio::istream | hobio::ihandle  |
+|  W   | hobio::obuffer  | hobio::ostream | hobio::ohandle  |
+| R/W  | hobio::iobuffer |                | hobio::iohandle |
+
+**HOBs** can be converted to / from a binary format or an JSON format
+by means of dedicated encoder and decoder objects:
+
+| binary               | JSON                  |
+| :---                 | :---                  |
+| hobio::flat::encoder | hobio::json::encoder  |
+| hobio::flat::decoder | hobio::json::decoder  |
+
 
 ```
 std::stringstream stream;
@@ -139,10 +155,10 @@ std::stringstream stream;
 myMessage >> stream;
 ```
 
-### Deserialization
+### De-serialization
 
 **HOBSs** can be retrieved from a C++ STL istream derived object.  
-However to make sure that the deserialized data is really what it should be,
+However to make sure that the de-serialized data is really what it should be,
 some steps are needed:
 
 1. Deserialization of the **HOB** *UID*
@@ -207,11 +223,11 @@ The declared **HOBSs** have methods to enquire/reset changes in their data:
 
     operator bool () const;
 
-Can be used to detect the change status in any of the **HOB** fileds.
+Can be used to detect the change status in any of the **HOB** fields.
 
     void operator ~ ();
 
-Can be used to reset the change status in all of the **HOB** fileds.
+Can be used to reset the change status in all of the **HOB** fields.
 
     bool operator & (const Fields &field) const;
 
