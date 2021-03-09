@@ -25,7 +25,8 @@ namespace hobio
         {
         public:
             encoder(hobio::writer &os)
-                : flat::encoder(os)
+                : flat::encoder(     os)
+                , _os          (os.os())
                 , _format      (COMPACT)
                 , _has_payload (  false)
             {
@@ -72,30 +73,24 @@ namespace hobio
                                        const hob::UID &id   ,
                                        const size_t   &payload)
             {
-                if (level() == 0)
-                {
-                    _ss.clear();
-                    _ss.str(string());
-                }
-
                 level(+1);
 
                 _has_payload = (payload > 0);
 
-                _ss << noshowpos << "{";
+                _os << noshowpos << "{";
 
                 if (_format == VERBOSE)
                 {
                     if (NULL != name)
                     {
-                        _ss << endl
+                        _os << endl
                             << padding(1)
                             << "\"t\": \""
                             << name
                             << "\",";
                     }
 
-                    _ss << endl
+                    _os << endl
                         << padding(1)
                         << "\"i\": ";
                 }
@@ -108,7 +103,7 @@ namespace hobio
 
                 if ((_format == VERBOSE) && (NULL != value))
                 {
-                    _ss << ","
+                    _os << ","
                         << endl
                         << padding(1)
                         << "\"s\": \""
@@ -118,11 +113,11 @@ namespace hobio
 
                 if (_has_payload)
                 {
-                    _ss << ",";
+                    _os << ",";
 
                     if (_format == VERBOSE)
                     {
-                        _ss << endl
+                        _os << endl
                             << padding(1)
                             << "\"b\": ";
                     }
@@ -135,7 +130,7 @@ namespace hobio
 
                     if (_format == VERBOSE)
                     {
-                        _ss << ","
+                        _os << ","
                             << endl
                             << padding(1)
                             << "\"f\": ["
@@ -154,13 +149,13 @@ namespace hobio
 
                 if (_format == VERBOSE)
                 {
-                    _ss << padding(2)
+                    _os << padding(2)
                         << "{"
                         << endl;
 
                     if (NULL != type)
                     {
-                        _ss << padding(3)
+                        _os << padding(3)
                             << "\"t\": \""
                             << type
                             << "\","
@@ -169,14 +164,14 @@ namespace hobio
 
                     if (NULL != name)
                     {
-                        _ss << padding(3)
+                        _os << padding(3)
                             << "\"n\": \""
                             << name
                             << "\","
                             << endl;
                     }
 
-                    _ss << padding(3)
+                    _os << padding(3)
                         << "\"v\": ";
                 }
 
@@ -195,7 +190,7 @@ namespace hobio
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl
+                    _os << endl
                         << padding(2)
                         << "},"
                         << endl;
@@ -209,7 +204,7 @@ namespace hobio
             {
                 if (_has_payload && (_format == VERBOSE))
                 {
-                    _ss << padding(2)
+                    _os << padding(2)
                         << "null"
                         << endl
                         << padding(1)
@@ -218,26 +213,20 @@ namespace hobio
 
                 if (_format == VERBOSE)
                 {
-                   _ss << endl;
+                   _os << endl;
                 }
 
-                _ss << padding(0) << "}";
+                _os << padding(0) << "}";
 
                 level(-1);
 
-                return (level() > 0)
-                       ||
-                       writer().write
-                       (
-                           _ss.str().data(),
-                           _ss.str().size()
-                       );
+                return (level() > 0) && _os.good();
             }
 
         protected:
             virtual bool encode(const uint8_t &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"C\":"
                     << static_cast<unsigned int>(v)
                     << "}";
@@ -247,7 +236,7 @@ namespace hobio
 
             virtual bool encode(const uint16_t &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"S\":"
                     << v
                     << "}";
@@ -257,7 +246,7 @@ namespace hobio
 
             virtual bool encode(const uint32_t &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"I\":"
                     << v
                     << "}";
@@ -267,7 +256,7 @@ namespace hobio
 
             virtual bool encode(const uint64_t &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"L\":"
                     << v
                     << "}";
@@ -277,7 +266,7 @@ namespace hobio
 
             virtual bool encode(const int8_t &v)
             {
-                _ss << "{\"C\":"
+                _os << "{\"C\":"
                     << showpos
                     << static_cast<int>(v)
                     << noshowpos
@@ -288,7 +277,7 @@ namespace hobio
 
             virtual bool encode(const int16_t &v)
             {
-                _ss << "{\"S\":"
+                _os << "{\"S\":"
                     << showpos
                     << v
                     << noshowpos
@@ -299,7 +288,7 @@ namespace hobio
 
             virtual bool encode(const int32_t &v)
             {
-                _ss << "{\"I\":"
+                _os << "{\"I\":"
                     << showpos
                     << v
                     << noshowpos
@@ -310,7 +299,7 @@ namespace hobio
 
             virtual bool encode(const int64_t &v)
             {
-                _ss << "{\"L\":"
+                _os << "{\"L\":"
                     << showpos
                     << v
                     << noshowpos
@@ -321,43 +310,43 @@ namespace hobio
 
             virtual bool encode(const float &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"F\":\"";
 
                 encode(&v, sizeof(v));
 
-                _ss << "\"}";
+                _os << "\"}";
 
                 return true;
             }
 
             virtual bool encode(const double &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"D\":\"";
 
                 encode(&v, sizeof(v));
 
-                _ss << "\"}";
+                _os << "\"}";
 
                 return true;
             }
 
             virtual bool encode(const long double &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"Q\":\"";
 
                 encode(&v, sizeof(v));
 
-                _ss << "\"}";
+                _os << "\"}";
 
                 return true;
             }
 
             virtual bool encode(const char *v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"T\":\""
                     << v
                     << "\"}";
@@ -367,7 +356,7 @@ namespace hobio
 
             virtual bool encode(const string &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"T\":\""
                     << v
                     << "\"}";
@@ -377,7 +366,7 @@ namespace hobio
 
             virtual bool encode(const bool &v)
             {
-                _ss << (v ? "{\"B\":true}" : "{\"B\":false}");
+                _os << (v ? "{\"B\":true}" : "{\"B\":false}");
 
                 return true;
             }
@@ -394,37 +383,37 @@ namespace hobio
                     return false;
                 }
 
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"B\":\"";
 
                 for (ssize_t i=size_-1; i>=0; i--)
                 {
-                    _ss << static_cast<unsigned int>((bits[i>>3]>>(i%8)) & 1);
+                    _os << static_cast<unsigned int>((bits[i>>3]>>(i%8)) & 1);
                 }
 
-                _ss << "\"}";
+                _os << "\"}";
 
                 return true;
             }
 
             virtual bool encode_vector_begin(size_t len)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{";
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
 
-                _ss << padding(1)
+                _os << padding(1)
                     << "\"V("
                     << len
                     << ")\":[";
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
 
                 return true;
@@ -435,7 +424,7 @@ namespace hobio
                 (void)i;
                 (void)len;
 
-                _ss << padding(2);
+                _os << padding(2);
 
                 indentation(+2);
             }
@@ -446,57 +435,57 @@ namespace hobio
 
                 if ((_format == VERBOSE) && (i < (len-1)))
                 {
-                    _ss << ",";
+                    _os << ",";
                 }
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
             }
 
             virtual bool encode_vector_end()
             {
-                _ss << padding(1) << "]";
+                _os << padding(1) << "]";
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
 
-                _ss << padding(0) << "}";
+                _os << padding(0) << "}";
 
                 return true;
             }
 
             virtual bool encode(const vector<bool> &v)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{\"B("
                     << v.size()
                     << ")\":\"";
 
                 for (size_t i=0; i<v.size(); i++)
                 {
-                    _ss << v[i];
+                    _os << v[i];
                 }
 
-                _ss << "\"}";
+                _os << "\"}";
 
                 return true;
             }
 
             virtual bool encode_optional_begin(const bool &has_value)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{";
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
 
-                _ss << padding(1)
+                _os << padding(1)
                     << "\"O("
                     << has_value
                     << ")\":";
@@ -518,37 +507,37 @@ namespace hobio
             {
                 if (!has_value && (_format == VERBOSE))
                 {
-                    _ss << "null";
+                    _os << "null";
                 }
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
 
-                _ss << padding(0) << "}";
+                _os << padding(0) << "}";
 
                 return true;
             }
 
             virtual bool encode_map_begin(const size_t &len)
             {
-                _ss << noshowpos
+                _os << noshowpos
                     << "{";
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
 
-                _ss << padding(1)
+                _os << padding(1)
                     << "\"M("
                     << len
                     << ")\":[";
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
 
                 return true;
@@ -556,13 +545,13 @@ namespace hobio
 
             virtual void encode_map_item_key_pre()
             {
-                _ss << padding(2)
+                _os << padding(2)
                     << "{";
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
-                    _ss << padding(3)
+                    _os << endl;
+                    _os << padding(3)
                         << "\"k\": ";
                 }
 
@@ -573,14 +562,14 @@ namespace hobio
             {
                 indentation(-1);
 
-                _ss << ",";
+                _os << ",";
             }
 
             virtual void encode_map_item_value_pre()
             {
                 if (_format == VERBOSE)
                 {
-                    _ss << endl
+                    _os << endl
                         << padding(3)
                         << "\"v\": ";
                 }
@@ -594,33 +583,33 @@ namespace hobio
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl
+                    _os << endl
                         << padding(2);
                 }
 
-                _ss << "}";
+                _os << "}";
 
                 if (_format == VERBOSE)
                 {
                     if (remaining > 1)
                     {
-                        _ss << ",";
+                        _os << ",";
                     }
 
-                    _ss << endl;
+                    _os << endl;
                 }
             }
 
             virtual bool encode_map_end()
             {
-                _ss << padding(1) << "]";
+                _os << padding(1) << "]";
 
                 if (_format == VERBOSE)
                 {
-                    _ss << endl;
+                    _os << endl;
                 }
 
-                _ss << padding(0) << "}";
+                _os << padding(0) << "}";
 
                 return true;
             }
@@ -629,22 +618,22 @@ namespace hobio
             {
                 for (size_t i = 0; i<s; i++)
                 {
-                      _ss << hex
+                      _os << hex
                           << setw(2)
                           << setfill('0')
                           << static_cast<int>(reinterpret_cast<const char*>(v)[i] & 0xff);
                 }
 
-                _ss << dec
+                _os << dec
                     << setw(0);
 
                 return true;
             }
 
         private:
-            stringstream _ss;
-            Format       _format;
-            bool         _has_payload;
+            ostream &_os;
+            Format   _format;
+            bool     _has_payload;
 
             inline int level(int count=0)
             {

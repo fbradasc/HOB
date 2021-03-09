@@ -3,6 +3,10 @@
 
 #include <unistd.h>
 #include <inttypes.h>
+#include <iostream>
+#include <cstdio>
+
+using namespace std;
 
 namespace hobio
 {
@@ -47,6 +51,12 @@ namespace hobio
     public:
         static const bool CLEAR=true;
 
+        writer()
+            : _obuffer(*this)
+            , _ostream(&_obuffer)
+        {
+        }
+
         virtual ~writer()
         {
         }
@@ -59,6 +69,33 @@ namespace hobio
         }
 
         virtual bool write(const void *data, size_t size) = 0;
+
+        ostream &os() { return _ostream; }
+
+    protected:
+        class buffer
+            : public streambuf
+        {
+        public:
+            buffer(writer &os): _os(os)
+            {
+            }
+
+        protected:
+            virtual int_type overflow(int_type c)
+            {
+                uint8_t out = (c & 0xff);
+
+                return ((c == EOF) || !_os.write(&out,1)) ? EOF : c;
+            }
+
+        private:
+            writer &_os;
+        };
+
+    private:
+        buffer  _obuffer;
+        ostream _ostream;
     };
 
     class reader

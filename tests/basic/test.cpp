@@ -74,25 +74,6 @@ diff3 f.txt i.txt s.txt
 #include "hob/io/buffer.hpp"
 #include "hob/io/stream.hpp"
 
-#define BACKTRACE
-#if defined(BACKTRACE)
-#include <execinfo.h>
-#include <signal.h>
-
-void handler(int sig) {
-  void *array[100];
-  size_t size;
-
-  // get void*'s for all entries on the stack
-  size = backtrace(array, 100);
-
-  // print out all the frames to stderr
-  fprintf(stderr, "Error: signal %d:\n", sig);
-  backtrace_symbols_fd(array, size, STDERR_FILENO);
-  exit(1);
-}
-#endif // BACKTRACE
-
 #if defined(__ANDROID__)
 #include <stdlib.h>
 #include <string.h>
@@ -466,10 +447,6 @@ int main(int argc, char *argv[])
 {
     (void)argc;
     (void)argv;
-
-#if defined(BACKTRACE)
-    signal(SIGABRT, handler);
-#endif
 
     hobio::iobuffer *io = NULL;
     hobio::writer   *os = NULL;
