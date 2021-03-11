@@ -150,6 +150,7 @@ int getsubopt(char **optionp, char *const *tokens, char **valuep)
 }
 #endif
 
+DynamicFields          m_DynamicFields         ;
 MyStruct               m_MyStruct              ;
 AnotherStruct          m_AnotherStruct         ;
 NoParamMessage         m_NoParamMessage        ;
@@ -666,6 +667,41 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING HOBS ]------------------\n\n");
 
+        {
+            MyStruct m;
+
+            hob h("DYNAMIC_FIELDS");
+
+            h.set("uint8_t"    , static_cast<uint8_t    >( 13    ))
+             .set("uint16_t"   , static_cast<uint16_t   >( 1313  ))
+             .set("uint32_t"   , static_cast<uint32_t   >( 131313))
+             .set("int8_t"     , static_cast<int8_t     >(-13    ))
+             .set("int16_t"    , static_cast<int16_t    >(-1313  ))
+             .set("int32_t"    , static_cast<int32_t    >(-131313))
+             .set("bool"       , static_cast<bool       >(true   ))
+             .set("float"      , static_cast<float      >(1.3f   ))
+             .set("double"     , static_cast<double     >(1.313f ))
+             .set("long double", static_cast<long double>(1.3131313131313131313))
+             .set("string"     , static_cast<string     >(string("1Po'DiMaiuscoleMinuscole&Numeri")))
+             .set("hob"        , static_cast<MyStruct   >(m))
+            ;
+
+            cout << h.get<uint8_t    >("uint8_t"    ) << endl;
+            cout << h.get<uint16_t   >("uint16_t"   ) << endl;
+            cout << h.get<uint32_t   >("uint32_t"   ) << endl;
+            cout << h.get<int8_t     >("int8_t"     ) << endl;
+            cout << h.get<int16_t    >("int16_t"    ) << endl;
+            cout << h.get<int32_t    >("int32_t"    ) << endl;
+            cout << h.get<bool       >("bool"       ) << endl;
+            cout << h.get<float      >("float"      ) << endl;
+            cout << h.get<double     >("double"     ) << endl;
+            cout << h.get<long double>("long double") << endl;
+            cout << h.get<string     >("string"     ) << endl;
+
+            LOG(h.get<MyStruct>("hob"));
+
+            cout << "-----------------------------------------------" << endl;
+        }
         { MyStruct               m; m >> *ps; LOG(m); }
         {
             AnotherStruct m;

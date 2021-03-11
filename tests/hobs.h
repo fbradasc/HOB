@@ -131,6 +131,8 @@ HOBSTRUCT(NumericExtraParameters, hob::UID(43),
      (bool, extra, true)
 )
 
+HOBSTRUCT(DynamicFields, "DYNAMIC_FIELDS")
+
 #endif // MINIMAL
 
 #endif // __HOBS_H__

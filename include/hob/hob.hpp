@@ -59,6 +59,7 @@
 #include <vector>
 #include <map>
 #include "hob/std/optional.hpp"
+#include "hob/std/any.hpp"
 
 #define M_LOG(...)            printf("%s:%s:%d: ",        \
                                      __FILE__,            \
@@ -924,6 +925,27 @@ public:
         return (NULL != _is) && _is->seek(_sp,SEEK_SET);
     }
 
+    template<class T>
+    inline hob& set(const string &n, const T &v)
+    {
+        _dynamic_fields[n] = v;
+
+        return *this;
+    }
+
+    template<class T>
+    inline T get(const string &n)
+    {
+        T v = any_cast<T>(_dynamic_fields[n]);
+
+        return v;
+    }
+
+    inline bool has(const string &n)
+    {
+        return _dynamic_fields.find(n) != _dynamic_fields.end();
+    }
+
 protected:
     virtual bool __decode(hob &ref)
     {
@@ -1074,6 +1096,10 @@ private:
     ssize_t  _sp;
     ssize_t  _ep;
     ssize_t  _np;
+
+    typedef map<string,any> dynamic_fields_t;
+
+    dynamic_fields_t _dynamic_fields;
 };
 
 inline bool operator<<(hob::encoder &e, hob &h) { return h >> e; }
