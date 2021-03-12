@@ -667,11 +667,12 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING HOBS ]------------------\n\n");
 
-        if (false) // for now avoid to print these out
+        if (true) // for now avoid to print these out
         {
             MyStruct m;
 
             hob h("DYNAMIC_FIELDS");
+            hob h1("NESTED_DYNAMIC_FIELDS");
 
 #if 1
             h.set<uint8_t    >("uint8_t"    ,  13    )
@@ -685,7 +686,9 @@ int main(int argc, char *argv[])
              .set<double     >("double"     , 1.313f )
              .set<long double>("long double", 1.3131313131313131313)
              .set<string     >("string"     , "1Po'DiMaiuscoleMinuscole&Numeri")
-             .set<MyStruct   >("hob"        , m)
+             .set<hob>(
+                "hob",
+                hob("NESTED_DYNAMIC_FIELDS").set<MyStruct>("myStruct",m))
             ;
 
             cout << "12 items expected:" << endl << endl;
@@ -702,9 +705,20 @@ int main(int argc, char *argv[])
             h.has<long double>("long double") && cout << h.get<long double>("long double") << endl;
             h.has<string     >("string"     ) && cout << h.get<string     >("string"     ) << endl;
 
-            if (h.has<MyStruct>("hob"))
+            if (h.has<hob>("hob"))
             {
-                LOG(h.get<MyStruct>("hob"));
+                hob nh = h.get<hob>("hob");
+
+                if (nh.has<MyStruct>("myStruct"))
+                {
+                    LOG(nh.get<MyStruct>("myStruct"));
+                }
+/*
+                if (h.get<hob>("hob").has<MyStruct>("myStruct"))
+                {
+                    LOG(h.get<hob>("hob").get<MyStruct>("myStruct"));
+                }
+*/
             }
 
             cout << endl << "0 items expected:" << endl << endl;
@@ -726,7 +740,6 @@ int main(int argc, char *argv[])
                 LOG(h.get<MyStruct>("hob"));
             }
 #else
-            hob h1("NESTED_DYNAMIC_FIELDS");
 
             h["uint8_t"    ] = static_cast<uint8_t    >( 13    );
             h["uint16_t"   ] = static_cast<uint16_t   >( 1313  );
