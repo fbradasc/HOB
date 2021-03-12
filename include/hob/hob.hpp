@@ -131,6 +131,92 @@ public:
 
     static const UID UNDEFINED = ULLONG_MAX;
 
+    ///////////////////////////////////////////////////////////////////////////
+    //                                                                       //
+    //                     Dynamic fields interface                          //
+    //                                                                       //
+    ///////////////////////////////////////////////////////////////////////////
+
+    typedef map<string,any> dynamic_fields_t;
+
+    typedef dynamic_fields_t::iterator               iterator;
+    typedef dynamic_fields_t::const_iterator         const_iterator;
+    typedef dynamic_fields_t::reverse_iterator       reverse_iterator;
+    typedef dynamic_fields_t::const_reverse_iterator const_reverse_iterator;
+    typedef dynamic_fields_t::size_type              size_type;
+
+    inline iterator               begin   ()       { return _df.begin   (); }
+    inline const_iterator         begin   () const { return _df.begin   (); }
+    inline iterator               end     ()       { return _df.end     (); }
+    inline const_iterator         end     () const { return _df.end     (); }
+    inline reverse_iterator       rbegin  ()       { return _df.rbegin  (); }
+    inline const_reverse_iterator rbegin  () const { return _df.rbegin  (); }
+    inline reverse_iterator       rend    ()       { return _df.rend    (); }
+    inline const_reverse_iterator rend    () const { return _df.rend    (); }
+    inline bool                   empty   () const { return _df.empty   (); }
+    inline size_type              size    () const { return _df.size    (); }
+    inline size_type              max_size() const { return _df.max_size(); }
+
+    inline size_type      erase(const string &n)       { return _df.erase(n); }
+    inline size_type      count(const string &n)       { return _df.count(n); }
+    inline iterator       find (const string &n)       { return _df.find (n); }
+    inline const_iterator find (const string &n) const { return _df.find (n); }
+
+    inline void clear(                             ) { _df.clear(          ); }
+    inline void erase(iterator pos                 ) { _df.erase(pos       ); }
+    inline void erase(iterator first, iterator last) { _df.erase(first,last); }
+
+    inline any& operator[](const char *n)
+    {
+        return _df[n];
+    }
+
+    inline any& operator[](const string &n)
+    {
+        return _df[n];
+    }
+
+    template<class T>
+    inline hob& set(const string &n, const T &v)
+    {
+        _df[n] = v;
+
+        return *this;
+    }
+
+    template<class T>
+    inline T get(const string &n)
+    {
+        T v = any_cast<T>(_df[n]);
+
+        return v;
+    }
+
+    template<class T>
+    inline bool get(const string &n, T &v)
+    {
+        if (has<T>(n))
+        {
+            v = any_cast<T>(_df[n]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    template<class T>
+    inline bool has(const string &n)
+    {
+        return (count(n) && (_df[n].type() == typeid(T)));
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                                                                       //
+    //                          HOB implementation                           //
+    //                                                                       //
+    ///////////////////////////////////////////////////////////////////////////
+
     class encoder
     {
     public:
@@ -842,6 +928,7 @@ public:
         _is = ref._is;
         _sp = ref._sp;
         _ep = ref._ep;
+        _df = ref._df;
 
         return *this;
     }
@@ -923,27 +1010,6 @@ public:
     inline bool __rewind()
     {
         return (NULL != _is) && _is->seek(_sp,SEEK_SET);
-    }
-
-    template<class T>
-    inline hob& set(const string &n, const T &v)
-    {
-        _dynamic_fields[n] = v;
-
-        return *this;
-    }
-
-    template<class T>
-    inline T get(const string &n)
-    {
-        T v = any_cast<T>(_dynamic_fields[n]);
-
-        return v;
-    }
-
-    inline bool has(const string &n)
-    {
-        return _dynamic_fields.find(n) != _dynamic_fields.end();
     }
 
 protected:
@@ -1097,9 +1163,7 @@ private:
     ssize_t  _ep;
     ssize_t  _np;
 
-    typedef map<string,any> dynamic_fields_t;
-
-    dynamic_fields_t _dynamic_fields;
+    dynamic_fields_t _df;
 };
 
 inline bool operator<<(hob::encoder &e, hob &h) { return h >> e; }

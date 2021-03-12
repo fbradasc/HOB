@@ -667,38 +667,96 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING HOBS ]------------------\n\n");
 
+        if (false) // for now avoid to print these out
         {
             MyStruct m;
 
             hob h("DYNAMIC_FIELDS");
 
-            h.set("uint8_t"    , static_cast<uint8_t    >( 13    ))
-             .set("uint16_t"   , static_cast<uint16_t   >( 1313  ))
-             .set("uint32_t"   , static_cast<uint32_t   >( 131313))
-             .set("int8_t"     , static_cast<int8_t     >(-13    ))
-             .set("int16_t"    , static_cast<int16_t    >(-1313  ))
-             .set("int32_t"    , static_cast<int32_t    >(-131313))
-             .set("bool"       , static_cast<bool       >(true   ))
-             .set("float"      , static_cast<float      >(1.3f   ))
-             .set("double"     , static_cast<double     >(1.313f ))
-             .set("long double", static_cast<long double>(1.3131313131313131313))
-             .set("string"     , static_cast<string     >(string("1Po'DiMaiuscoleMinuscole&Numeri")))
-             .set("hob"        , static_cast<MyStruct   >(m))
+#if 1
+            h.set<uint8_t    >("uint8_t"    ,  13    )
+             .set<uint16_t   >("uint16_t"   ,  1313  )
+             .set<uint32_t   >("uint32_t"   ,  131313)
+             .set<int8_t     >("int8_t"     , -13    )
+             .set<int16_t    >("int16_t"    , -1313  )
+             .set<int32_t    >("int32_t"    , -131313)
+             .set<bool       >("bool"       , true   )
+             .set<float      >("float"      , 1.3f   )
+             .set<double     >("double"     , 1.313f )
+             .set<long double>("long double", 1.3131313131313131313)
+             .set<string     >("string"     , "1Po'DiMaiuscoleMinuscole&Numeri")
+             .set<MyStruct   >("hob"        , m)
             ;
 
-            cout << h.get<uint8_t    >("uint8_t"    ) << endl;
-            cout << h.get<uint16_t   >("uint16_t"   ) << endl;
-            cout << h.get<uint32_t   >("uint32_t"   ) << endl;
-            cout << h.get<int8_t     >("int8_t"     ) << endl;
-            cout << h.get<int16_t    >("int16_t"    ) << endl;
-            cout << h.get<int32_t    >("int32_t"    ) << endl;
-            cout << h.get<bool       >("bool"       ) << endl;
-            cout << h.get<float      >("float"      ) << endl;
-            cout << h.get<double     >("double"     ) << endl;
-            cout << h.get<long double>("long double") << endl;
-            cout << h.get<string     >("string"     ) << endl;
+            cout << "12 items expected:" << endl << endl;
 
-            LOG(h.get<MyStruct>("hob"));
+            h.has<uint8_t    >("uint8_t"    ) && cout << h.get<uint8_t    >("uint8_t"    ) << endl;
+            h.has<uint16_t   >("uint16_t"   ) && cout << h.get<uint16_t   >("uint16_t"   ) << endl;
+            h.has<uint32_t   >("uint32_t"   ) && cout << h.get<uint32_t   >("uint32_t"   ) << endl;
+            h.has<int8_t     >("int8_t"     ) && cout << h.get<int8_t     >("int8_t"     ) << endl;
+            h.has<int16_t    >("int16_t"    ) && cout << h.get<int16_t    >("int16_t"    ) << endl;
+            h.has<int32_t    >("int32_t"    ) && cout << h.get<int32_t    >("int32_t"    ) << endl;
+            h.has<bool       >("bool"       ) && cout << h.get<bool       >("bool"       ) << endl;
+            h.has<float      >("float"      ) && cout << h.get<float      >("float"      ) << endl;
+            h.has<double     >("double"     ) && cout << h.get<double     >("double"     ) << endl;
+            h.has<long double>("long double") && cout << h.get<long double>("long double") << endl;
+            h.has<string     >("string"     ) && cout << h.get<string     >("string"     ) << endl;
+
+            if (h.has<MyStruct>("hob"))
+            {
+                LOG(h.get<MyStruct>("hob"));
+            }
+
+            cout << endl << "0 items expected:" << endl << endl;
+
+            h.has<MyStruct   >("uint8_t"    ) && cout << h.get<uint8_t    >("uint8_t"    ) << endl;
+            h.has<string     >("uint16_t"   ) && cout << h.get<uint16_t   >("uint16_t"   ) << endl;
+            h.has<long double>("uint32_t"   ) && cout << h.get<uint32_t   >("uint32_t"   ) << endl;
+            h.has<double     >("int8_t"     ) && cout << h.get<int8_t     >("int8_t"     ) << endl;
+            h.has<float      >("int16_t"    ) && cout << h.get<int16_t    >("int16_t"    ) << endl;
+            h.has<bool       >("int32_t"    ) && cout << h.get<int32_t    >("int32_t"    ) << endl;
+            h.has<int32_t    >("bool"       ) && cout << h.get<bool       >("bool"       ) << endl;
+            h.has<int16_t    >("float"      ) && cout << h.get<float      >("float"      ) << endl;
+            h.has<int8_t     >("double"     ) && cout << h.get<double     >("double"     ) << endl;
+            h.has<uint32_t   >("long double") && cout << h.get<long double>("long double") << endl;
+            h.has<uint16_t   >("string"     ) && cout << h.get<string     >("string"     ) << endl;
+
+            if (h.has<uint8_t>("hob"))
+            {
+                LOG(h.get<MyStruct>("hob"));
+            }
+#else
+            hob h1("NESTED_DYNAMIC_FIELDS");
+
+            h["uint8_t"    ] = static_cast<uint8_t    >( 13    );
+            h["uint16_t"   ] = static_cast<uint16_t   >( 1313  );
+            h["uint32_t"   ] = static_cast<uint32_t   >( 131313);
+            h["int8_t"     ] = static_cast<int8_t     >(-13    );
+            h["int16_t"    ] = static_cast<int16_t    >(-1313  );
+            h["int32_t"    ] = static_cast<int32_t    >(-131313);
+            h["bool"       ] = true;
+            h["float"      ] = static_cast<float      >(1.3f   );
+            h["double"     ] = static_cast<double     >(1.313f );
+            h["long double"] = static_cast<long double>(1.3131313131313131313);
+            h["string"     ] = string("1Po'DiMaiuscoleMinuscole&Numeri");
+            // h["myStruct"   ] = m;
+            h1["myStruct"] = m;
+            h["hob"] = h1;
+
+            cout << any_cast<uint8_t    >(h["uint8_t"    ]) << endl;
+            cout << any_cast<uint16_t   >(h["uint16_t"   ]) << endl;
+            cout << any_cast<uint32_t   >(h["uint32_t"   ]) << endl;
+            cout << any_cast<int8_t     >(h["int8_t"     ]) << endl;
+            cout << any_cast<int16_t    >(h["int16_t"    ]) << endl;
+            cout << any_cast<int32_t    >(h["int32_t"    ]) << endl;
+            cout << any_cast<bool       >(h["bool"       ]) << endl;
+            cout << any_cast<float      >(h["float"      ]) << endl;
+            cout << any_cast<double     >(h["double"     ]) << endl;
+            cout << any_cast<long double>(h["long double"]) << endl;
+            cout << any_cast<string     >(h["string"     ]) << endl;
+
+            LOG(any_cast<MyStruct>(any_cast<hob>(h["hob"])["myStruct"]));
+#endif
 
             cout << "-----------------------------------------------" << endl;
         }
