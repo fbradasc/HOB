@@ -589,7 +589,7 @@ template<
 >
 any_nodiscard inline ValueType any_cast( any const & operand )
 {
-   const ValueType * result = any_cast< typename detail::add_const< typename detail::remove_reference<ValueType>::type >::type >( &operand );
+   typename detail::remove_reference<ValueType>::type * result = any_cast< typename detail::add_const< typename detail::remove_reference<ValueType>::type >::type >( &operand );
 
 #if any_CONFIG_NO_EXCEPTIONS
    assert( result );
@@ -611,7 +611,7 @@ template<
 >
 any_nodiscard inline ValueType any_cast( any & operand )
 {
-   const ValueType * result = any_cast< typename detail::remove_reference<ValueType>::type >( &operand );
+   typename detail::remove_reference<ValueType>::type * result = any_cast< typename detail::remove_reference<ValueType>::type >( &operand );
 
 #if any_CONFIG_NO_EXCEPTIONS
    assert( result );

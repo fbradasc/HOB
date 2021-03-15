@@ -158,7 +158,7 @@ public:
     inline size_type              max_size() const { return _df.max_size(); }
 
     inline size_type      erase(const string &n)       { return _df.erase(n); }
-    inline size_type      count(const string &n)       { return _df.count(n); }
+    inline size_type      count(const string &n) const { return _df.count(n); }
     inline iterator       find (const string &n)       { return _df.find (n); }
     inline const_iterator find (const string &n) const { return _df.find (n); }
 
@@ -184,20 +184,26 @@ public:
         return *this;
     }
 
-    template<class T>
-    inline T get(const string &n)
+    template<typename T>
+    inline const T& at(const string &n) const
     {
-        T v = any_cast<T>(_df[n]);
+        const_iterator cit = find(n);
 
-        return v;
+        return any_cast<const T&>(static_cast<const any&>((*cit).second));
+    }
+
+    template<typename T>
+    inline T& at(const string &n)
+    {
+        return any_cast<T&>((*find(n)).second);
     }
 
     template<class T>
-    inline bool get(const string &n, T &v)
+    inline bool get(const string &n, T &v) const
     {
         if (has<T>(n))
         {
-            v = any_cast<T>(_df[n]);
+            v = any_cast<T&>((*find(n)).second);
 
             return true;
         }
@@ -206,9 +212,29 @@ public:
     }
 
     template<class T>
-    inline bool has(const string &n)
+    inline bool get(const string &n, T &v)
     {
-        return (count(n) && (_df[n].type() == typeid(T)));
+        if (has<T>(n))
+        {
+            v = any_cast<T&>((*find(n)).second);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    template<class T>
+    inline bool has(const string &n) const
+    {
+        if (count(n))
+        {
+            const_iterator cit = find(n);
+
+            return ((*cit).second.type() == typeid(T));
+        }
+
+        return false;
     }
 
     ///////////////////////////////////////////////////////////////////////////
