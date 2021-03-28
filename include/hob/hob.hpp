@@ -137,7 +137,74 @@ public:
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
-    typedef map<string,any> dynamic_fields_t;
+    class dynamic_fields_id
+    {
+    public:
+        dynamic_fields_id(const UID               & in ) { _set_id(in); }
+        dynamic_fields_id(const char              * in ) { _set_id(in); }
+        dynamic_fields_id(const string            & in ) { _set_id(in); }
+        dynamic_fields_id(const dynamic_fields_id & ref) { _id = ref._id  ; }
+
+        inline dynamic_fields_id & operator=(const dynamic_fields_id &ref)
+        {
+            _id = ref._id;
+
+            return *this;
+        }
+
+        inline bool operator==(const dynamic_fields_id &ref) const
+        {
+            return _id == ref._id;
+        }
+
+        inline bool operator!=(const dynamic_fields_id &ref) const
+        {
+            return _id != ref._id;
+        }
+
+        inline bool operator>(const dynamic_fields_id &ref) const
+        {
+            return _id > ref._id;
+        }
+
+        inline bool operator<(const dynamic_fields_id &ref) const
+        {
+            return _id < ref._id;
+        }
+
+        UID id() const { return _id; }
+
+    private:
+        UID _id;
+
+        inline void _set_id(const UID &in)
+        {
+            _id = in;
+        }
+
+        inline void _set_id(const string &in)
+        {
+            _set_id(in.c_str());
+        }
+
+        void _set_id(const char *in)
+        {
+            _id = 0;
+
+            //
+            // in != NULL -> update ID calculation
+            //
+            if (NULL != in)
+            {
+                for (size_t i = 0; in[i]; ++i)
+                {
+                    _id = HSEED * _id + in[i];
+                }
+            }
+        }
+    };
+
+    typedef map<dynamic_fields_id,any> dynamic_fields_t;
 
     typedef dynamic_fields_t::iterator               iterator;
     typedef dynamic_fields_t::const_iterator         const_iterator;
@@ -165,6 +232,11 @@ public:
     inline void clear(                             ) { _df.clear(          ); }
     inline void erase(iterator pos                 ) { _df.erase(pos       ); }
     inline void erase(iterator first, iterator last) { _df.erase(first,last); }
+
+    inline any& operator[](const UID &id)
+    {
+        return _df[id];
+    }
 
     inline any& operator[](const char *n)
     {

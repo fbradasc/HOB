@@ -748,8 +748,8 @@ int main(int argc, char *argv[])
 
             h.erase("uint16_t");
             h.erase("int16_t");
-            h["bool"       ] = false;
-            h["string"     ] = string("1Po'DiMinuscoleNumeri&Maiuscole");
+            h["bool"  ] = false;
+            h["string"] = string("1Po'DiMinuscoleNumeri&Maiuscole");
 
             AnotherStruct as;
             h["anotherStruct"] = as;
