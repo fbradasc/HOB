@@ -2,15 +2,29 @@
 
 **Header Only Buffer** (**HOB** for short) is a C++ header only implementation
 preprocessor macro to define C++ structured buffers classes which can be binary
-and text/JSON serializable over a memory area, a file or a stream.
+and text/JSON serialize-able over a memory area, a file or a stream.
+  
+The **HOB** object can have a statically defined structure with the option
+to add dynamic data on the fly.
+  
+An **HOB** with a statically defined structure is a type by itself, a C++ class.
+  
+An **HOB** object could have no structure at all, containing only dynamic data.
+  
+Dynamic data can be added to an instance of a **HOB** type as well.
+  
+**TODO**: Currently the serialization and deserialization of **HOB**'s Dynamic
+data is not yet implemented.
 
-## The HOBSTRUCT macro
+## Static structure definition
 
-An **HOB** structure needs to be declared by using the HOBSTRUCT() macro.
+### The HOBSTRUCT macro
 
-### Identification
+An **HOB** type needs to be defined by using the HOBSTRUCT() macro.
 
-A very basic **HOB** requires a name and an identifier:
+#### Identification
+
+A very basic **HOB** type requires a type name and an identifier:
 
 ```
 HOBSTRUCT (
@@ -27,9 +41,9 @@ The *identifier* can be:
 - a 63 bit integer number (it's used as is for the *UID* base value)
 - a string (whose 63 bit hash code is used for the *UID* base value)
 
-### Core parameters
+#### Core parameters
 
-An **HOB** can have core parameters:
+An **HOB** type can have core parameters:
 
 ```
 HOBSTRUCT (
@@ -54,9 +68,9 @@ HOBSTRUCT (
 
 The core parameters are used to update the **HOB** *UID*.
 
-### Extra parameters
+#### Extra parameters
 
-An **HOB** can also have extra parameters:
+An **HOB** type can also have extra parameters:
 
 ```
 HOBSTRUCT (
@@ -71,23 +85,43 @@ Extra parameters are defined in the same way as core parameters.
 
 The extra parameters are **not** used to update the **HOB** *UID*.
 
-### Parameter types
+## Dynamic data interface
+
+Unstructured data (dynamic fields) can be added / removed on the fly to an **HOB** 
+object either through the same **std::map**'s API and/or through additional handful
+methods:
+```
+template<class    T> hob  & set (const string & filed_name, const T & value)
+
+template<class    T> bool   get (const string & filed_name, T & value)
+template<class    T> bool   get (const string & filed_name, T & value) const
+
+template<class    T> bool   has (const string & filed_name) const
+
+template<typename T> T    & at  (const string & filed_name)
+template<typename T> T    & at  (const string & filed_name) const
+```
+
+**TODO**: Currently the serialization and deserialization of **HOB**'s Dynamic
+data is not yet implemented.
+
+## Parameter types
 
 The **HOB** parameters are C++ variables by value (references and pointers are
 not supported) and can be any of the following types:
 
-#### Base types
+### Base types
 
     int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
     boot, float, double
 
-#### Complex types
+### Complex types
 
     string, bitset<N>
 
 Where N is the number of bits to be stored in the bitset.
 
-#### Another **HOB**
+### Another **HOB**
 
     HOB
 
@@ -102,13 +136,13 @@ HOBSTRUCT (
 )
 ```
 
-#### Collections
+### Collections
 
     vector<T>, map<K,V>
 
 Where T, K and V can be any of the above parameter type.
 
-#### Optional type
+### Optional type
 
 It can be possible to declare a parameter as optional, when its value can be
 missing.  
