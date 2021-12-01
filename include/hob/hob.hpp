@@ -70,7 +70,7 @@
 
 #define HSEED                 65599llu
 // #define HSEED                 11400714819323198485llu
-#define HLEN(s)	              ((sizeof(s)/sizeof(s[0])) - 1)
+#define HLEN(s)               ((sizeof(s)/sizeof(s[0])) - 1)
 #define H1(s,i,x)             (static_cast<uint64_t>(x)*(((i)<HLEN(s))?HSEED:1)\
                                +                                               \
                                static_cast<uint8_t>(s[((i)<HLEN(s))            \
@@ -137,37 +137,37 @@ public:
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
-    class dynamic_fields_id
+    class dynamic_field_id
     {
     public:
-        dynamic_fields_id(const UID               & in ) { _set_id(in); }
-        dynamic_fields_id(const char              * in ) { _set_id(in); }
-        dynamic_fields_id(const string            & in ) { _set_id(in); }
-        dynamic_fields_id(const dynamic_fields_id & ref) { _id = ref._id  ; }
+        dynamic_field_id(const UID              & in ) { _set_id(in)    ; }
+        dynamic_field_id(const char             * in ) { _set_id(in)    ; }
+        dynamic_field_id(const string           & in ) { _set_id(in)    ; }
+        dynamic_field_id(const dynamic_field_id & ref) { _id = ref._id  ; }
 
-        inline dynamic_fields_id & operator=(const dynamic_fields_id &ref)
+        inline dynamic_field_id & operator=(const dynamic_field_id &ref)
         {
             _id = ref._id;
 
             return *this;
         }
 
-        inline bool operator==(const dynamic_fields_id &ref) const
+        inline bool operator==(const dynamic_field_id &ref) const
         {
             return _id == ref._id;
         }
 
-        inline bool operator!=(const dynamic_fields_id &ref) const
+        inline bool operator!=(const dynamic_field_id &ref) const
         {
             return _id != ref._id;
         }
 
-        inline bool operator>(const dynamic_fields_id &ref) const
+        inline bool operator>(const dynamic_field_id &ref) const
         {
             return _id > ref._id;
         }
 
-        inline bool operator<(const dynamic_fields_id &ref) const
+        inline bool operator<(const dynamic_field_id &ref) const
         {
             return _id < ref._id;
         }
@@ -204,7 +204,7 @@ public:
         }
     };
 
-    typedef map<dynamic_fields_id,any> dynamic_fields_t;
+    typedef map<dynamic_field_id,any> dynamic_fields_t;
 
     typedef dynamic_fields_t::iterator               iterator;
     typedef dynamic_fields_t::const_iterator         const_iterator;
@@ -1062,7 +1062,10 @@ public:
             (
                 os.encode_header(static_cast<const char *>(NULL),
                                  static_cast<const char *>(NULL),
-                                 _id, 0)
+                                 _id,
+                                 __payload(os))
+                &&
+                __encode_dynamic_fields(os)
                 &&
                 os.encode_footer()
             )
@@ -1152,7 +1155,7 @@ protected:
         _ep = _sp + sz_;
         _id = id_;
 
-        return true;
+        return __decode_dynamic_fields();
     }
 
     inline const uint64_t& __get_id() const
@@ -1207,7 +1210,12 @@ protected:
         }
     }
 
-    virtual size_t __payload(hob::encoder &os) const
+    size_t __payload(hob::encoder &os) const
+    {
+        return __static_payload(os) + __dynamic_payload(os);
+    }
+
+    virtual size_t __static_payload(hob::encoder &os) const
     {
         (void)os;
 
@@ -1219,6 +1227,25 @@ protected:
         // An odd ID means attached payload
         //
         return ( id & 1 );
+    }
+
+    size_t __dynamic_payload(hob::encoder &os) const
+    {
+        (void)os;
+
+        return 0;
+    }
+
+    bool __encode_dynamic_fields(hob::encoder &os) const
+    {
+        (void)os;
+
+        return true;
+    }
+
+    bool __decode_dynamic_fields()
+    {
+        return true;
     }
 
     virtual void __reset_changes()
@@ -1430,6 +1457,8 @@ public:                                                                         
                                  value_,                                          \
                                  __get_id(),                                      \
                                  payload)                                         \
+                &&                                                                \
+                hob::__encode_dynamic_fields(os)                                  \
                 SCAN_FIELDS(ENCODE_FIELD, PP_FIRST(__VA_ARGS__))                  \
                 SCAN_FIELDS(ENCODE_FIELD, PP_REMAIN(__VA_ARGS__))                 \
                 &&                                                                \
@@ -1533,7 +1562,7 @@ protected:                                                                      
     {                                                                             \
     }                                                                             \
                                                                                   \
-    virtual size_t __payload(hob::encoder &os) const                              \
+    virtual size_t __static_payload(hob::encoder &os) const                       \
     {                                                                             \
         (void)os;                                                                 \
                                                                                   \
