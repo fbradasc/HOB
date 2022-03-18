@@ -68,6 +68,9 @@
                               printf(__VA_ARGS__);        \
                               printf("\n");
 
+#define _PAYLOAD_FLAG_POS_    0
+#define _DYNFLDS_FLAG_POS_    1
+
 #define HSEED                 65599llu
 // #define HSEED                 11400714819323198485llu
 #define HLEN(s)               ((sizeof(s)/sizeof(s[0])) - 1)
@@ -367,6 +370,16 @@ public:
         virtual size_t field_size(const float       &v) = 0;
         virtual size_t field_size(const double      &v) = 0;
         virtual size_t field_size(const long double &v) = 0;
+
+        inline size_t field_size(const dynamic_field_id &v)
+        {
+            return field_size(v.id());
+        }
+
+        inline size_t field_size(const any &v)
+        {
+            return 0; // TODO
+        }
 
         inline size_t field_size(const string &v)
         {
@@ -1062,7 +1075,7 @@ public:
             (
                 os.encode_header(static_cast<const char *>(NULL),
                                  static_cast<const char *>(NULL),
-                                 _id,
+                                 __get_id(),
                                  __payload(os))
                 &&
                 __encode_dynamic_fields(os)
@@ -1105,7 +1118,9 @@ public:
     {
         size_t sz = __payload(os);
 
-        return os.field_size(_id) + ((sz > 0) ? (os.field_size(sz) + sz) : 0);
+        return os.field_size(__get_id())
+               +
+               ((sz > 0) ? (os.field_size(sz) + sz) : 0);
     }
 
     inline bool __rewind()
@@ -1140,7 +1155,9 @@ protected:
 
         size_t sz_ = 0;
 
-        if (__has_payload(id_) && !is.decode_field(sz_))
+        if ((__has_payload(id_) || __has_dynamic_payload(id_))
+            &&
+            !is.decode_field(sz_))
         {
             return false;
         }
@@ -1158,9 +1175,9 @@ protected:
         return __decode_dynamic_fields();
     }
 
-    inline const uint64_t& __get_id() const
+    inline uint64_t __get_id() const
     {
-        return _id;
+        return _id | ( !_df.empty() << _DYNFLDS_FLAG_POS_ );
     }
 
     inline void __update_id(const uint64_t &in)
@@ -1198,11 +1215,10 @@ protected:
         //
         if (_np >= 0)
         {
-            // HOBs with    parameters have an odd  ID
-            // HOBs without parameters have an even ID
+            _id <<= 2;
 
-            _id <<= 1;
-            _id |= (_np > 0);
+            _id |= ( (_np > 0)    << _PAYLOAD_FLAG_POS_ );
+            _id |= ( !_df.empty() << _DYNFLDS_FLAG_POS_ );
 
             // Avoid parameters check multiple appliance
             //
@@ -1224,27 +1240,42 @@ protected:
 
     inline bool __has_payload(uint64_t id)
     {
-        // An odd ID means attached payload
-        //
-        return ( id & 1 );
+        return ( ( id >> _PAYLOAD_FLAG_POS_ ) & 1 );
+    }
+
+    inline bool __has_dynamic_payload(uint64_t id)
+    {
+        return ( ( id >> _DYNFLDS_FLAG_POS_ ) & 1 );
     }
 
     size_t __dynamic_payload(hob::encoder &os) const
     {
-        (void)os;
-
-        return 0;
+        return (_df.empty()) ? 0 : os.field_size(_df);
     }
 
     bool __encode_dynamic_fields(hob::encoder &os) const
     {
         (void)os;
 
+        if (_df.empty())
+        {
+            return true;
+        }
+
+        // TODO: encode dynamic fields
+
         return true;
     }
 
     bool __decode_dynamic_fields()
     {
+        if (!__has_dynamic_payload(_id))
+        {
+            return true;
+        }
+
+        // TODO: decode dynamic fields
+
         return true;
     }
 
