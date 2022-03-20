@@ -378,7 +378,38 @@ public:
 
         inline size_t field_size(const any &v)
         {
-            return 0; // TODO
+            #define ANY_SIZE(V,T)                           \
+                    if (V.type() == typeid(T))              \
+                    {                                       \
+                        size_t rv = field_size              \
+                        (                                   \
+                            any_cast<const T&>              \
+                            (                               \
+                                static_cast<const any &>(V) \
+                            )                               \
+                        );                                  \
+                                                            \
+                        return rv;                          \
+                    }
+
+            ANY_SIZE(v, uint8_t     ) else
+            ANY_SIZE(v, uint16_t    ) else
+            ANY_SIZE(v, uint32_t    ) else
+            ANY_SIZE(v, uint64_t    ) else
+            ANY_SIZE(v, int8_t      ) else
+            ANY_SIZE(v, int16_t     ) else
+            ANY_SIZE(v, int32_t     ) else
+            ANY_SIZE(v, int64_t     ) else
+            ANY_SIZE(v, bool        ) else
+            ANY_SIZE(v, float       ) else
+            ANY_SIZE(v, double      ) else
+            ANY_SIZE(v, long double ) else
+            ANY_SIZE(v, string      ) else
+            ANY_SIZE(v, hob         ) else
+            ANY_SIZE(v, vector<bool>) else
+            return 0;
+
+            #undef ANY_SIZE
         }
 
         inline size_t field_size(const string &v)
@@ -475,6 +506,45 @@ public:
         virtual bool encode(const string       &v) = 0;
         virtual bool encode(const hob          &v) = 0;
         virtual bool encode(const vector<bool> &v) = 0;
+
+        bool encode(const dynamic_field_id &v)
+        {
+            return encode(v.id());
+        }
+
+        bool encode(const any &v)
+        {
+            #define ANY_ENCODE(V,T)                          \
+                    if (V.type() == typeid(T))               \
+                    {                                        \
+                        return encode                        \
+                        (                                    \
+                            any_cast<const T&>               \
+                            (                                \
+                                static_cast<const any &>(V)  \
+                            )                                \
+                        );                                   \
+                    }
+
+            ANY_ENCODE(v, uint8_t     ) else
+            ANY_ENCODE(v, uint16_t    ) else
+            ANY_ENCODE(v, uint32_t    ) else
+            ANY_ENCODE(v, uint64_t    ) else
+            ANY_ENCODE(v, int8_t      ) else
+            ANY_ENCODE(v, int16_t     ) else
+            ANY_ENCODE(v, int32_t     ) else
+            ANY_ENCODE(v, int64_t     ) else
+            ANY_ENCODE(v, bool        ) else
+            ANY_ENCODE(v, float       ) else
+            ANY_ENCODE(v, double      ) else
+            ANY_ENCODE(v, long double ) else
+            ANY_ENCODE(v, string      ) else
+            ANY_ENCODE(v, hob         ) else
+            ANY_ENCODE(v, vector<bool>) else
+            return 0;
+
+            #undef ANY_ENCODE
+        }
 
         template<size_t N>
         bool encode(const std::bitset<N>& v)
@@ -1262,9 +1332,7 @@ protected:
             return true;
         }
 
-        // TODO: encode dynamic fields
-
-        return true;
+        return os.encode_field(_df, "dynamic_fields_t", "DynamicFields"); // TODO
     }
 
     bool __decode_dynamic_fields()

@@ -685,9 +685,11 @@ int main(int argc, char *argv[])
              .set<double     >("double"     , 1.313f )
              .set<long double>("long double", 1.3131313131313131313)
              .set<string     >("string"     , "1Po'DiMaiuscoleMinuscole&Numeri")
+/*
              .set<hob>(
                 "hob",
                 hob("NESTED_DYNAMIC_FIELDS").set<MyStruct>("myStruct",m))
+*/
             ;
 
             cout << "12 items expected:" << endl << endl;
@@ -743,7 +745,7 @@ int main(int argc, char *argv[])
 
                 LOG(cm);
             }
-
+#if 0
             cout << endl << "Using operator[]:" << endl << endl;
 
             h.erase("uint16_t");
@@ -778,9 +780,12 @@ int main(int argc, char *argv[])
             {
                 LOG(any_cast<AnotherStruct>(h["anotherStruct"]));
             }
+#endif
+            h >> *ps;
 
             cout << "-----------------------------------------------" << endl;
         }
+#if 0
         { MyStruct               m; m >> *ps; LOG(m); }
         {
             AnotherStruct m;
@@ -911,7 +916,7 @@ int main(int argc, char *argv[])
 
             LOG(m);
         }
-
+#endif
         delete ps;
     }
 
