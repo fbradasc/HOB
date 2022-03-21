@@ -685,11 +685,9 @@ int main(int argc, char *argv[])
              .set<double     >("double"     , 1.313f )
              .set<long double>("long double", 1.3131313131313131313)
              .set<string     >("string"     , "1Po'DiMaiuscoleMinuscole&Numeri")
-/*
              .set<hob>(
                 "hob",
-                hob("NESTED_DYNAMIC_FIELDS").set<MyStruct>("myStruct",m))
-*/
+                hob("NESTED_DYNAMIC_FIELDS").set<string>("nested","deep"))
             ;
 
             cout << "12 items expected:" << endl << endl;
@@ -710,24 +708,12 @@ int main(int argc, char *argv[])
             {
                 hob &nh = h.at<hob>("hob");
 
-                if (nh.has<MyStruct>("myStruct"))
-                {
-                    MyStruct &cm = nh.at<MyStruct>("myStruct");
-
-                    LOG(cm);
-
-                    cm.anEnum = static_cast<uint32_t>(enThree);
-                }
-
-                if (h.at<hob>("hob").has<MyStruct>("myStruct"))
-                {
-                    LOG(h.at<hob>("hob").at<MyStruct>("myStruct"));
-                }
+                nh.has<string>("nested") && cout << nh.at<string>("nested") << endl;
             }
 
             cout << endl << "0 items expected:" << endl << endl;
 
-            h.has<MyStruct   >("uint8_t"    ) && cout << h.at<uint8_t    >("uint8_t"    ) << endl;
+            h.has<hob        >("uint8_t"    ) && cout << h.at<uint8_t    >("uint8_t"    ) << endl;
             h.has<string     >("uint16_t"   ) && cout << h.at<uint16_t   >("uint16_t"   ) << endl;
             h.has<long double>("uint32_t"   ) && cout << h.at<uint32_t   >("uint32_t"   ) << endl;
             h.has<double     >("int8_t"     ) && cout << h.at<int8_t     >("int8_t"     ) << endl;
@@ -741,20 +727,17 @@ int main(int argc, char *argv[])
 
             if (h.has<uint8_t>("hob"))
             {
-                const MyStruct &cm = h.at<MyStruct>("hob");
+                const hob &nh = h.at<hob>("hob");
 
-                LOG(cm);
+                LOG(nh);
             }
-#if 0
+
             cout << endl << "Using operator[]:" << endl << endl;
 
             h.erase("uint16_t");
             h.erase("int16_t");
             h["bool"  ] = false;
             h["string"] = string("1Po'DiMinuscoleNumeri&Maiuscole");
-
-            AnotherStruct as;
-            h["anotherStruct"] = as;
 
             h.has<uint8_t    >("uint8_t"    ) && cout << any_cast<uint8_t    >(h["uint8_t"    ]) << endl;
             h.has<uint16_t   >("uint16_t"   ) && cout << any_cast<uint16_t   >(h["uint16_t"   ]) << endl;
@@ -769,18 +752,13 @@ int main(int argc, char *argv[])
             h.has<string     >("string"     ) && cout << any_cast<string     >(h["string"     ]) << endl;
 
             hob nh;
-            MyStruct cm;
+            string nested;
 
-            if (h.get<hob>("hob",nh) && nh.get<MyStruct>("myStruct",cm))
+            if (h.get<hob>("hob",nh) && nh.get<string>("nested",nested))
             {
-                LOG(cm);
+                cout << any_cast<string>(nh["nested"]) << endl;
             }
 
-            if (h.has<AnotherStruct>("anotherStruct"))
-            {
-                LOG(any_cast<AnotherStruct>(h["anotherStruct"]));
-            }
-#endif
             h >> *ps;
 
             cout << "-----------------------------------------------" << endl;

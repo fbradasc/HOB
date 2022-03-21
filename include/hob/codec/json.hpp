@@ -574,12 +574,12 @@ namespace hobio
                         << "\"v\": ";
                 }
 
-                indentation(+1);
+                indentation(+3);
             }
 
             virtual void encode_map_item_value_post(const size_t &remaining)
             {
-                indentation(-1);
+                indentation(-3);
 
                 if (_format == VERBOSE)
                 {

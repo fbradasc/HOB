@@ -378,35 +378,36 @@ public:
 
         inline size_t field_size(const any &v)
         {
-            #define ANY_SIZE(V,T)                           \
-                    if (V.type() == typeid(T))              \
-                    {                                       \
-                        size_t rv = field_size              \
-                        (                                   \
-                            any_cast<const T&>              \
-                            (                               \
-                                static_cast<const any &>(V) \
-                            )                               \
-                        );                                  \
-                                                            \
-                        return rv;                          \
-                    }
+            #define ANY_SIZE(V,T)                                              \
+                    if (V.type() == typeid(T))                                 \
+                    {                                                          \
+                        return field_size(any_cast<const          T  &>(V)); \
+                    }                                                          \
+                    else                                                       \
+                    if (V.type() == typeid(vector<T>))                         \
+                    {                                                          \
+                        return field_size(any_cast<const vector  <T> &>(V)); \
+                    }                                                          \
+                    else                                                       \
+                    if (V.type() == typeid(optional<T>))                       \
+                    {                                                          \
+                        return field_size(any_cast<const optional<T> &>(V)); \
+                    }                                                          \
 
-            ANY_SIZE(v, uint8_t     ) else
-            ANY_SIZE(v, uint16_t    ) else
-            ANY_SIZE(v, uint32_t    ) else
-            ANY_SIZE(v, uint64_t    ) else
-            ANY_SIZE(v, int8_t      ) else
-            ANY_SIZE(v, int16_t     ) else
-            ANY_SIZE(v, int32_t     ) else
-            ANY_SIZE(v, int64_t     ) else
-            ANY_SIZE(v, bool        ) else
-            ANY_SIZE(v, float       ) else
-            ANY_SIZE(v, double      ) else
-            ANY_SIZE(v, long double ) else
-            ANY_SIZE(v, string      ) else
-            ANY_SIZE(v, hob         ) else
-            ANY_SIZE(v, vector<bool>) else
+            ANY_SIZE(v, uint8_t    ) else
+            ANY_SIZE(v, uint16_t   ) else
+            ANY_SIZE(v, uint32_t   ) else
+            ANY_SIZE(v, uint64_t   ) else
+            ANY_SIZE(v, int8_t     ) else
+            ANY_SIZE(v, int16_t    ) else
+            ANY_SIZE(v, int32_t    ) else
+            ANY_SIZE(v, int64_t    ) else
+            ANY_SIZE(v, bool       ) else
+            ANY_SIZE(v, float      ) else
+            ANY_SIZE(v, double     ) else
+            ANY_SIZE(v, long double) else
+            ANY_SIZE(v, string     ) else
+            ANY_SIZE(v, hob        ) else
             return 0;
 
             #undef ANY_SIZE
@@ -491,21 +492,21 @@ public:
     protected:
         friend class hobio::json::decoder;
 
-        virtual bool encode(const uint8_t      &v) = 0;
-        virtual bool encode(const uint16_t     &v) = 0;
-        virtual bool encode(const uint32_t     &v) = 0;
-        virtual bool encode(const uint64_t     &v) = 0;
-        virtual bool encode(const int8_t       &v) = 0;
-        virtual bool encode(const int16_t      &v) = 0;
-        virtual bool encode(const int32_t      &v) = 0;
-        virtual bool encode(const int64_t      &v) = 0;
-        virtual bool encode(const bool         &v) = 0;
-        virtual bool encode(const float        &v) = 0;
-        virtual bool encode(const double       &v) = 0;
-        virtual bool encode(const long double  &v) = 0;
-        virtual bool encode(const string       &v) = 0;
-        virtual bool encode(const hob          &v) = 0;
-        virtual bool encode(const vector<bool> &v) = 0;
+        virtual bool encode(const uint8_t          &v) = 0;
+        virtual bool encode(const uint16_t         &v) = 0;
+        virtual bool encode(const uint32_t         &v) = 0;
+        virtual bool encode(const uint64_t         &v) = 0;
+        virtual bool encode(const int8_t           &v) = 0;
+        virtual bool encode(const int16_t          &v) = 0;
+        virtual bool encode(const int32_t          &v) = 0;
+        virtual bool encode(const int64_t          &v) = 0;
+        virtual bool encode(const bool             &v) = 0;
+        virtual bool encode(const float            &v) = 0;
+        virtual bool encode(const double           &v) = 0;
+        virtual bool encode(const long double      &v) = 0;
+        virtual bool encode(const string           &v) = 0;
+        virtual bool encode(const hob              &v) = 0;
+        virtual bool encode(const vector<bool>     &v) = 0;
 
         bool encode(const dynamic_field_id &v)
         {
@@ -514,34 +515,37 @@ public:
 
         bool encode(const any &v)
         {
-            #define ANY_ENCODE(V,T)                          \
-                    if (V.type() == typeid(T))               \
-                    {                                        \
-                        return encode                        \
-                        (                                    \
-                            any_cast<const T&>               \
-                            (                                \
-                                static_cast<const any &>(V)  \
-                            )                                \
-                        );                                   \
-                    }
+            #define ANY_ENCODE(V,T)                                      \
+                    if (V.type() == typeid(T))                           \
+                    {                                                    \
+                        return encode(any_cast<const          T  &>(V)); \
+                    }                                                    \
+                    else                                                 \
+                    if (V.type() == typeid(vector<T>))                   \
+                    {                                                    \
+                        return encode(any_cast<const vector  <T> &>(V)); \
+                    }                                                    \
+                    else                                                 \
+                    if (V.type() == typeid(optional<T>))                 \
+                    {                                                    \
+                        return encode(any_cast<const optional<T> &>(V)); \
+                    }                                                    \
 
-            ANY_ENCODE(v, uint8_t     ) else
-            ANY_ENCODE(v, uint16_t    ) else
-            ANY_ENCODE(v, uint32_t    ) else
-            ANY_ENCODE(v, uint64_t    ) else
-            ANY_ENCODE(v, int8_t      ) else
-            ANY_ENCODE(v, int16_t     ) else
-            ANY_ENCODE(v, int32_t     ) else
-            ANY_ENCODE(v, int64_t     ) else
-            ANY_ENCODE(v, bool        ) else
-            ANY_ENCODE(v, float       ) else
-            ANY_ENCODE(v, double      ) else
-            ANY_ENCODE(v, long double ) else
-            ANY_ENCODE(v, string      ) else
-            ANY_ENCODE(v, hob         ) else
-            ANY_ENCODE(v, vector<bool>) else
-            return 0;
+            ANY_ENCODE(v, uint8_t    ) else
+            ANY_ENCODE(v, uint16_t   ) else
+            ANY_ENCODE(v, uint32_t   ) else
+            ANY_ENCODE(v, uint64_t   ) else
+            ANY_ENCODE(v, int8_t     ) else
+            ANY_ENCODE(v, int16_t    ) else
+            ANY_ENCODE(v, int32_t    ) else
+            ANY_ENCODE(v, int64_t    ) else
+            ANY_ENCODE(v, bool       ) else
+            ANY_ENCODE(v, float      ) else
+            ANY_ENCODE(v, double     ) else
+            ANY_ENCODE(v, long double) else
+            ANY_ENCODE(v, string     ) else
+            ANY_ENCODE(v, hob        ) else
+            return true;
 
             #undef ANY_ENCODE
         }
@@ -1332,7 +1336,7 @@ protected:
             return true;
         }
 
-        return os.encode_field(_df, "dynamic_fields_t", "DynamicFields"); // TODO
+        return os.encode_field(_df, "V", "V");
     }
 
     bool __decode_dynamic_fields()
