@@ -687,49 +687,45 @@ int main(int argc, char *argv[])
              .set<string     >("string"     , "1Po'DiMaiuscoleMinuscole&Numeri")
              .set<hob>(
                 "hob",
-                hob("NESTED_DYNAMIC_FIELDS").set<string>("nested","deep"))
+                hob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
+                                            .set<hob   >("MyStruct", m))
             ;
 
             cout << "12 items expected:" << endl << endl;
 
-            h.has<uint8_t    >("uint8_t"    ) && cout << h.at<uint8_t    >("uint8_t"    ) << endl;
-            h.has<uint16_t   >("uint16_t"   ) && cout << h.at<uint16_t   >("uint16_t"   ) << endl;
-            h.has<uint32_t   >("uint32_t"   ) && cout << h.at<uint32_t   >("uint32_t"   ) << endl;
-            h.has<int8_t     >("int8_t"     ) && cout << h.at<int8_t     >("int8_t"     ) << endl;
-            h.has<int16_t    >("int16_t"    ) && cout << h.at<int16_t    >("int16_t"    ) << endl;
-            h.has<int32_t    >("int32_t"    ) && cout << h.at<int32_t    >("int32_t"    ) << endl;
-            h.has<bool       >("bool"       ) && cout << h.at<bool       >("bool"       ) << endl;
-            h.has<float      >("float"      ) && cout << h.at<float      >("float"      ) << endl;
-            h.has<double     >("double"     ) && cout << h.at<double     >("double"     ) << endl;
-            h.has<long double>("long double") && cout << h.at<long double>("long double") << endl;
-            h.has<string     >("string"     ) && cout << h.at<string     >("string"     ) << endl;
-
-            if (h.has<hob>("hob"))
+            if (h.has("hob"))
             {
-                hob &nh = h.at<hob>("hob");
+                const hob &nh = h.get<hob>("hob");
 
-                nh.has<string>("nested") && cout << nh.at<string>("nested") << endl;
+                nh.has("nested") && cout << nh.get<string>("nested") << endl;
             }
 
             cout << endl << "0 items expected:" << endl << endl;
 
-            h.has<hob        >("uint8_t"    ) && cout << h.at<uint8_t    >("uint8_t"    ) << endl;
-            h.has<string     >("uint16_t"   ) && cout << h.at<uint16_t   >("uint16_t"   ) << endl;
-            h.has<long double>("uint32_t"   ) && cout << h.at<uint32_t   >("uint32_t"   ) << endl;
-            h.has<double     >("int8_t"     ) && cout << h.at<int8_t     >("int8_t"     ) << endl;
-            h.has<float      >("int16_t"    ) && cout << h.at<int16_t    >("int16_t"    ) << endl;
-            h.has<bool       >("int32_t"    ) && cout << h.at<int32_t    >("int32_t"    ) << endl;
-            h.has<int32_t    >("bool"       ) && cout << h.at<bool       >("bool"       ) << endl;
-            h.has<int16_t    >("float"      ) && cout << h.at<float      >("float"      ) << endl;
-            h.has<int8_t     >("double"     ) && cout << h.at<double     >("double"     ) << endl;
-            h.has<uint32_t   >("long double") && cout << h.at<long double>("long double") << endl;
-            h.has<uint16_t   >("string"     ) && cout << h.at<string     >("string"     ) << endl;
+            h.has("uint8_t"    ) && cout << h.get<uint8_t    >("uint8_t"    ) << endl;
+            h.has("uint16_t"   ) && cout << h.get<uint16_t   >("uint16_t"   ) << endl;
+            h.has("uint32_t"   ) && cout << h.get<uint32_t   >("uint32_t"   ) << endl;
+            h.has("int8_t"     ) && cout << h.get<int8_t     >("int8_t"     ) << endl;
+            h.has("int16_t"    ) && cout << h.get<int16_t    >("int16_t"    ) << endl;
+            h.has("int32_t"    ) && cout << h.get<int32_t    >("int32_t"    ) << endl;
+            h.has("bool"       ) && cout << h.get<bool       >("bool"       ) << endl;
+            h.has("float"      ) && cout << h.get<float      >("float"      ) << endl;
+            h.has("double"     ) && cout << h.get<double     >("double"     ) << endl;
+            h.has("long double") && cout << h.get<long double>("long double") << endl;
+            h.has("string"     ) && cout << h.get<string     >("string"     ) << endl;
 
-            if (h.has<uint8_t>("hob"))
+            if (h.has("hob"))
             {
-                const hob &nh = h.at<hob>("hob");
+                const hob &nh = h.get<hob>("hob");
 
                 LOG(nh);
+
+                if (nh.has("MyStruct"))
+                {
+                    const hob &ms = nh.get<hob>("MyStruct");
+
+                    LOG(ms);
+                }
             }
 
             cout << endl << "Using operator[]:" << endl << endl;
@@ -739,24 +735,35 @@ int main(int argc, char *argv[])
             h["bool"  ] = false;
             h["string"] = string("1Po'DiMinuscoleNumeri&Maiuscole");
 
-            h.has<uint8_t    >("uint8_t"    ) && cout << any_cast<uint8_t    >(h["uint8_t"    ]) << endl;
-            h.has<uint16_t   >("uint16_t"   ) && cout << any_cast<uint16_t   >(h["uint16_t"   ]) << endl;
-            h.has<uint32_t   >("uint32_t"   ) && cout << any_cast<uint32_t   >(h["uint32_t"   ]) << endl;
-            h.has<int8_t     >("int8_t"     ) && cout << any_cast<int8_t     >(h["int8_t"     ]) << endl;
-            h.has<int16_t    >("int16_t"    ) && cout << any_cast<int16_t    >(h["int16_t"    ]) << endl;
-            h.has<int32_t    >("int32_t"    ) && cout << any_cast<int32_t    >(h["int32_t"    ]) << endl;
-            h.has<bool       >("bool"       ) && cout << any_cast<bool       >(h["bool"       ]) << endl;
-            h.has<float      >("float"      ) && cout << any_cast<float      >(h["float"      ]) << endl;
-            h.has<double     >("double"     ) && cout << any_cast<double     >(h["double"     ]) << endl;
-            h.has<long double>("long double") && cout << any_cast<long double>(h["long double"]) << endl;
-            h.has<string     >("string"     ) && cout << any_cast<string     >(h["string"     ]) << endl;
+            h.has("uint8_t"    ) && cout << h.get<uint8_t    >("uint8_t"    ) << endl;
+            h.has("uint16_t"   ) && cout << h.get<uint16_t   >("uint16_t"   ) << endl;
+            h.has("uint32_t"   ) && cout << h.get<uint32_t   >("uint32_t"   ) << endl;
+            h.has("int8_t"     ) && cout << h.get<int8_t     >("int8_t"     ) << endl;
+            h.has("int16_t"    ) && cout << h.get<int16_t    >("int16_t"    ) << endl;
+            h.has("int32_t"    ) && cout << h.get<int32_t    >("int32_t"    ) << endl;
+            h.has("bool"       ) && cout << h.get<bool       >("bool"       ) << endl;
+            h.has("float"      ) && cout << h.get<float      >("float"      ) << endl;
+            h.has("double"     ) && cout << h.get<double     >("double"     ) << endl;
+            h.has("long double") && cout << h.get<long double>("long double") << endl;
+            h.has("string"     ) && cout << h.get<string     >("string"     ) << endl;
 
             hob nh;
             string nested;
 
-            if (h.get<hob>("hob",nh) && nh.get<string>("nested",nested))
+            if (h.get("hob",nh))
             {
-                cout << any_cast<string>(nh["nested"]) << endl;
+                if (nh.get("nested",nested))
+                {
+                    cout << "nested     : " << nested << endl;
+                }
+
+                hob ms;
+
+                if (nh.get("MyStruct",ms))
+                {
+                    cout << "MyStruct   : ";
+                    LOG(ms);
+                }
             }
 
             h >> *ps;

@@ -140,59 +140,120 @@ public:
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
-    class dynamic_field_id
+    class variant
     {
     public:
-        dynamic_field_id(const UID              & in ) { _set_id(in)    ; }
-        dynamic_field_id(const char             * in ) { _set_id(in)    ; }
-        dynamic_field_id(const string           & in ) { _set_id(in)    ; }
-        dynamic_field_id(const dynamic_field_id & ref) { _id = ref._id  ; }
+        typedef long double quadle;
 
-        inline dynamic_field_id & operator=(const dynamic_field_id &ref)
+        enum variant_t
+        {
+            //
+            // discrete types
+            //
+            _t_uint8    = 0x00,
+            _t_uint16         ,
+            _t_uint32         ,
+            _t_uint64         ,
+            _t_int8           ,
+            _t_int16          ,
+            _t_int32          ,
+            _t_int64          ,
+            _t_bool           ,
+            _t_float          ,
+            _t_double         ,
+            _t_quadle         ,
+            _t_string         ,
+            _t_hob            ,
+            _t_bitset         ,
+            _t_unknown        ,
+            //
+            // container types
+            //
+            _t_vector   = 0x10,
+            _t_optional = 0x20,
+            _t_map      = 0x30,
+        };
+
+        variant(const UID    & in ): _t(_t_unknown) { _id = in    ; }
+        variant(const char   * in ): _t(_t_unknown) { _id = id(in); }
+        variant(const string & in ): _t(_t_unknown) { _id = id(in); }
+
+        variant(const variant & ref) { *this = ref; }
+
+        inline variant & operator=(const variant &ref)
         {
             _id = ref._id;
+            _t  = ref._t;
+            _v  = ref._v;
 
             return *this;
         }
 
-        inline bool operator==(const dynamic_field_id &ref) const
+        inline bool operator==(const variant &ref) const
         {
             return _id == ref._id;
         }
 
-        inline bool operator!=(const dynamic_field_id &ref) const
+        inline bool operator!=(const variant &ref) const
         {
             return _id != ref._id;
         }
 
-        inline bool operator>(const dynamic_field_id &ref) const
+        inline bool operator>(const variant &ref) const
         {
             return _id > ref._id;
         }
 
-        inline bool operator<(const dynamic_field_id &ref) const
+        inline bool operator<(const variant &ref) const
         {
             return _id < ref._id;
         }
 
-        UID id() const { return _id; }
-
-    private:
-        UID _id;
-
-        inline void _set_id(const UID &in)
+        template<typename T>
+        inline variant & operator=(const T & v)
         {
-            _id = in;
+            variant_t t = (typeid(T) == typeid(uint8_t )) ? _t_uint8  :
+                          (typeid(T) == typeid(uint16_t)) ? _t_uint16 :
+                          (typeid(T) == typeid(uint32_t)) ? _t_uint32 :
+                          (typeid(T) == typeid(uint64_t)) ? _t_uint64 :
+                          (typeid(T) == typeid(int8_t  )) ? _t_int8   :
+                          (typeid(T) == typeid(int16_t )) ? _t_int16  :
+                          (typeid(T) == typeid(int32_t )) ? _t_int32  :
+                          (typeid(T) == typeid(int64_t )) ? _t_int64  :
+                          (typeid(T) == typeid(bool    )) ? _t_bool   :
+                          (typeid(T) == typeid(float   )) ? _t_float  :
+                          (typeid(T) == typeid(double  )) ? _t_double :
+                          (typeid(T) == typeid(quadle  )) ? _t_quadle :
+                          (typeid(T) == typeid(string  )) ? _t_string :
+                          (typeid(T) == typeid(hob     )) ? _t_hob    :
+                                                            _t_unknown;
+
+            if (t != _t_unknown)
+            {
+                _t = t;
+                _v = v;
+            }
+
+            return *this;
         }
 
-        inline void _set_id(const string &in)
+        UID       id  () const { return _id; }
+        variant_t type() const { return _t ; }
+
+        template<typename T>
+        const T & data() const
         {
-            _set_id(in.c_str());
+            return any_cast<const T&>(static_cast<const any&>(_v));
         }
 
-        void _set_id(const char *in)
+        static UID id(const string &in)
         {
-            _id = 0;
+            return id(in.c_str());
+        }
+
+        static UID id(const char *in)
+        {
+            UID id_ = 0;
 
             //
             // in != NULL -> update ID calculation
@@ -201,13 +262,20 @@ public:
             {
                 for (size_t i = 0; in[i]; ++i)
                 {
-                    _id = HSEED * _id + in[i];
+                    id_ = HSEED * id_ + in[i];
                 }
             }
+
+            return id_;
         }
+
+    private:
+        UID       _id;
+        variant_t _t ;
+        any       _v ;
     };
 
-    typedef map<dynamic_field_id,any> dynamic_fields_t;
+    typedef vector<variant> dynamic_fields_t;
 
     typedef dynamic_fields_t::iterator               iterator;
     typedef dynamic_fields_t::const_iterator         const_iterator;
@@ -227,89 +295,231 @@ public:
     inline size_type              size    () const { return _df.size    (); }
     inline size_type              max_size() const { return _df.max_size(); }
 
-    inline size_type      erase(const string &n)       { return _df.erase(n); }
-    inline size_type      count(const string &n) const { return _df.count(n); }
-    inline iterator       find (const string &n)       { return _df.find (n); }
-    inline const_iterator find (const string &n) const { return _df.find (n); }
+    inline iterator find(const UID &id)
+    {
+        iterator it = begin();
+
+        for (; (it != end()) && ((*it) != id); ++it);
+
+        return it;
+    }
+
+    inline iterator find(const string &n)
+    {
+        iterator it = begin();
+
+        for (; (it != end()) && ((*it) != n); ++it);
+
+        return it;
+    }
+
+    inline const_iterator find(const UID &id) const
+    {
+        const_iterator cit = begin();
+
+        for (; (cit != end()) && ((*cit) != id); ++cit);
+
+        return cit;
+    }
+
+    inline const_iterator find(const string &n) const
+    {
+        const_iterator cit = begin();
+
+        for (; (cit != end()) && ((*cit) != n); ++cit);
+
+        return cit;
+    }
+
+    template <typename T>
+    inline iterator find(const UID &id)
+    {
+        iterator it = begin();
+
+        for (; (it != end()) && ((*it) != id); ++it);
+
+        return ((it != end()) && static_cast<optional<T&> >(*it).has_value())
+                   ? it
+                   : end();
+    }
+
+    template <typename T>
+    inline iterator find(const string &n)
+    {
+        iterator it = begin();
+
+        for (; (it != end()) && ((*it) != n); ++it);
+
+        return ((it != end()) && static_cast<optional<T&> >(*it).has_value())
+                   ? it
+                   : end();
+    }
+
+    template <typename T>
+    inline const_iterator find(const UID &id) const
+    {
+        const_iterator cit = begin();
+
+        for (; (cit != end()) && ((*cit) != id); ++cit);
+
+        return ((cit != end()) && static_cast<optional<T&> >(*cit).has_value())
+                   ? cit
+                   : end();
+    }
+
+    template <typename T>
+    inline const_iterator find(const string &n) const
+    {
+        const_iterator cit = begin();
+
+        for (; (cit != end()) && ((*cit) != n); ++cit);
+
+        return ((cit != end()) && static_cast<optional<T&> >(*cit).has_value())
+                   ? cit
+                   : end();
+    }
 
     inline void clear(                             ) { _df.clear(          ); }
+    inline void erase(const char   *n              ) { _df.erase(find( n)  ); }
+    inline void erase(const UID    &id             ) { _df.erase(find(id)  ); }
+    inline void erase(const string &n              ) { _df.erase(find( n)  ); }
     inline void erase(iterator pos                 ) { _df.erase(pos       ); }
     inline void erase(iterator first, iterator last) { _df.erase(first,last); }
 
-    inline any& operator[](const UID &id)
+    inline variant& operator[](const UID &id)
     {
-        return _df[id];
+        return get_or_create(id);
     }
 
-    inline any& operator[](const char *n)
+    inline variant& operator[](const char *n)
     {
-        return _df[n];
+        return get_or_create(n);
     }
 
-    inline any& operator[](const string &n)
+    inline variant& operator[](const string &n)
     {
-        return _df[n];
+        return get_or_create(n);
     }
 
-    template<class T>
-    inline hob& set(const string &n, const T &v)
+    inline variant& get_or_create(const UID id)
     {
-        _df[n] = v;
+        iterator it = find(id);
+
+        if (it == end())
+        {
+            variant v(id);
+
+            it = _df.insert(end(),v);
+        }
+
+        return *it;
+    }
+
+    inline variant& get_or_create(const char *n)
+    {
+        return get_or_create(variant::id(n));
+    }
+
+    inline variant& get_or_create(const string &n)
+    {
+        return get_or_create(variant::id(n));
+    }
+
+    template<typename T>
+    inline hob & set(const string &n, const T &v)
+    {
+        variant & _v = get_or_create(n);
+
+        _v = v;
 
         return *this;
     }
 
     template<typename T>
-    inline const T& at(const string &n) const
+    inline hob & set(const UID &id, const T &v)
     {
-        const_iterator cit = find(n);
+        variant & _v = get_or_create(id);
 
-        return any_cast<const T&>(static_cast<const any&>((*cit).second));
+        _v = v;
+
+        return *this;
     }
 
     template<typename T>
-    inline T& at(const string &n)
+    inline hob & set(const char *n, const T &v)
     {
-        return any_cast<T&>((*find(n)).second);
+        variant & _v = get_or_create(n);
+
+        _v = v;
+
+        return *this;
     }
 
-    template<class T>
-    inline bool get(const string &n, T &v) const
-    {
-        if (has<T>(n))
-        {
-            v = any_cast<T&>((*find(n)).second);
+    inline bool has(const string & n ) const { return (find( n) != end()); }
+    inline bool has(const UID    & id) const { return (find(id) != end()); }
+    inline bool has(const char   * n ) const { return (find( n) != end()); }
 
-            return true;
+    template<typename T>
+    inline bool has(const string & n ) const { return (find<T>( n) != end()); }
+
+    template<typename T>
+    inline bool has(const UID    & id) const { return (find<T>(id) != end()); }
+
+    template<typename T>
+    inline bool has(const char   * n ) const { return (find<T>( n) != end()); }
+
+    template<typename T>
+    inline const T & get(const string & n ) const { return (*find( n)).data<T>(); }
+
+    template<typename T>
+    inline const T & get(const UID    & id) const { return (*find(id)).data<T>(); }
+
+    template<typename T>
+    inline const T & get(const char   * n ) const { return (*find (n)).data<T>(); }
+
+    template<typename T>
+    inline bool get(const string & n, T & v) const
+    {
+        const const_iterator cit = find(n);
+
+        if (cit == end())
+        {
+            return false;
         }
 
-        return false;
+        v = (*cit).data<T>();
+
+        return true;
     }
 
-    template<class T>
-    inline bool get(const string &n, T &v)
+    template<typename T>
+    inline bool get(const UID & id, T & v) const
     {
-        if (has<T>(n))
-        {
-            v = any_cast<T&>((*find(n)).second);
+        const const_iterator cit = find(id);
 
-            return true;
+        if (cit == end())
+        {
+            return false;
         }
 
-        return false;
+        v = (*cit).data<T>();
+
+        return true;
     }
 
-    template<class T>
-    inline bool has(const string &n) const
+    template<typename T>
+    inline bool get(const char * n, T & v) const
     {
-        if (count(n))
-        {
-            const_iterator cit = find(n);
+        const const_iterator cit = find(n);
 
-            return ((*cit).second.type() == typeid(T));
+        if (cit == end())
+        {
+            return false;
         }
 
-        return false;
+        v = (*cit).data<T>();
+
+        return true;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -371,46 +581,33 @@ public:
         virtual size_t field_size(const double      &v) = 0;
         virtual size_t field_size(const long double &v) = 0;
 
-        inline size_t field_size(const dynamic_field_id &v)
+        inline size_t field_size(const variant &v)
         {
-            return field_size(v.id());
-        }
+            size_t retval = field_size(v.id())
+                            +
+                            field_size(v.type());
 
-        inline size_t field_size(const any &v)
-        {
-            #define ANY_SIZE(V,T)                                              \
-                    if (V.type() == typeid(T))                                 \
-                    {                                                          \
-                        return field_size(any_cast<const          T  &>(V)); \
-                    }                                                          \
-                    else                                                       \
-                    if (V.type() == typeid(vector<T>))                         \
-                    {                                                          \
-                        return field_size(any_cast<const vector  <T> &>(V)); \
-                    }                                                          \
-                    else                                                       \
-                    if (V.type() == typeid(optional<T>))                       \
-                    {                                                          \
-                        return field_size(any_cast<const optional<T> &>(V)); \
-                    }                                                          \
+            switch (v.type())
+            {
+                case variant::_t_uint8 : retval += field_size(v.data<uint8_t    >()); break;
+                case variant::_t_uint16: retval += field_size(v.data<uint16_t   >()); break;
+                case variant::_t_uint32: retval += field_size(v.data<uint32_t   >()); break;
+                case variant::_t_uint64: retval += field_size(v.data<uint64_t   >()); break;
+                case variant::_t_int8  : retval += field_size(v.data<int8_t     >()); break;
+                case variant::_t_int16 : retval += field_size(v.data<int16_t    >()); break;
+                case variant::_t_int32 : retval += field_size(v.data<int32_t    >()); break;
+                case variant::_t_int64 : retval += field_size(v.data<int64_t    >()); break;
+                case variant::_t_bool  : retval += field_size(v.data<bool       >()); break;
+                case variant::_t_float : retval += field_size(v.data<float      >()); break;
+                case variant::_t_double: retval += field_size(v.data<double     >()); break;
+                case variant::_t_quadle: retval += field_size(v.data<long double>()); break;
+                case variant::_t_string: retval += field_size(v.data<string     >()); break;
+                case variant::_t_hob   : retval += field_size(v.data<hob        >()); break;
+                default:
+                    break;
+            }
 
-            ANY_SIZE(v, uint8_t    ) else
-            ANY_SIZE(v, uint16_t   ) else
-            ANY_SIZE(v, uint32_t   ) else
-            ANY_SIZE(v, uint64_t   ) else
-            ANY_SIZE(v, int8_t     ) else
-            ANY_SIZE(v, int16_t    ) else
-            ANY_SIZE(v, int32_t    ) else
-            ANY_SIZE(v, int64_t    ) else
-            ANY_SIZE(v, bool       ) else
-            ANY_SIZE(v, float      ) else
-            ANY_SIZE(v, double     ) else
-            ANY_SIZE(v, long double) else
-            ANY_SIZE(v, string     ) else
-            ANY_SIZE(v, hob        ) else
-            return 0;
-
-            #undef ANY_SIZE
+            return retval;
         }
 
         inline size_t field_size(const string &v)
@@ -508,46 +705,38 @@ public:
         virtual bool encode(const hob              &v) = 0;
         virtual bool encode(const vector<bool>     &v) = 0;
 
-        bool encode(const dynamic_field_id &v)
+        bool encode(const variant &v)
         {
-            return encode(v.id());
-        }
+            bool encoded = encode(v.id())
+                           &&
+                           encode(v.type());
 
-        bool encode(const any &v)
-        {
-            #define ANY_ENCODE(V,T)                                      \
-                    if (V.type() == typeid(T))                           \
-                    {                                                    \
-                        return encode(any_cast<const          T  &>(V)); \
-                    }                                                    \
-                    else                                                 \
-                    if (V.type() == typeid(vector<T>))                   \
-                    {                                                    \
-                        return encode(any_cast<const vector  <T> &>(V)); \
-                    }                                                    \
-                    else                                                 \
-                    if (V.type() == typeid(optional<T>))                 \
-                    {                                                    \
-                        return encode(any_cast<const optional<T> &>(V)); \
-                    }                                                    \
+            if (!encoded)
+            {
+                return encoded;
+            }
 
-            ANY_ENCODE(v, uint8_t    ) else
-            ANY_ENCODE(v, uint16_t   ) else
-            ANY_ENCODE(v, uint32_t   ) else
-            ANY_ENCODE(v, uint64_t   ) else
-            ANY_ENCODE(v, int8_t     ) else
-            ANY_ENCODE(v, int16_t    ) else
-            ANY_ENCODE(v, int32_t    ) else
-            ANY_ENCODE(v, int64_t    ) else
-            ANY_ENCODE(v, bool       ) else
-            ANY_ENCODE(v, float      ) else
-            ANY_ENCODE(v, double     ) else
-            ANY_ENCODE(v, long double) else
-            ANY_ENCODE(v, string     ) else
-            ANY_ENCODE(v, hob        ) else
+            switch (v.type())
+            {
+                case variant::_t_uint8 : return encode(v.data<uint8_t    >()); break;
+                case variant::_t_uint16: return encode(v.data<uint16_t   >()); break;
+                case variant::_t_uint32: return encode(v.data<uint32_t   >()); break;
+                case variant::_t_uint64: return encode(v.data<uint64_t   >()); break;
+                case variant::_t_int8  : return encode(v.data<int8_t     >()); break;
+                case variant::_t_int16 : return encode(v.data<int16_t    >()); break;
+                case variant::_t_int32 : return encode(v.data<int32_t    >()); break;
+                case variant::_t_int64 : return encode(v.data<int64_t    >()); break;
+                case variant::_t_bool  : return encode(v.data<bool       >()); break;
+                case variant::_t_float : return encode(v.data<float      >()); break;
+                case variant::_t_double: return encode(v.data<double     >()); break;
+                case variant::_t_quadle: return encode(v.data<long double>()); break;
+                case variant::_t_string: return encode(v.data<string     >()); break;
+                case variant::_t_hob   : return encode(v.data<hob        >()); break;
+                default:
+                    break;
+            }
+
             return true;
-
-            #undef ANY_ENCODE
         }
 
         template<size_t N>
