@@ -28,7 +28,6 @@ namespace hobio
                 : flat::encoder(     os)
                 , _os          (os.os())
                 , _format      (COMPACT)
-                , _has_payload (  false)
             {
             }
 
@@ -75,7 +74,7 @@ namespace hobio
             {
                 level(+1);
 
-                _has_payload = (payload > 0);
+                _has_payload[level()] = (payload > 0);
 
                 _os << noshowpos << "{";
 
@@ -111,7 +110,7 @@ namespace hobio
                         << "\"";
                 }
 
-                if (_has_payload)
+                if (_has_payload[level()])
                 {
                     _os << ",";
 
@@ -202,7 +201,7 @@ namespace hobio
 
             virtual inline bool encode_footer()
             {
-                if (_has_payload && (_format == VERBOSE))
+                if (_has_payload[level()] && (_format == VERBOSE))
                 {
                     _os << padding(2)
                         << "null"
@@ -475,6 +474,52 @@ namespace hobio
                 return true;
             }
 
+            virtual bool encode_variant_begin(hob::UID id, hob::hob_t type)
+            {
+                _os << noshowpos
+                    << "{";
+
+                if (_format == VERBOSE)
+                {
+                    _os << endl
+                        << padding(1)
+                        << "\"i\": ";
+
+                }
+
+                indentation(+1);
+
+                encode(id);
+
+                indentation(-1);
+
+                if (_format == VERBOSE)
+                {
+                    _os << ","
+                        << endl
+                        << padding(1)
+                        << "\"f\": ";
+                }
+
+                indentation(+1);
+
+                return true;
+            }
+
+            virtual bool encode_variant_end()
+            {
+                indentation(-1);
+
+                if (_format == VERBOSE)
+                {
+                    _os << endl;
+                }
+
+                _os << padding(0) << "}";
+
+                return true;
+            }
+
             virtual bool encode_optional_begin(const bool &has_value)
             {
                 _os << noshowpos
@@ -631,9 +676,9 @@ namespace hobio
             }
 
         private:
-            ostream &_os;
-            Format   _format;
-            bool     _has_payload;
+            ostream          &_os;
+            Format            _format;
+            map<size_t,bool>  _has_payload;
 
             inline int level(int count=0)
             {

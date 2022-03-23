@@ -58,8 +58,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <typeinfo>
 #include "hob/std/optional.hpp"
-#include "hob/std/any.hpp"
 
 #define M_LOG(...)            printf("%s:%s:%d: ",        \
                                      __FILE__,            \
@@ -130,7 +130,38 @@ using namespace nonstd;
 class hob
 {
 public:
-    typedef uint64_t UID;
+    typedef uint64_t    UID;
+    typedef long double quadle;
+
+    enum hob_t
+    {
+        //
+        // discrete types
+        //
+        _t_uint8    = 0x00,
+        _t_uint16         ,
+        _t_uint32         ,
+        _t_uint64         ,
+        _t_int8           ,
+        _t_int16          ,
+        _t_int32          ,
+        _t_int64          ,
+        _t_bool           ,
+        _t_float          ,
+        _t_double         ,
+        _t_quadle         ,
+        _t_string         ,
+        _t_hob            ,
+        _t_bitset         ,
+        _t_unknown        ,
+        //
+        // container types
+        //
+        _t_vector   = 0x10,
+        _t_optional = 0x20,
+        _t_map      = 0x30,
+    };
+
 
     static const UID UNDEFINED = ULLONG_MAX;
 
@@ -143,37 +174,6 @@ public:
     class variant
     {
     public:
-        typedef long double quadle;
-
-        enum variant_t
-        {
-            //
-            // discrete types
-            //
-            _t_uint8    = 0x00,
-            _t_uint16         ,
-            _t_uint32         ,
-            _t_uint64         ,
-            _t_int8           ,
-            _t_int16          ,
-            _t_int32          ,
-            _t_int64          ,
-            _t_bool           ,
-            _t_float          ,
-            _t_double         ,
-            _t_quadle         ,
-            _t_string         ,
-            _t_hob            ,
-            _t_bitset         ,
-            _t_unknown        ,
-            //
-            // container types
-            //
-            _t_vector   = 0x10,
-            _t_optional = 0x20,
-            _t_map      = 0x30,
-        };
-
         variant(const UID    & in ): _t(_t_unknown) { _id = in    ; }
         variant(const char   * in ): _t(_t_unknown) { _id = id(in); }
         variant(const string & in ): _t(_t_unknown) { _id = id(in); }
@@ -184,7 +184,8 @@ public:
         {
             _id = ref._id;
             _t  = ref._t;
-            _v  = ref._v;
+
+            memcpy(_v._d, ref._v._d, sizeof(_v._d));
 
             return *this;
         }
@@ -212,38 +213,87 @@ public:
         template<typename T>
         inline variant & operator=(const T & v)
         {
-            variant_t t = (typeid(T) == typeid(uint8_t )) ? _t_uint8  :
-                          (typeid(T) == typeid(uint16_t)) ? _t_uint16 :
-                          (typeid(T) == typeid(uint32_t)) ? _t_uint32 :
-                          (typeid(T) == typeid(uint64_t)) ? _t_uint64 :
-                          (typeid(T) == typeid(int8_t  )) ? _t_int8   :
-                          (typeid(T) == typeid(int16_t )) ? _t_int16  :
-                          (typeid(T) == typeid(int32_t )) ? _t_int32  :
-                          (typeid(T) == typeid(int64_t )) ? _t_int64  :
-                          (typeid(T) == typeid(bool    )) ? _t_bool   :
-                          (typeid(T) == typeid(float   )) ? _t_float  :
-                          (typeid(T) == typeid(double  )) ? _t_double :
-                          (typeid(T) == typeid(quadle  )) ? _t_quadle :
-                          (typeid(T) == typeid(string  )) ? _t_string :
-                          (typeid(T) == typeid(hob     )) ? _t_hob    :
-                                                            _t_unknown;
+            const void *p = &v;
 
-            if (t != _t_unknown)
+            if (NULL != _v.pd)
             {
-                _t = t;
-                _v = v;
+                if (_t_string == _t) { delete static_cast<const string*>(_v.pd); }
+                else
+                if (_t_hob    == _t) { delete static_cast<const hob   *>(_v.pd); }
+            }
+
+            _v.pd = NULL;
+
+            _t = _t_unknown;
+
+            if (typeid(T) == typeid(uint8_t )) { _t = _t_uint8 ; _v.uc = *static_cast<const uint8_t *>(p); } else
+            if (typeid(T) == typeid(uint16_t)) { _t = _t_uint16; _v.us = *static_cast<const uint16_t*>(p); } else
+            if (typeid(T) == typeid(uint32_t)) { _t = _t_uint32; _v.ui = *static_cast<const uint32_t*>(p); } else
+            if (typeid(T) == typeid(uint64_t)) { _t = _t_uint64; _v.ul = *static_cast<const uint64_t*>(p); } else
+            if (typeid(T) == typeid(int8_t  )) { _t = _t_int8  ; _v.sc = *static_cast<const int8_t  *>(p); } else
+            if (typeid(T) == typeid(int16_t )) { _t = _t_int16 ; _v.ss = *static_cast<const int16_t *>(p); } else
+            if (typeid(T) == typeid(int32_t )) { _t = _t_int32 ; _v.si = *static_cast<const int32_t *>(p); } else
+            if (typeid(T) == typeid(int64_t )) { _t = _t_int64 ; _v.sl = *static_cast<const int64_t *>(p); } else
+            if (typeid(T) == typeid(bool    )) { _t = _t_bool  ; _v.bd = *static_cast<const bool    *>(p); } else
+            if (typeid(T) == typeid(float   )) { _t = _t_float ; _v.fd = *static_cast<const float   *>(p); } else
+            if (typeid(T) == typeid(double  )) { _t = _t_double; _v.dd = *static_cast<const double  *>(p); } else
+            if (typeid(T) == typeid(quadle  )) { _t = _t_quadle; _v.qd = *static_cast<const quadle  *>(p); }
+            else
+            if (typeid(T) == typeid(string))
+            {
+                _t = _t_string;
+
+                _v.pd = new string(*static_cast<const string*>(p));
+            }
+            else
+            if (typeid(T) == typeid(hob))
+            {
+                _t = _t_hob;
+
+                _v.pd = static_cast<const hob*>(p)->clone();
             }
 
             return *this;
         }
 
-        UID       id  () const { return _id; }
-        variant_t type() const { return _t ; }
+        inline UID   id   () const { return _id; }
+        inline hob_t type () const { return _t ; }
+        inline bool  known() const { return (type() != _t_unknown); }
 
         template<typename T>
-        const T & data() const
+        const T * data() const
         {
-            return any_cast<const T&>(static_cast<const any&>(_v));
+            if (_t_unknown == _t)
+            {
+                return NULL;
+            }
+
+            hob_t rt = (typeid(T) == typeid(uint8_t )) ? _t_uint8  :
+                       (typeid(T) == typeid(uint16_t)) ? _t_uint16 :
+                       (typeid(T) == typeid(uint32_t)) ? _t_uint32 :
+                       (typeid(T) == typeid(uint64_t)) ? _t_uint64 :
+                       (typeid(T) == typeid(int8_t  )) ? _t_int8   :
+                       (typeid(T) == typeid(int16_t )) ? _t_int16  :
+                       (typeid(T) == typeid(int32_t )) ? _t_int32  :
+                       (typeid(T) == typeid(int64_t )) ? _t_int64  :
+                       (typeid(T) == typeid(bool    )) ? _t_bool   :
+                       (typeid(T) == typeid(float   )) ? _t_float  :
+                       (typeid(T) == typeid(double  )) ? _t_double :
+                       (typeid(T) == typeid(quadle  )) ? _t_quadle :
+                       (typeid(T) == typeid(string  )) ? _t_string :
+                       (typeid(T) == typeid(hob     )) ? _t_hob    :
+                                                         _t_unknown;
+
+            if (rt != _t)
+            {
+                return NULL;
+            }
+
+            const void *p = ((_t == _t_string) || (_t == _t_hob))
+                             ? _v.pd
+                             : &_v._d;
+
+            return static_cast<const T*>(p);
         }
 
         static UID id(const string &in)
@@ -270,9 +320,28 @@ public:
         }
 
     private:
-        UID       _id;
-        variant_t _t ;
-        any       _v ;
+        union data_t
+        {
+            uint8_t  uc;
+            uint16_t us;
+            uint32_t ui;
+            uint64_t ul;
+            int8_t   sc;
+            int16_t  ss;
+            int32_t  si;
+            int64_t  sl;
+            bool     bd;
+            float    fd;
+            double   dd;
+            quadle   qd;
+            void    *pd;
+
+            char _d[sizeof(quadle)];
+        };
+
+        UID    _id;
+        hob_t  _t ;
+        data_t _v ;
     };
 
     typedef vector<variant> dynamic_fields_t;
@@ -334,49 +403,33 @@ public:
     template <typename T>
     inline iterator find(const UID &id)
     {
-        iterator it = begin();
+        iterator it = find(id);
 
-        for (; (it != end()) && ((*it) != id); ++it);
-
-        return ((it != end()) && static_cast<optional<T&> >(*it).has_value())
-                   ? it
-                   : end();
+        return ((it != end()) && ((*it).data<T>() != NULL)) ? it : end();
     }
 
     template <typename T>
     inline iterator find(const string &n)
     {
-        iterator it = begin();
+        iterator it = find(n);
 
-        for (; (it != end()) && ((*it) != n); ++it);
-
-        return ((it != end()) && static_cast<optional<T&> >(*it).has_value())
-                   ? it
-                   : end();
+        return ((it != end()) && ((*it).data<T>() != NULL)) ? it : end();
     }
 
     template <typename T>
     inline const_iterator find(const UID &id) const
     {
-        const_iterator cit = begin();
+        const_iterator cit = find(id);
 
-        for (; (cit != end()) && ((*cit) != id); ++cit);
-
-        return ((cit != end()) && static_cast<optional<T&> >(*cit).has_value())
-                   ? cit
-                   : end();
+        return ((cit != end()) && ((*cit).data<T>() != NULL)) ? cit : end();
     }
 
     template <typename T>
     inline const_iterator find(const string &n) const
     {
-        const_iterator cit = begin();
+        const_iterator cit = find(n);
 
-        for (; (cit != end()) && ((*cit) != n); ++cit);
-
-        return ((cit != end()) && static_cast<optional<T&> >(*cit).has_value())
-                   ? cit
-                   : end();
+        return ((cit != end()) && ((*cit).data<T>() != NULL)) ? cit : end();
     }
 
     inline void clear(                             ) { _df.clear(          ); }
@@ -428,9 +481,9 @@ public:
     template<typename T>
     inline hob & set(const string &n, const T &v)
     {
-        variant & _v = get_or_create(n);
+        variant & v_ = get_or_create(n);
 
-        _v = v;
+        v_ = v;
 
         return *this;
     }
@@ -438,9 +491,9 @@ public:
     template<typename T>
     inline hob & set(const UID &id, const T &v)
     {
-        variant & _v = get_or_create(id);
+        variant & v_ = get_or_create(id);
 
-        _v = v;
+        v_ = v;
 
         return *this;
     }
@@ -448,9 +501,9 @@ public:
     template<typename T>
     inline hob & set(const char *n, const T &v)
     {
-        variant & _v = get_or_create(n);
+        variant & v_ = get_or_create(n);
 
-        _v = v;
+        v_ = v;
 
         return *this;
     }
@@ -469,13 +522,43 @@ public:
     inline bool has(const char   * n ) const { return (find<T>( n) != end()); }
 
     template<typename T>
-    inline const T & get(const string & n ) const { return (*find( n)).data<T>(); }
+    inline const T * get(const string & n) const
+    {
+        const const_iterator cit = find(n);
+
+        if (cit == end())
+        {
+            return NULL;
+        }
+
+        return (*cit).data<T>();
+    }
 
     template<typename T>
-    inline const T & get(const UID    & id) const { return (*find(id)).data<T>(); }
+    inline const T * get(const UID & id) const
+    {
+        const const_iterator cit = find(id);
+
+        if (cit == end())
+        {
+            return NULL;
+        }
+
+        return (*cit).data<T>();
+    }
 
     template<typename T>
-    inline const T & get(const char   * n ) const { return (*find (n)).data<T>(); }
+    inline const T * get(const char * n ) const
+    {
+        const const_iterator cit = find(n);
+
+        if (cit == end())
+        {
+            return NULL;
+        }
+
+        return (*cit).data<T>();
+    }
 
     template<typename T>
     inline bool get(const string & n, T & v) const
@@ -487,7 +570,14 @@ public:
             return false;
         }
 
-        v = (*cit).data<T>();
+        const T *rv = (*cit).data<T>();
+
+        if (NULL == rv)
+        {
+            return false;
+        }
+
+        v = *rv;
 
         return true;
     }
@@ -502,7 +592,14 @@ public:
             return false;
         }
 
-        v = (*cit).data<T>();
+        const T *rv = (*cit).data<T>();
+
+        if (NULL == rv)
+        {
+            return false;
+        }
+
+        v = *rv;
 
         return true;
     }
@@ -517,7 +614,14 @@ public:
             return false;
         }
 
-        v = (*cit).data<T>();
+        const T *rv = (*cit).data<T>();
+
+        if (NULL == rv)
+        {
+            return false;
+        }
+
+        v = *rv;
 
         return true;
     }
@@ -589,25 +693,31 @@ public:
 
             switch (v.type())
             {
-                case variant::_t_uint8 : retval += field_size(v.data<uint8_t    >()); break;
-                case variant::_t_uint16: retval += field_size(v.data<uint16_t   >()); break;
-                case variant::_t_uint32: retval += field_size(v.data<uint32_t   >()); break;
-                case variant::_t_uint64: retval += field_size(v.data<uint64_t   >()); break;
-                case variant::_t_int8  : retval += field_size(v.data<int8_t     >()); break;
-                case variant::_t_int16 : retval += field_size(v.data<int16_t    >()); break;
-                case variant::_t_int32 : retval += field_size(v.data<int32_t    >()); break;
-                case variant::_t_int64 : retval += field_size(v.data<int64_t    >()); break;
-                case variant::_t_bool  : retval += field_size(v.data<bool       >()); break;
-                case variant::_t_float : retval += field_size(v.data<float      >()); break;
-                case variant::_t_double: retval += field_size(v.data<double     >()); break;
-                case variant::_t_quadle: retval += field_size(v.data<long double>()); break;
-                case variant::_t_string: retval += field_size(v.data<string     >()); break;
-                case variant::_t_hob   : retval += field_size(v.data<hob        >()); break;
+                case hob::_t_uint8 : retval += field_size(v.data<uint8_t    >()); break;
+                case hob::_t_uint16: retval += field_size(v.data<uint16_t   >()); break;
+                case hob::_t_uint32: retval += field_size(v.data<uint32_t   >()); break;
+                case hob::_t_uint64: retval += field_size(v.data<uint64_t   >()); break;
+                case hob::_t_int8  : retval += field_size(v.data<int8_t     >()); break;
+                case hob::_t_int16 : retval += field_size(v.data<int16_t    >()); break;
+                case hob::_t_int32 : retval += field_size(v.data<int32_t    >()); break;
+                case hob::_t_int64 : retval += field_size(v.data<int64_t    >()); break;
+                case hob::_t_bool  : retval += field_size(v.data<bool       >()); break;
+                case hob::_t_float : retval += field_size(v.data<float      >()); break;
+                case hob::_t_double: retval += field_size(v.data<double     >()); break;
+                case hob::_t_quadle: retval += field_size(v.data<long double>()); break;
+                case hob::_t_string: retval += field_size(v.data<string     >()); break;
+                case hob::_t_hob   : retval += field_size(v.data<hob        >()); break;
                 default:
                     break;
             }
 
             return retval;
+        }
+
+        template<typename T>
+        inline size_t field_size(const T * v)
+        {
+            return (NULL == v) ? 0 : field_size(*v);
         }
 
         inline size_t field_size(const string &v)
@@ -689,55 +799,67 @@ public:
     protected:
         friend class hobio::json::decoder;
 
-        virtual bool encode(const uint8_t          &v) = 0;
-        virtual bool encode(const uint16_t         &v) = 0;
-        virtual bool encode(const uint32_t         &v) = 0;
-        virtual bool encode(const uint64_t         &v) = 0;
-        virtual bool encode(const int8_t           &v) = 0;
-        virtual bool encode(const int16_t          &v) = 0;
-        virtual bool encode(const int32_t          &v) = 0;
-        virtual bool encode(const int64_t          &v) = 0;
-        virtual bool encode(const bool             &v) = 0;
-        virtual bool encode(const float            &v) = 0;
-        virtual bool encode(const double           &v) = 0;
-        virtual bool encode(const long double      &v) = 0;
-        virtual bool encode(const string           &v) = 0;
-        virtual bool encode(const hob              &v) = 0;
-        virtual bool encode(const vector<bool>     &v) = 0;
+        virtual bool encode(const uint8_t      &v) = 0;
+        virtual bool encode(const uint16_t     &v) = 0;
+        virtual bool encode(const uint32_t     &v) = 0;
+        virtual bool encode(const uint64_t     &v) = 0;
+        virtual bool encode(const int8_t       &v) = 0;
+        virtual bool encode(const int16_t      &v) = 0;
+        virtual bool encode(const int32_t      &v) = 0;
+        virtual bool encode(const int64_t      &v) = 0;
+        virtual bool encode(const bool         &v) = 0;
+        virtual bool encode(const float        &v) = 0;
+        virtual bool encode(const double       &v) = 0;
+        virtual bool encode(const long double  &v) = 0;
+        virtual bool encode(const string       &v) = 0;
+        virtual bool encode(const hob          &v) = 0;
+        virtual bool encode(const vector<bool> &v) = 0;
 
         bool encode(const variant &v)
         {
-            bool encoded = encode(v.id())
-                           &&
-                           encode(v.type());
-
-            if (!encoded)
+            if (v.type() == hob::_t_unknown)
             {
-                return encoded;
+                return false;
             }
+
+            if (!encode_variant_begin(v.id(), v.type()))
+            {
+                return false;
+            }
+
+            bool encoded = false;
 
             switch (v.type())
             {
-                case variant::_t_uint8 : return encode(v.data<uint8_t    >()); break;
-                case variant::_t_uint16: return encode(v.data<uint16_t   >()); break;
-                case variant::_t_uint32: return encode(v.data<uint32_t   >()); break;
-                case variant::_t_uint64: return encode(v.data<uint64_t   >()); break;
-                case variant::_t_int8  : return encode(v.data<int8_t     >()); break;
-                case variant::_t_int16 : return encode(v.data<int16_t    >()); break;
-                case variant::_t_int32 : return encode(v.data<int32_t    >()); break;
-                case variant::_t_int64 : return encode(v.data<int64_t    >()); break;
-                case variant::_t_bool  : return encode(v.data<bool       >()); break;
-                case variant::_t_float : return encode(v.data<float      >()); break;
-                case variant::_t_double: return encode(v.data<double     >()); break;
-                case variant::_t_quadle: return encode(v.data<long double>()); break;
-                case variant::_t_string: return encode(v.data<string     >()); break;
-                case variant::_t_hob   : return encode(v.data<hob        >()); break;
+                case hob::_t_uint8 : encoded = encode(v.data<uint8_t    >()); break;
+                case hob::_t_uint16: encoded = encode(v.data<uint16_t   >()); break;
+                case hob::_t_uint32: encoded = encode(v.data<uint32_t   >()); break;
+                case hob::_t_uint64: encoded = encode(v.data<uint64_t   >()); break;
+                case hob::_t_int8  : encoded = encode(v.data<int8_t     >()); break;
+                case hob::_t_int16 : encoded = encode(v.data<int16_t    >()); break;
+                case hob::_t_int32 : encoded = encode(v.data<int32_t    >()); break;
+                case hob::_t_int64 : encoded = encode(v.data<int64_t    >()); break;
+                case hob::_t_bool  : encoded = encode(v.data<bool       >()); break;
+                case hob::_t_float : encoded = encode(v.data<float      >()); break;
+                case hob::_t_double: encoded = encode(v.data<double     >()); break;
+                case hob::_t_quadle: encoded = encode(v.data<long double>()); break;
+                case hob::_t_string: encoded = encode(v.data<string     >()); break;
+                case hob::_t_hob   : encoded = encode(v.data<hob        >()); break;
                 default:
                     break;
             }
 
-            return true;
+            return encoded && encode_variant_end();
         }
+
+        template<typename T>
+        inline bool encode(const T * v)
+        {
+            return (NULL == v) ? false : encode(*v);
+        }
+
+        virtual bool encode_variant_begin(UID id, hob_t type) = 0;
+        virtual bool encode_variant_end() = 0;
 
         template<size_t N>
         bool encode(const std::bitset<N>& v)
@@ -1296,6 +1418,11 @@ public:
     {
     }
 
+    virtual hob * clone() const
+    {
+        return new hob(*this);
+    }
+
     hob & operator=(const hob & ref)
     {
         _id = ref._id;
@@ -1525,7 +1652,7 @@ protected:
             return true;
         }
 
-        return os.encode_field(_df, "V", "V");
+        return os.encode_field(_df, "variant");
     }
 
     bool __decode_dynamic_fields()
@@ -1700,6 +1827,11 @@ public:                                                                         
                                                                                   \
     ~name_()                                                                      \
     {                                                                             \
+    }                                                                             \
+                                                                                  \
+    virtual name_ * clone() const                                                 \
+    {                                                                             \
+        return new name_(*this);                                                  \
     }                                                                             \
                                                                                   \
     name_ & operator=(const hob & ref)                                            \

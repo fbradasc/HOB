@@ -340,6 +340,16 @@ namespace hobio
                 return (NULL != bits) && encode(((size_+7)>>3),bits);
             }
 
+            virtual bool encode_variant_begin(hob::UID id, hob::hob_t type)
+            {
+                return encode(id) && encode(type);
+            }
+
+            virtual bool encode_variant_end()
+            {
+                return true;
+            }
+
             virtual bool encode_vector_begin(size_t len)
             {
                 return encode(len);
