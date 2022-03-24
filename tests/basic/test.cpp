@@ -674,17 +674,22 @@ int main(int argc, char *argv[])
             hob h("DYNAMIC_FIELDS");
             hob h1("NESTED_DYNAMIC_FIELDS");
 
-            h.set<uint8_t    >("uint8_t"    ,  13    )
-             .set<uint16_t   >("uint16_t"   ,  1313  )
-             .set<uint32_t   >("uint32_t"   ,  131313)
-             .set<int8_t     >("int8_t"     , -13    )
-             .set<int16_t    >("int16_t"    , -1313  )
-             .set<int32_t    >("int32_t"    , -131313)
-             .set<bool       >("bool"       , true   )
-             .set<float      >("float"      , 1.3f   )
-             .set<double     >("double"     , 1.313f )
-             .set<long double>("long double", 1.3131313131313131313)
-             .set<string     >("string"     , "1Po'DiMaiuscoleMinuscole&Numeri")
+            vector<uint8_t> v;
+            v.push_back(42);
+            v.push_back(17);
+
+            h.set< uint8_t         >("uint8_t"        ,  13    )
+             .set< uint16_t        >("uint16_t"       ,  1313  )
+             .set< uint32_t        >("uint32_t"       ,  131313)
+             .set< int8_t          >("int8_t"         , -13    )
+             .set< int16_t         >("int16_t"        , -1313  )
+             .set< int32_t         >("int32_t"        , -131313)
+             .set< vector<uint8_t> >("vector<uint8_t>", v      )
+             .set< bool            >("bool"           , true   )
+             .set< float           >("float"          , 1.3f   )
+             .set< double          >("double"         , 1.313f )
+             .set< long double     >("long double"    , 1.3131313131313131313)
+             .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
              .set<hob>(
                 "hob",
                 hob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
