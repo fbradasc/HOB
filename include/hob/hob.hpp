@@ -136,9 +136,6 @@ public:
     enum hob_t
     {
         _t_unknown  = 0x00,
-
-        // Discrete types
-        //
         _t_uint8          , // 00000001b
         _t_uint16         , // 00000010b
         _t_uint32         , // 00000011b
@@ -153,10 +150,7 @@ public:
         _t_quadle         , // 00001100b
         _t_string         , // 00001101b
         _t_hob            , // 00001110b
-
-        // Container types
-        //
-        _t_vector         , // 00001111b
+        _t_special  = 0x0f, // 00001111b
     };
 
 
@@ -212,12 +206,26 @@ public:
         {
             __clear();
 
-            _t = __whois<V>(__whois<K>());
+            _t = __type(__whois<K>(), __whois<V>());
 
-            if (_t_unknown != _t)
+            if (v_type() != _t_unknown)
             {
-                // TODO: allow destruction
-                _v.pd = new map<K,V>(m);
+                _v.pd = new Map<K,V>(m);
+            }
+
+            return *this;
+        }
+
+        template<class T>
+        inline variant & operator=(const optional<T> & v)
+        {
+            __clear();
+
+            _t = __type(__whois<T>(), _t_special);
+
+            if (v_type() != _t_unknown)
+            {
+                _v.pd = new Optional<T>(v);
             }
 
             return *this;
@@ -228,12 +236,39 @@ public:
         {
             __clear();
 
-            _t = __whois<T>(_t_vector);
+            _t = __type(_t_special, __whois<T>());
 
-            if (_t_unknown != _t)
+            if (v_type() != _t_unknown)
             {
-                // TODO: allow destruction
-                _v.pd = new vector<T>(v);
+                _v.pd = new Vector<T>(v);
+            }
+
+            return *this;
+        }
+
+        inline variant & operator=(const string & v)
+        {
+            __clear();
+
+            _t = __type(_t_unknown, __whois<string>());
+
+            if (v_type() != _t_unknown)
+            {
+                _v.pd = new String(v);
+            }
+
+            return *this;
+        }
+
+        inline variant & operator=(const hob & v)
+        {
+            __clear();
+
+            _t = __type(_t_unknown, __whois<hob>());
+
+            if (v_type() != _t_unknown)
+            {
+                _v.pd = new Hob(v);
             }
 
             return *this;
@@ -246,7 +281,7 @@ public:
 
             __clear();
 
-            _t = __whois<T>();
+            _t = __type(_t_unknown, __whois<T>());
 
             switch (_t)
             {
@@ -267,8 +302,8 @@ public:
                 case _t_float : _v.fd = LET_VAL(float   , p); break;
                 case _t_double: _v.dd = LET_VAL(double  , p); break;
                 case _t_quadle: _v.qd = LET_VAL(quadle  , p); break;
-                case _t_string: _v.pd = LET_STR(string  , p); break;
-                case _t_hob   : _v.pd = LET_HOB(hob     , p); break;
+                // case _t_string: _v.pd = LET_STR(string  , p); break;
+                // case _t_hob   : _v.pd = LET_HOB(hob     , p); break;
                 default       :                               break;
 
 #undef GET_PTR
@@ -280,41 +315,99 @@ public:
             return *this;
         }
 
-        inline UID     id     () const { return _id; }
-        inline uint8_t type   () const { return _t ; }
+        inline UID     id  () const { return _id; }
+        inline uint8_t type() const { return _t ; }
 
         inline hob_t v_type() const
         {
-            return static_cast<hob_t>( ( _t >> 0 ) & _t_vector );
+            return (__l_type() == _t_special) ? __h_type() : __l_type();
         }
 
         inline hob_t k_type() const
         {
-            return static_cast<hob_t>( ( _t >> 4 ) & _t_vector );
+            return __h_type();
+        }
+
+        inline bool is_basic() const
+        {
+            return ((__h_type() == _t_unknown)
+                    &&
+                    (__l_type() != _t_special)
+                    &&
+                    (__l_type() != _t_unknown));
+        }
+
+        inline bool is_vector() const
+        {
+            return ((__h_type() == _t_special)
+                    &&
+                    (__l_type() != _t_special)
+                    &&
+                    (__l_type() != _t_unknown));
+        }
+
+        inline bool is_optional() const
+        {
+            return ((__l_type() == _t_special)
+                    &&
+                    (__h_type() != _t_special)
+                    &&
+                    (__h_type() != _t_unknown));
+        }
+
+        inline bool is_map() const
+        {
+            return ((__l_type() != _t_special)
+                    &&
+                    (__l_type() != _t_unknown)
+                    &&
+                    (__h_type() != _t_special)
+                    &&
+                    (__h_type() != _t_unknown));
         }
 
         template<class T>
-        const T * data() const
+        const vector<T> * data() const
         {
-            if ((_t_unknown == _t) || (__whois<T>() != v_type()))
+            if ((NULL == _v.pd)
+                ||
+                (_t_unknown == _t)
+                ||
+                !is_vector()
+                ||
+                (__whois<T>() != v_type()))
             {
                 return NULL;
             }
 
-            const void *p = ((v_type() == _t_string )
-                             ||
-                             (v_type() == _t_hob    )
-                             ||
-                             (k_type() != _t_unknown)) ? _v.pd
-                                                       : &_v._d;
+            return static_cast<const vector<T> *>(_v.pd->data());
+        }
 
-            return static_cast<const T*>(p);
+        template<class T>
+        const optional<T> * data() const
+        {
+            if ((NULL == _v.pd)
+                ||
+                (_t_unknown == _t)
+                ||
+                !is_optional()
+                ||
+                (__whois<T>() != v_type()))
+            {
+                return NULL;
+            }
+
+            return static_cast<const optional<T> *>(_v.pd->data());
         }
 
         template<class K, class V>
         const map<K,V> * data() const
         {
-            if ((_t_unknown == _t)
+            if ((NULL == _v.pd)
+                ||
+                (_t_unknown == _t)
+                ||
+                !is_map()
                 ||
                 (__whois<K>() != k_type())
                 ||
@@ -323,9 +416,34 @@ public:
                 return NULL;
             }
 
-            const void *p = _v.pd;
+            return static_cast< const map<K,V> * >(_v.pd->data());
+        }
 
-            return static_cast< const map<K,V> * >(p);
+        template<class T>
+        const T * data() const
+        {
+            if ((_t_unknown == _t)
+                ||
+                !is_basic()
+                ||
+                (__whois<T>() != v_type()))
+            {
+                return NULL;
+            }
+
+            if ((v_type() == _t_string) || (v_type() == _t_hob))
+            {
+                if (NULL == _v.pd)
+                {
+                    return NULL;
+                }
+
+                return static_cast<const T *>(_v.pd->data());
+            }
+
+            const void *p = &_v._d;
+
+            return static_cast<const T *>(p);
         }
 
         static UID id(const string &in)
@@ -352,21 +470,76 @@ public:
         }
 
     private:
+        class IPointer
+        {
+        public:
+            virtual ~IPointer() {}
+            virtual const void *data() = 0;
+        };
+
+        class Hob : public IPointer
+        {
+        public:
+            Hob(const hob & v): _d(v.clone()) {}
+            virtual const void *data() { return static_cast<const void *>(_d); }
+        private:
+            hob *_d;
+        };
+
+        class String : public IPointer
+        {
+        public:
+            String(const string & v): _d(new string(v)) {}
+            virtual const void *data() { return static_cast<const void *>(_d); }
+        private:
+            string *_d;
+        };
+
+        template <typename T>
+        class Optional: public IPointer
+        {
+        public:
+            Optional(const optional<T> & v): _d(new optional<T>(v)) {}
+            virtual const void *data() { return static_cast<const void *>(_d); }
+        private:
+            optional<T> *_d;
+        };
+
+        template <typename T>
+        class Vector: public IPointer
+        {
+        public:
+            Vector(const vector<T> & v): _d(new vector<T>(v)) {}
+            virtual const void *data() { return static_cast<const void *>(_d); }
+        private:
+            vector<T> *_d;
+        };
+
+        template <typename K, typename V>
+        class Map: public IPointer
+        {
+        public:
+            Map(const map<K,V> & v): _d(new map<K,V>(v)) {}
+            virtual const void *data() { return static_cast<const void *>(_d); }
+        private:
+            map<K,V> *_d;
+        };
+
         union data_t
         {
-            uint8_t  uc;
-            uint16_t us;
-            uint32_t ui;
-            uint64_t ul;
-            int8_t   sc;
-            int16_t  ss;
-            int32_t  si;
-            int64_t  sl;
-            bool     bd;
-            float    fd;
-            double   dd;
-            quadle   qd;
-            void    *pd;
+            uint8_t   uc;
+            uint16_t  us;
+            uint32_t  ui;
+            uint64_t  ul;
+            int8_t    sc;
+            int16_t   ss;
+            int32_t   si;
+            int64_t   sl;
+            bool      bd;
+            float     fd;
+            double    dd;
+            quadle    qd;
+            IPointer *pd;
 
             char _d[sizeof(quadle)];
         };
@@ -376,34 +549,76 @@ public:
         data_t  _v ;
 
         template<typename T>
-        inline uint8_t __whois(uint8_t high_nibble = 0) const
+        inline hob_t __whois() const
         {
-            uint8_t rv = (typeid(T) == typeid(uint8_t )) ? _t_uint8  :
-                         (typeid(T) == typeid(uint16_t)) ? _t_uint16 :
-                         (typeid(T) == typeid(uint32_t)) ? _t_uint32 :
-                         (typeid(T) == typeid(uint64_t)) ? _t_uint64 :
-                         (typeid(T) == typeid(int8_t  )) ? _t_int8   :
-                         (typeid(T) == typeid(int16_t )) ? _t_int16  :
-                         (typeid(T) == typeid(int32_t )) ? _t_int32  :
-                         (typeid(T) == typeid(int64_t )) ? _t_int64  :
-                         (typeid(T) == typeid(bool    )) ? _t_bool   :
-                         (typeid(T) == typeid(float   )) ? _t_float  :
-                         (typeid(T) == typeid(double  )) ? _t_double :
-                         (typeid(T) == typeid(quadle  )) ? _t_quadle :
-                         (typeid(T) == typeid(string  )) ? _t_string :
-                         (typeid(T) == typeid(hob     )) ? _t_hob    :
-                                                           _t_unknown;
+            return (typeid(T) == typeid(uint8_t )) ? _t_uint8  :
+                   (typeid(T) == typeid(uint16_t)) ? _t_uint16 :
+                   (typeid(T) == typeid(uint32_t)) ? _t_uint32 :
+                   (typeid(T) == typeid(uint64_t)) ? _t_uint64 :
+                   (typeid(T) == typeid(int8_t  )) ? _t_int8   :
+                   (typeid(T) == typeid(int16_t )) ? _t_int16  :
+                   (typeid(T) == typeid(int32_t )) ? _t_int32  :
+                   (typeid(T) == typeid(int64_t )) ? _t_int64  :
+                   (typeid(T) == typeid(bool    )) ? _t_bool   :
+                   (typeid(T) == typeid(float   )) ? _t_float  :
+                   (typeid(T) == typeid(double  )) ? _t_double :
+                   (typeid(T) == typeid(quadle  )) ? _t_quadle :
+                   (typeid(T) == typeid(string  )) ? _t_string :
+                   (typeid(T) == typeid(hob     )) ? _t_hob    :
+                                                     _t_unknown;
+        }
 
-            return (_t_unknown != rv) ? ((high_nibble << 4) | rv) : rv;
+        inline uint8_t __type(hob_t h, hob_t l)
+        {
+            return (((static_cast<uint8_t>(h) & 0x0f) << 4)
+                    |
+                    ((static_cast<uint8_t>(l) & 0x0f) << 0));
+        }
+
+        inline hob_t __l_type() const
+        {
+            return static_cast<hob_t>((_t >> 0) & 0x0f);
+        }
+
+        inline hob_t __h_type() const
+        {
+            return static_cast<hob_t>((_t >> 4) & 0x0f);
         }
 
         inline void __clear()
         {
             if (NULL != _v.pd)
             {
-                if (_t_string == _t) { delete static_cast<const string*>(_v.pd); }
+                delete _v.pd;
+/*
+                if (_t_string == _t)
+                {
+                    delete static_cast<const string*>(_v.pd);
+                }
                 else
-                if (_t_hob    == _t) { delete static_cast<const hob   *>(_v.pd); }
+                if (_t_hob == _t)
+                {
+                    delete static_cast<const hob *>(_v.pd);
+                }
+                else
+                if (is_vector())
+                {
+                    // TODO: allow destruction
+                    //
+                }
+                else
+                if (is_map())
+                {
+                    // TODO: allow destruction
+                    //
+                }
+                else
+                if (is_optional())
+                {
+                    // TODO: allow destruction
+                    //
+                }
+*/
             }
 
             _v.pd = NULL;
