@@ -474,7 +474,7 @@ namespace hobio
                 return true;
             }
 
-            virtual bool encode_variant_begin(hob::UID id, hob::hob_t type)
+            virtual bool encode_variant_begin(hob::UID id, uint8_t type)
             {
                 _os << noshowpos
                     << "{";

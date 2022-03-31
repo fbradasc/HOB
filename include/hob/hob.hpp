@@ -116,9 +116,6 @@
 #define HUPDATE(s)   __update_id(s)
 #endif // !ENABLE_CPP_HASH
 
-#define _HV2P(_T_,_P_) static_cast<const _T_ *>(_P_)
-#define _HP2V(_T_,_P_) *_HV2P(_T_,_P_)
-
 namespace hobio
 {
     namespace json
@@ -134,7 +131,7 @@ class hob
 {
 public:
     typedef uint64_t    UID;
-    typedef long double quadle;
+    typedef long double triple;
 
     enum hob_t
     {
@@ -156,6 +153,7 @@ public:
         _t_special  = 0x0f, // 00001111b
     };
 
+    class encoder; // forward declaration
 
     static const UID UNDEFINED = ULLONG_MAX;
 
@@ -288,27 +286,19 @@ public:
 
             switch (_t)
             {
-#define LET_STR(_T_,_P_) new string(_HP2V(_T_,_P_))
-#define LET_HOB(_T_,_P_) _HV2P(_T_,_P_)->clone()
-
-                case _t_uint8 : _v.uc = _HP2V(uint8_t , p); break;
-                case _t_uint16: _v.us = _HP2V(uint16_t, p); break;
-                case _t_uint32: _v.ui = _HP2V(uint32_t, p); break;
-                case _t_uint64: _v.ul = _HP2V(uint64_t, p); break;
-                case _t_int8  : _v.sc = _HP2V(int8_t  , p); break;
-                case _t_int16 : _v.ss = _HP2V(int16_t , p); break;
-                case _t_int32 : _v.si = _HP2V(int32_t , p); break;
-                case _t_int64 : _v.sl = _HP2V(int64_t , p); break;
-                case _t_bool  : _v.bd = _HP2V(bool    , p); break;
-                case _t_float : _v.fd = _HP2V(float   , p); break;
-                case _t_double: _v.dd = _HP2V(double  , p); break;
-                case _t_quadle: _v.qd = _HP2V(quadle  , p); break;
-                // case _t_string: _v.pd = LET_STR(string  , p); break;
-                // case _t_hob   : _v.pd = LET_HOB(hob     , p); break;
-                default       :                               break;
-
-#undef LET_STR
-#undef LET_HOB
+                case _t_uint8 : _v.uc = *static_cast<const uint8_t *>(p); break;
+                case _t_uint16: _v.us = *static_cast<const uint16_t*>(p); break;
+                case _t_uint32: _v.ui = *static_cast<const uint32_t*>(p); break;
+                case _t_uint64: _v.ul = *static_cast<const uint64_t*>(p); break;
+                case _t_int8  : _v.sc = *static_cast<const int8_t  *>(p); break;
+                case _t_int16 : _v.ss = *static_cast<const int16_t *>(p); break;
+                case _t_int32 : _v.si = *static_cast<const int32_t *>(p); break;
+                case _t_int64 : _v.sl = *static_cast<const int64_t *>(p); break;
+                case _t_bool  : _v.bd = *static_cast<const bool    *>(p); break;
+                case _t_float : _v.fd = *static_cast<const float   *>(p); break;
+                case _t_double: _v.dd = *static_cast<const double  *>(p); break;
+                case _t_quadle: _v.qd = *static_cast<const triple  *>(p); break;
+                default       :                                           break;
             }
 
             return *this;
@@ -468,11 +458,110 @@ public:
             return id_;
         }
 
+        size_t field_size(hob::encoder &e) const
+        {
+            if (type() == hob::_t_unknown)
+            {
+                return 0;
+            }
+
+            size_t retval = e.field_size(id())
+                            +
+                            e.field_size(type());
+
+            if (!is_basic()
+                ||
+                (v_type() == hob::_t_string)
+                ||
+                (v_type() == hob::_t_hob))
+            {
+                if (NULL == _v.pd)
+                {
+                    return 0;
+                }
+
+                retval += _v.pd->field_size(e);
+            }
+            else
+            switch (v_type())
+            {
+                case hob::_t_uint8 : retval += e.field_size(_v.uc); break;
+                case hob::_t_uint16: retval += e.field_size(_v.us); break;
+                case hob::_t_uint32: retval += e.field_size(_v.ui); break;
+                case hob::_t_uint64: retval += e.field_size(_v.ul); break;
+                case hob::_t_int8  : retval += e.field_size(_v.sc); break;
+                case hob::_t_int16 : retval += e.field_size(_v.ss); break;
+                case hob::_t_int32 : retval += e.field_size(_v.si); break;
+                case hob::_t_int64 : retval += e.field_size(_v.sl); break;
+                case hob::_t_bool  : retval += e.field_size(_v.bd); break;
+                case hob::_t_float : retval += e.field_size(_v.fd); break;
+                case hob::_t_double: retval += e.field_size(_v.dd); break;
+                case hob::_t_quadle: retval += e.field_size(_v.qd); break;
+
+                default:
+                {
+                    return 0;
+                }
+                break;
+            }
+
+            return retval;
+        }
+
+        bool encode(hob::encoder &e) const
+        {
+            if (type() == hob::_t_unknown)
+            {
+                return false;
+            }
+
+            if (!e.encode_variant_begin(id(), type()))
+            {
+                return false;
+            }
+
+            bool encoded = false;
+
+            if (!is_basic()
+                ||
+                (v_type() == hob::_t_string)
+                ||
+                (v_type() == hob::_t_hob))
+            {
+                if (NULL != _v.pd)
+                {
+                    encoded = _v.pd->encode(e);
+                }
+            }
+            else
+            switch (v_type())
+            {
+                case hob::_t_uint8 : encoded = e.encode(_v.uc); break;
+                case hob::_t_uint16: encoded = e.encode(_v.us); break;
+                case hob::_t_uint32: encoded = e.encode(_v.ui); break;
+                case hob::_t_uint64: encoded = e.encode(_v.ul); break;
+                case hob::_t_int8  : encoded = e.encode(_v.sc); break;
+                case hob::_t_int16 : encoded = e.encode(_v.ss); break;
+                case hob::_t_int32 : encoded = e.encode(_v.si); break;
+                case hob::_t_int64 : encoded = e.encode(_v.sl); break;
+                case hob::_t_bool  : encoded = e.encode(_v.bd); break;
+                case hob::_t_float : encoded = e.encode(_v.fd); break;
+                case hob::_t_double: encoded = e.encode(_v.dd); break;
+                case hob::_t_quadle: encoded = e.encode(_v.qd); break;
+                default:
+                    break;
+            }
+
+            return encoded && e.encode_variant_end();
+        }
+
     private:
         class IPointer
         {
         public:
             virtual ~IPointer() {}
+            virtual size_t field_size(hob::encoder &e) = 0;
+            virtual bool   encode    (hob::encoder &e) = 0;
             virtual const void *data() = 0;
         };
 
@@ -480,7 +569,9 @@ public:
         {
         public:
             Hob(const hob & v): _d(v.clone()) {}
-            virtual const void *data() { return _HV2P(void,_d); }
+            virtual size_t field_size(hob::encoder &e) { return e.field_size(*_d); }
+            virtual bool   encode    (hob::encoder &e) { return e.encode    (*_d); }
+            virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             hob *_d;
         };
@@ -489,7 +580,9 @@ public:
         {
         public:
             String(const string & v): _d(new string(v)) {}
-            virtual const void *data() { return _HV2P(void,_d); }
+            virtual size_t field_size(hob::encoder &e) { return e.field_size(*_d); }
+            virtual bool   encode    (hob::encoder &e) { return e.encode    (*_d); }
+            virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             string *_d;
         };
@@ -499,7 +592,9 @@ public:
         {
         public:
             Optional(const optional<T> & v): _d(new optional<T>(v)) {}
-            virtual const void *data() { return _HV2P(void,_d); }
+            virtual size_t field_size(hob::encoder &e) { return e.field_size(*_d); }
+            virtual bool   encode    (hob::encoder &e) { return e.encode    (*_d); }
+            virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             optional<T> *_d;
         };
@@ -509,7 +604,9 @@ public:
         {
         public:
             Vector(const vector<T> & v): _d(new vector<T>(v)) {}
-            virtual const void *data() { return _HV2P(void,_d); }
+            virtual size_t field_size(hob::encoder &e) { return e.field_size(*_d); }
+            virtual bool   encode    (hob::encoder &e) { return e.encode    (*_d); }
+            virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             vector<T> *_d;
         };
@@ -519,7 +616,9 @@ public:
         {
         public:
             Map(const map<K,V> & v): _d(new map<K,V>(v)) {}
-            virtual const void *data() { return _HV2P(void,_d); }
+            virtual size_t field_size(hob::encoder &e) { return e.field_size(*_d); }
+            virtual bool   encode    (hob::encoder &e) { return e.encode    (*_d); }
+            virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             map<K,V> *_d;
         };
@@ -537,10 +636,10 @@ public:
             bool      bd;
             float     fd;
             double    dd;
-            quadle    qd;
+            triple    qd;
             IPointer *pd;
 
-            char _d[sizeof(quadle)];
+            char _d[sizeof(triple)];
         };
 
         UID     _id;
@@ -561,7 +660,7 @@ public:
                    (typeid(T) == typeid(bool    )) ? _t_bool   :
                    (typeid(T) == typeid(float   )) ? _t_float  :
                    (typeid(T) == typeid(double  )) ? _t_double :
-                   (typeid(T) == typeid(quadle  )) ? _t_quadle :
+                   (typeid(T) == typeid(triple  )) ? _t_quadle :
                    (typeid(T) == typeid(string  )) ? _t_string :
                    (typeid(T) == typeid(hob     )) ? _t_hob    :
                                                      _t_unknown;
@@ -589,35 +688,6 @@ public:
             if (!is_basic() && (NULL != _v.pd))
             {
                 delete _v.pd;
-/*
-                if (_t_string == _t)
-                {
-                    delete static_cast<const string*>(_v.pd);
-                }
-                else
-                if (_t_hob == _t)
-                {
-                    delete static_cast<const hob *>(_v.pd);
-                }
-                else
-                if (is_vector())
-                {
-                    // TODO: allow destruction
-                    //
-                }
-                else
-                if (is_map())
-                {
-                    // TODO: allow destruction
-                    //
-                }
-                else
-                if (is_optional())
-                {
-                    // TODO: allow destruction
-                    //
-                }
-*/
             }
 
             _v.pd = NULL;
@@ -967,37 +1037,7 @@ public:
 
         inline size_t field_size(const variant &v)
         {
-            size_t retval = field_size(v.id())
-                            +
-                            field_size(v.type());
-
-            switch (v.v_type())
-            {
-                case hob::_t_uint8 : retval += field_size(_HV2P(uint8_t    ,v)); break;
-                case hob::_t_uint16: retval += field_size(_HV2P(uint16_t   ,v)); break;
-                case hob::_t_uint32: retval += field_size(_HV2P(uint32_t   ,v)); break;
-                case hob::_t_uint64: retval += field_size(_HV2P(uint64_t   ,v)); break;
-                case hob::_t_int8  : retval += field_size(_HV2P(int8_t     ,v)); break;
-                case hob::_t_int16 : retval += field_size(_HV2P(int16_t    ,v)); break;
-                case hob::_t_int32 : retval += field_size(_HV2P(int32_t    ,v)); break;
-                case hob::_t_int64 : retval += field_size(_HV2P(int64_t    ,v)); break;
-                case hob::_t_bool  : retval += field_size(_HV2P(bool       ,v)); break;
-                case hob::_t_float : retval += field_size(_HV2P(float      ,v)); break;
-                case hob::_t_double: retval += field_size(_HV2P(double     ,v)); break;
-                case hob::_t_quadle: retval += field_size(_HV2P(long double,v)); break;
-                case hob::_t_string: retval += field_size(_HV2P(string     ,v)); break;
-                case hob::_t_hob   : retval += field_size(_HV2P(hob        ,v)); break;
-                default:
-                    break;
-            }
-
-            return retval;
-        }
-
-        template<typename T>
-        inline size_t field_size(const T * v)
-        {
-            return (NULL == v) ? 0 : field_size(*v);
+            return v.field_size(*this);
         }
 
         inline size_t field_size(const string &v)
@@ -1078,6 +1118,7 @@ public:
 
     protected:
         friend class hobio::json::decoder;
+        friend class variant;
 
         virtual bool encode(const uint8_t      &v) = 0;
         virtual bool encode(const uint16_t     &v) = 0;
@@ -1097,48 +1138,10 @@ public:
 
         bool encode(const variant &v)
         {
-            if (v.type() == hob::_t_unknown)
-            {
-                return false;
-            }
-
-            if (!encode_variant_begin(v.id(), v.v_type()))
-            {
-                return false;
-            }
-
-            bool encoded = false;
-
-            switch (v.v_type())
-            {
-                case hob::_t_uint8 : encoded = encode(_HV2P(uint8_t    ,v)); break;
-                case hob::_t_uint16: encoded = encode(_HV2P(uint16_t   ,v)); break;
-                case hob::_t_uint32: encoded = encode(_HV2P(uint32_t   ,v)); break;
-                case hob::_t_uint64: encoded = encode(_HV2P(uint64_t   ,v)); break;
-                case hob::_t_int8  : encoded = encode(_HV2P(int8_t     ,v)); break;
-                case hob::_t_int16 : encoded = encode(_HV2P(int16_t    ,v)); break;
-                case hob::_t_int32 : encoded = encode(_HV2P(int32_t    ,v)); break;
-                case hob::_t_int64 : encoded = encode(_HV2P(int64_t    ,v)); break;
-                case hob::_t_bool  : encoded = encode(_HV2P(bool       ,v)); break;
-                case hob::_t_float : encoded = encode(_HV2P(float      ,v)); break;
-                case hob::_t_double: encoded = encode(_HV2P(double     ,v)); break;
-                case hob::_t_quadle: encoded = encode(_HV2P(long double,v)); break;
-                case hob::_t_string: encoded = encode(_HV2P(string     ,v)); break;
-                case hob::_t_hob   : encoded = encode(_HV2P(hob        ,v)); break;
-                default:
-                    break;
-            }
-
-            return encoded && encode_variant_end();
+            return v.encode(*this);
         }
 
-        template<typename T>
-        inline bool encode(const T * v)
-        {
-            return (NULL == v) ? false : encode(*v);
-        }
-
-        virtual bool encode_variant_begin(UID id, hob_t type) = 0;
+        virtual bool encode_variant_begin(UID id, uint8_t type) = 0;
         virtual bool encode_variant_end() = 0;
 
         template<size_t N>
