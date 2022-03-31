@@ -116,6 +116,9 @@
 #define HUPDATE(s)   __update_id(s)
 #endif // !ENABLE_CPP_HASH
 
+#define _HV2P(_T_,_P_) static_cast<const _T_ *>(_P_)
+#define _HP2V(_T_,_P_) *_HV2P(_T_,_P_)
+
 namespace hobio
 {
     namespace json
@@ -165,9 +168,9 @@ public:
     class variant
     {
     public:
-        variant(const UID    & in ): _t(_t_unknown) { _id = in    ; }
-        variant(const char   * in ): _t(_t_unknown) { _id = id(in); }
-        variant(const string & in ): _t(_t_unknown) { _id = id(in); }
+        variant(const UID    & in ): _t(_t_unknown) { _v.pd = NULL; _id = in    ; }
+        variant(const char   * in ): _t(_t_unknown) { _v.pd = NULL; _id = id(in); }
+        variant(const string & in ): _t(_t_unknown) { _v.pd = NULL; _id = id(in); }
 
         variant(const variant & ref) { *this = ref; }
 
@@ -285,29 +288,25 @@ public:
 
             switch (_t)
             {
-#define GET_PTR(_T_,_P_) static_cast<const _T_ *>(_P_)
-#define LET_VAL(_T_,_P_) *GET_PTR(_T_,_P_)
-#define LET_STR(_T_,_P_) new string(LET_VAL(_T_,_P_))
-#define LET_HOB(_T_,_P_) GET_PTR(_T_,_P_)->clone()
+#define LET_STR(_T_,_P_) new string(_HP2V(_T_,_P_))
+#define LET_HOB(_T_,_P_) _HV2P(_T_,_P_)->clone()
 
-                case _t_uint8 : _v.uc = LET_VAL(uint8_t , p); break;
-                case _t_uint16: _v.us = LET_VAL(uint16_t, p); break;
-                case _t_uint32: _v.ui = LET_VAL(uint32_t, p); break;
-                case _t_uint64: _v.ul = LET_VAL(uint64_t, p); break;
-                case _t_int8  : _v.sc = LET_VAL(int8_t  , p); break;
-                case _t_int16 : _v.ss = LET_VAL(int16_t , p); break;
-                case _t_int32 : _v.si = LET_VAL(int32_t , p); break;
-                case _t_int64 : _v.sl = LET_VAL(int64_t , p); break;
-                case _t_bool  : _v.bd = LET_VAL(bool    , p); break;
-                case _t_float : _v.fd = LET_VAL(float   , p); break;
-                case _t_double: _v.dd = LET_VAL(double  , p); break;
-                case _t_quadle: _v.qd = LET_VAL(quadle  , p); break;
+                case _t_uint8 : _v.uc = _HP2V(uint8_t , p); break;
+                case _t_uint16: _v.us = _HP2V(uint16_t, p); break;
+                case _t_uint32: _v.ui = _HP2V(uint32_t, p); break;
+                case _t_uint64: _v.ul = _HP2V(uint64_t, p); break;
+                case _t_int8  : _v.sc = _HP2V(int8_t  , p); break;
+                case _t_int16 : _v.ss = _HP2V(int16_t , p); break;
+                case _t_int32 : _v.si = _HP2V(int32_t , p); break;
+                case _t_int64 : _v.sl = _HP2V(int64_t , p); break;
+                case _t_bool  : _v.bd = _HP2V(bool    , p); break;
+                case _t_float : _v.fd = _HP2V(float   , p); break;
+                case _t_double: _v.dd = _HP2V(double  , p); break;
+                case _t_quadle: _v.qd = _HP2V(quadle  , p); break;
                 // case _t_string: _v.pd = LET_STR(string  , p); break;
                 // case _t_hob   : _v.pd = LET_HOB(hob     , p); break;
                 default       :                               break;
 
-#undef GET_PTR
-#undef LET_VAL
 #undef LET_STR
 #undef LET_HOB
             }
@@ -367,7 +366,7 @@ public:
         }
 
         template<class T>
-        const vector<T> * data() const
+        operator const vector<T> *() const
         {
             if ((NULL == _v.pd)
                 ||
@@ -384,7 +383,7 @@ public:
         }
 
         template<class T>
-        const optional<T> * data() const
+        operator const optional<T> *() const
         {
             if ((NULL == _v.pd)
                 ||
@@ -401,7 +400,7 @@ public:
         }
 
         template<class K, class V>
-        const map<K,V> * data() const
+        operator const map<K,V> *() const
         {
             if ((NULL == _v.pd)
                 ||
@@ -420,7 +419,7 @@ public:
         }
 
         template<class T>
-        const T * data() const
+        operator const T *() const
         {
             if ((_t_unknown == _t)
                 ||
@@ -481,7 +480,7 @@ public:
         {
         public:
             Hob(const hob & v): _d(v.clone()) {}
-            virtual const void *data() { return static_cast<const void *>(_d); }
+            virtual const void *data() { return _HV2P(void,_d); }
         private:
             hob *_d;
         };
@@ -490,7 +489,7 @@ public:
         {
         public:
             String(const string & v): _d(new string(v)) {}
-            virtual const void *data() { return static_cast<const void *>(_d); }
+            virtual const void *data() { return _HV2P(void,_d); }
         private:
             string *_d;
         };
@@ -500,7 +499,7 @@ public:
         {
         public:
             Optional(const optional<T> & v): _d(new optional<T>(v)) {}
-            virtual const void *data() { return static_cast<const void *>(_d); }
+            virtual const void *data() { return _HV2P(void,_d); }
         private:
             optional<T> *_d;
         };
@@ -510,7 +509,7 @@ public:
         {
         public:
             Vector(const vector<T> & v): _d(new vector<T>(v)) {}
-            virtual const void *data() { return static_cast<const void *>(_d); }
+            virtual const void *data() { return _HV2P(void,_d); }
         private:
             vector<T> *_d;
         };
@@ -520,7 +519,7 @@ public:
         {
         public:
             Map(const map<K,V> & v): _d(new map<K,V>(v)) {}
-            virtual const void *data() { return static_cast<const void *>(_d); }
+            virtual const void *data() { return _HV2P(void,_d); }
         private:
             map<K,V> *_d;
         };
@@ -587,7 +586,7 @@ public:
 
         inline void __clear()
         {
-            if (NULL != _v.pd)
+            if (!is_basic() && (NULL != _v.pd))
             {
                 delete _v.pd;
 /*
@@ -686,7 +685,7 @@ public:
     {
         iterator it = find(id);
 
-        return ((it != end()) && ((*it).data<T>() != NULL)) ? it : end();
+        return ((it != end()) && (static_cast<T *>(*it) != NULL)) ? it : end();
     }
 
     template <typename T>
@@ -694,7 +693,7 @@ public:
     {
         iterator it = find(n);
 
-        return ((it != end()) && ((*it).data<T>() != NULL)) ? it : end();
+        return ((it != end()) && (static_cast<T *>(*it) != NULL)) ? it : end();
     }
 
     template <typename T>
@@ -702,7 +701,7 @@ public:
     {
         const_iterator cit = find(id);
 
-        return ((cit != end()) && ((*cit).data<T>() != NULL)) ? cit : end();
+        return ((cit != end()) && (static_cast<T *>(*cit) != NULL)) ? cit : end();
     }
 
     template <typename T>
@@ -710,7 +709,7 @@ public:
     {
         const_iterator cit = find(n);
 
-        return ((cit != end()) && ((*cit).data<T>() != NULL)) ? cit : end();
+        return ((cit != end()) && (static_cast<T *>(*cit) != NULL)) ? cit : end();
     }
 
     inline void clear(                             ) { _df.clear(          ); }
@@ -812,7 +811,7 @@ public:
             return NULL;
         }
 
-        return (*cit).data<T>();
+        return (*cit);
     }
 
     template<typename T>
@@ -825,7 +824,7 @@ public:
             return NULL;
         }
 
-        return (*cit).data<T>();
+        return (*cit);
     }
 
     template<typename T>
@@ -838,7 +837,7 @@ public:
             return NULL;
         }
 
-        return (*cit).data<T>();
+        return (*cit);
     }
 
     template<typename T>
@@ -851,7 +850,7 @@ public:
             return false;
         }
 
-        const T *rv = (*cit).data<T>();
+        const T *rv = (*cit);
 
         if (NULL == rv)
         {
@@ -873,7 +872,7 @@ public:
             return false;
         }
 
-        const T *rv = (*cit).data<T>();
+        const T *rv = (*cit);
 
         if (NULL == rv)
         {
@@ -895,7 +894,7 @@ public:
             return false;
         }
 
-        const T *rv = (*cit).data<T>();
+        const T *rv = (*cit);
 
         if (NULL == rv)
         {
@@ -974,20 +973,20 @@ public:
 
             switch (v.v_type())
             {
-                case hob::_t_uint8 : retval += field_size(v.data<uint8_t    >()); break;
-                case hob::_t_uint16: retval += field_size(v.data<uint16_t   >()); break;
-                case hob::_t_uint32: retval += field_size(v.data<uint32_t   >()); break;
-                case hob::_t_uint64: retval += field_size(v.data<uint64_t   >()); break;
-                case hob::_t_int8  : retval += field_size(v.data<int8_t     >()); break;
-                case hob::_t_int16 : retval += field_size(v.data<int16_t    >()); break;
-                case hob::_t_int32 : retval += field_size(v.data<int32_t    >()); break;
-                case hob::_t_int64 : retval += field_size(v.data<int64_t    >()); break;
-                case hob::_t_bool  : retval += field_size(v.data<bool       >()); break;
-                case hob::_t_float : retval += field_size(v.data<float      >()); break;
-                case hob::_t_double: retval += field_size(v.data<double     >()); break;
-                case hob::_t_quadle: retval += field_size(v.data<long double>()); break;
-                case hob::_t_string: retval += field_size(v.data<string     >()); break;
-                case hob::_t_hob   : retval += field_size(v.data<hob        >()); break;
+                case hob::_t_uint8 : retval += field_size(_HV2P(uint8_t    ,v)); break;
+                case hob::_t_uint16: retval += field_size(_HV2P(uint16_t   ,v)); break;
+                case hob::_t_uint32: retval += field_size(_HV2P(uint32_t   ,v)); break;
+                case hob::_t_uint64: retval += field_size(_HV2P(uint64_t   ,v)); break;
+                case hob::_t_int8  : retval += field_size(_HV2P(int8_t     ,v)); break;
+                case hob::_t_int16 : retval += field_size(_HV2P(int16_t    ,v)); break;
+                case hob::_t_int32 : retval += field_size(_HV2P(int32_t    ,v)); break;
+                case hob::_t_int64 : retval += field_size(_HV2P(int64_t    ,v)); break;
+                case hob::_t_bool  : retval += field_size(_HV2P(bool       ,v)); break;
+                case hob::_t_float : retval += field_size(_HV2P(float      ,v)); break;
+                case hob::_t_double: retval += field_size(_HV2P(double     ,v)); break;
+                case hob::_t_quadle: retval += field_size(_HV2P(long double,v)); break;
+                case hob::_t_string: retval += field_size(_HV2P(string     ,v)); break;
+                case hob::_t_hob   : retval += field_size(_HV2P(hob        ,v)); break;
                 default:
                     break;
             }
@@ -1112,20 +1111,20 @@ public:
 
             switch (v.v_type())
             {
-                case hob::_t_uint8 : encoded = encode(v.data<uint8_t    >()); break;
-                case hob::_t_uint16: encoded = encode(v.data<uint16_t   >()); break;
-                case hob::_t_uint32: encoded = encode(v.data<uint32_t   >()); break;
-                case hob::_t_uint64: encoded = encode(v.data<uint64_t   >()); break;
-                case hob::_t_int8  : encoded = encode(v.data<int8_t     >()); break;
-                case hob::_t_int16 : encoded = encode(v.data<int16_t    >()); break;
-                case hob::_t_int32 : encoded = encode(v.data<int32_t    >()); break;
-                case hob::_t_int64 : encoded = encode(v.data<int64_t    >()); break;
-                case hob::_t_bool  : encoded = encode(v.data<bool       >()); break;
-                case hob::_t_float : encoded = encode(v.data<float      >()); break;
-                case hob::_t_double: encoded = encode(v.data<double     >()); break;
-                case hob::_t_quadle: encoded = encode(v.data<long double>()); break;
-                case hob::_t_string: encoded = encode(v.data<string     >()); break;
-                case hob::_t_hob   : encoded = encode(v.data<hob        >()); break;
+                case hob::_t_uint8 : encoded = encode(_HV2P(uint8_t    ,v)); break;
+                case hob::_t_uint16: encoded = encode(_HV2P(uint16_t   ,v)); break;
+                case hob::_t_uint32: encoded = encode(_HV2P(uint32_t   ,v)); break;
+                case hob::_t_uint64: encoded = encode(_HV2P(uint64_t   ,v)); break;
+                case hob::_t_int8  : encoded = encode(_HV2P(int8_t     ,v)); break;
+                case hob::_t_int16 : encoded = encode(_HV2P(int16_t    ,v)); break;
+                case hob::_t_int32 : encoded = encode(_HV2P(int32_t    ,v)); break;
+                case hob::_t_int64 : encoded = encode(_HV2P(int64_t    ,v)); break;
+                case hob::_t_bool  : encoded = encode(_HV2P(bool       ,v)); break;
+                case hob::_t_float : encoded = encode(_HV2P(float      ,v)); break;
+                case hob::_t_double: encoded = encode(_HV2P(double     ,v)); break;
+                case hob::_t_quadle: encoded = encode(_HV2P(long double,v)); break;
+                case hob::_t_string: encoded = encode(_HV2P(string     ,v)); break;
+                case hob::_t_hob   : encoded = encode(_HV2P(hob        ,v)); break;
                 default:
                     break;
             }
