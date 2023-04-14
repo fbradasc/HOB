@@ -131,7 +131,7 @@ class hob
 {
 public:
     typedef uint64_t    UID;
-    typedef long double triple;
+    typedef long double quadle;
 
     enum hob_t
     {
@@ -154,6 +154,7 @@ public:
     };
 
     class encoder; // forward declaration
+    class decoder; // forward declaration
 
     static const UID UNDEFINED = ULLONG_MAX;
 
@@ -166,6 +167,8 @@ public:
     class variant
     {
     public:
+        variant(): _id(UNDEFINED), _t(_t_unknown) { _v.pd = NULL; }
+
         variant(const UID    & in ): _t(_t_unknown) { _v.pd = NULL; _id = in    ; }
         variant(const char   * in ): _t(_t_unknown) { _v.pd = NULL; _id = id(in); }
         variant(const string & in ): _t(_t_unknown) { _v.pd = NULL; _id = id(in); }
@@ -297,7 +300,7 @@ public:
                 case _t_bool  : _v.bd = *static_cast<const bool    *>(p); break;
                 case _t_float : _v.fd = *static_cast<const float   *>(p); break;
                 case _t_double: _v.dd = *static_cast<const double  *>(p); break;
-                case _t_quadle: _v.qd = *static_cast<const triple  *>(p); break;
+                case _t_quadle: _v.qd = *static_cast<const quadle  *>(p); break;
                 default       :                                           break;
             }
 
@@ -555,6 +558,175 @@ public:
             return encoded && e.encode_variant_end();
         }
 
+        template<class T>
+        bool decode_vector(hob::decoder &d, bool *changed = NULL)
+        {
+            vector<T> v;
+
+            bool decoded = d.decode_field(v, changed);
+
+            if (decoded)
+            {
+                *this = v;
+
+                M_LOG("Decoded vector");
+            }
+
+            return decoded;
+        }
+
+        template<class T>
+        bool decode_optional(hob::decoder &d, bool *changed = NULL)
+        {
+            optional<T> o;
+
+            bool decoded = d.decode_field(o, changed);
+
+            if (decoded)
+            {
+                *this = o;
+
+                M_LOG("Decoded optional");
+            }
+
+            return decoded;
+        }
+
+        bool decode(hob::decoder &d, bool *changed = NULL)
+        {
+            UID     id_;
+            uint8_t type_;
+
+            if (!d.decode_field(id_) || !d.decode_field(type_))
+            {
+                M_LOG("Invalid ID(%lu) or type(%u)", id_, type_);
+
+                return false;
+            }
+
+            M_LOG("Decoding variant: ID=%lu - type=%d", id_, type_);
+
+            _id = id_;
+            _t  = type_;
+
+            bool decoded = false;
+
+            if (is_vector())
+            {
+                switch (v_type())
+                {
+                    case hob::_t_uint8 : decoded = decode_vector<uint8_t >(d, changed); break;
+                    case hob::_t_uint16: decoded = decode_vector<uint16_t>(d, changed); break;
+                    case hob::_t_uint32: decoded = decode_vector<uint32_t>(d, changed); break;
+                    case hob::_t_uint64: decoded = decode_vector<uint64_t>(d, changed); break;
+                    case hob::_t_int8  : decoded = decode_vector<int8_t  >(d, changed); break;
+                    case hob::_t_int16 : decoded = decode_vector<int16_t >(d, changed); break;
+                    case hob::_t_int32 : decoded = decode_vector<int32_t >(d, changed); break;
+                    case hob::_t_int64 : decoded = decode_vector<int64_t >(d, changed); break;
+                    case hob::_t_bool  : decoded = decode_vector<bool    >(d, changed); break;
+                    case hob::_t_float : decoded = decode_vector<float   >(d, changed); break;
+                    case hob::_t_double: decoded = decode_vector<double  >(d, changed); break;
+                    case hob::_t_quadle: decoded = decode_vector<quadle  >(d, changed); break;
+                    default:
+                        {
+                            M_LOG("Unknown vector type: ID=%lu - type=%d", id_, type_);
+                        }
+                        break;
+                }
+            }
+            else
+            if (is_optional())
+            {
+                switch (v_type())
+                {
+                    case hob::_t_uint8 : decoded = decode_optional<uint8_t >(d, changed); break;
+                    case hob::_t_uint16: decoded = decode_optional<uint16_t>(d, changed); break;
+                    case hob::_t_uint32: decoded = decode_optional<uint32_t>(d, changed); break;
+                    case hob::_t_uint64: decoded = decode_optional<uint64_t>(d, changed); break;
+                    case hob::_t_int8  : decoded = decode_optional<int8_t  >(d, changed); break;
+                    case hob::_t_int16 : decoded = decode_optional<int16_t >(d, changed); break;
+                    case hob::_t_int32 : decoded = decode_optional<int32_t >(d, changed); break;
+                    case hob::_t_int64 : decoded = decode_optional<int64_t >(d, changed); break;
+                    case hob::_t_bool  : decoded = decode_optional<bool    >(d, changed); break;
+                    case hob::_t_float : decoded = decode_optional<float   >(d, changed); break;
+                    case hob::_t_double: decoded = decode_optional<double  >(d, changed); break;
+                    case hob::_t_quadle: decoded = decode_optional<quadle  >(d, changed); break;
+                    default:
+                        {
+                            M_LOG("Unknown optional type: ID=%lu - type=%d", id_, type_);
+                        }
+                        break;
+                }
+            }
+            else
+            if (is_map())
+            {
+                M_LOG("TODO: decode map variant");
+            }
+            else
+            if (v_type() == hob::_t_string)
+            {
+                string s;
+
+                decoded = d.decode_field(s, changed);
+
+                if (decoded)
+                {
+                    *this = s;
+
+                    M_LOG("Decoded string -> %s", s.c_str());
+                }
+            }
+            else
+            if (v_type() == hob::_t_hob)
+            {
+                M_LOG("Decoding hob");
+
+                hob h;
+
+                decoded = d.decode_field(h, changed);
+
+                if (decoded)
+                {
+                    *this = h;
+
+                    M_LOG("Decoded hob");
+                }
+            }
+            else
+            {
+                M_LOG("Decoding type(%u) variant", v_type());
+
+                switch (v_type())
+                {
+                    case hob::_t_uint8 : decoded = d.decode_field(_v.uc, changed); M_LOG("Decoded  -> %u -> %d",_v.uc,decoded); break;
+                    case hob::_t_uint16: decoded = d.decode_field(_v.us, changed); M_LOG("Decoded  -> %u -> %d",_v.us,decoded); break;
+                    case hob::_t_uint32: decoded = d.decode_field(_v.ui, changed); M_LOG("Decoded  -> %u -> %d",_v.ui,decoded); break;
+                    case hob::_t_uint64: decoded = d.decode_field(_v.ul, changed); M_LOG("Decoded  -> %lu -> %d",_v.ul,decoded); break;
+                    case hob::_t_int8  : decoded = d.decode_field(_v.sc, changed); M_LOG("Decoded  -> %d -> %d",_v.sc,decoded); break;
+                    case hob::_t_int16 : decoded = d.decode_field(_v.ss, changed); M_LOG("Decoded  -> %d -> %d",_v.ss,decoded); break;
+                    case hob::_t_int32 : decoded = d.decode_field(_v.si, changed); M_LOG("Decoded  -> %d -> %d",_v.si,decoded); break;
+                    case hob::_t_int64 : decoded = d.decode_field(_v.sl, changed); M_LOG("Decoded  -> %ld -> %d",_v.sl,decoded); break;
+                    case hob::_t_bool  : decoded = d.decode_field(_v.bd, changed); M_LOG("Decoded  -> %c -> %d",_v.bd ? 't' : 'f',decoded); break;
+                    case hob::_t_float : decoded = d.decode_field(_v.fd, changed); M_LOG("Decoded  -> %f -> %d",_v.fd,decoded); break;
+                    case hob::_t_double: decoded = d.decode_field(_v.dd, changed); M_LOG("Decoded  -> %lf -> %d",_v.dd,decoded); break;
+                    case hob::_t_quadle: decoded = d.decode_field(_v.qd, changed); M_LOG("Decoded  -> %Lf -> %d",_v.qd,decoded); break;
+                    default:
+                        {
+                            M_LOG("Unknown variant type: ID=%lu - type=%d", id_, type_);
+                        }
+                        break;
+                }
+            }
+
+            if (!decoded)
+            {
+                M_LOG("Error decoding variant: ID=%lu - type=%d", id_, type_);
+            }
+
+            return decoded;
+        }
+
     private:
         class IPointer
         {
@@ -636,10 +808,10 @@ public:
             bool      bd;
             float     fd;
             double    dd;
-            triple    qd;
+            quadle    qd;
             IPointer *pd;
 
-            char _d[sizeof(triple)];
+            char _d[sizeof(quadle)];
         };
 
         UID     _id;
@@ -660,7 +832,7 @@ public:
                    (typeid(T) == typeid(bool    )) ? _t_bool   :
                    (typeid(T) == typeid(float   )) ? _t_float  :
                    (typeid(T) == typeid(double  )) ? _t_double :
-                   (typeid(T) == typeid(triple  )) ? _t_quadle :
+                   (typeid(T) == typeid(quadle  )) ? _t_quadle :
                    (typeid(T) == typeid(string  )) ? _t_string :
                    (typeid(T) == typeid(hob     )) ? _t_hob    :
                                                      _t_unknown;
@@ -1298,6 +1470,11 @@ public:
         virtual bool decode_field(int32_t  &v, bool *changed = NULL) = 0;
         virtual bool decode_field(int64_t  &v, bool *changed = NULL) = 0;
 
+        bool decode_field(variant &v, bool *changed = NULL)
+        {
+            return v.decode(*this, changed);
+        }
+
         bool decode_field(bool &v, bool *changed = NULL)
         {
             bool rv;
@@ -1818,11 +1995,13 @@ protected:
 
         if (!is.load(update))
         {
+            M_LOG("Load error");
             return false;
         }
 
         if (!is.decode_field(id_))
         {
+            M_LOG("ID decoding error");
             return false;
         }
 
@@ -1832,11 +2011,13 @@ protected:
             &&
             !is.decode_field(sz_))
         {
+            M_LOG("Size decoding error");
             return false;
         }
 
         if (update && !is.bufferize(sz_))
         {
+            M_LOG("Buffer allocation error");
             return false;
         }
 
@@ -1945,9 +2126,9 @@ protected:
             return true;
         }
 
-        // TODO: decode dynamic fields
+        M_LOG("Called");
 
-        return true;
+        return ( (NULL == _is) || _is->decode_field(_df) );
     }
 
     virtual void __reset_changes()

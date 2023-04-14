@@ -667,6 +667,7 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING HOBS ]------------------\n\n");
 
+#ifdef TEST_VARIANT_HOBS
         if (true) // for now avoid to print these out
         {
             MyStruct m;
@@ -688,7 +689,7 @@ int main(int argc, char *argv[])
              .set< bool            >("bool"           , true   )
              .set< float           >("float"          , 1.3f   )
              .set< double          >("double"         , 1.313f )
-             .set< long double     >("long double"    , 1.3131313131313131313)
+             .set< hob::quadle     >("quadle"         , 1.3131313131313131313)
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
              .set<hob>(
                 "hob",
@@ -697,7 +698,7 @@ int main(int argc, char *argv[])
                                                          m.set<string>("nested2",
                                                                        "deepest")))
             ;
-
+#if 0
             cout << "12 items expected:" << endl << endl;
 
             {
@@ -713,17 +714,17 @@ int main(int argc, char *argv[])
 
             cout << endl << "0 items expected:" << endl << endl;
 
-            h.has("uint8_t"    ) && cout << *h.get<uint8_t    >("uint8_t"    ) << endl;
-            h.has("uint16_t"   ) && cout << *h.get<uint16_t   >("uint16_t"   ) << endl;
-            h.has("uint32_t"   ) && cout << *h.get<uint32_t   >("uint32_t"   ) << endl;
-            h.has("int8_t"     ) && cout << *h.get<int8_t     >("int8_t"     ) << endl;
-            h.has("int16_t"    ) && cout << *h.get<int16_t    >("int16_t"    ) << endl;
-            h.has("int32_t"    ) && cout << *h.get<int32_t    >("int32_t"    ) << endl;
-            h.has("bool"       ) && cout << *h.get<bool       >("bool"       ) << endl;
-            h.has("float"      ) && cout << *h.get<float      >("float"      ) << endl;
-            h.has("double"     ) && cout << *h.get<double     >("double"     ) << endl;
-            h.has("long double") && cout << *h.get<long double>("long double") << endl;
-            h.has("string"     ) && cout << *h.get<string     >("string"     ) << endl;
+            h.has("uint8_t" ) && cout << *h.get<uint8_t    >("uint8_t" ) << endl;
+            h.has("uint16_t") && cout << *h.get<uint16_t   >("uint16_t") << endl;
+            h.has("uint32_t") && cout << *h.get<uint32_t   >("uint32_t") << endl;
+            h.has("int8_t"  ) && cout << *h.get<int8_t     >("int8_t"  ) << endl;
+            h.has("int16_t" ) && cout << *h.get<int16_t    >("int16_t" ) << endl;
+            h.has("int32_t" ) && cout << *h.get<int32_t    >("int32_t" ) << endl;
+            h.has("bool"    ) && cout << *h.get<bool       >("bool"    ) << endl;
+            h.has("float"   ) && cout << *h.get<float      >("float"   ) << endl;
+            h.has("double"  ) && cout << *h.get<double     >("double"  ) << endl;
+            h.has("quadle"  ) && cout << *h.get<hob::quadle>("quadle"  ) << endl;
+            h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
 
             if (h.has("hob"))
             {
@@ -746,17 +747,17 @@ int main(int argc, char *argv[])
             h["bool"  ] = false;
             h["string"] = string("1Po'DiMinuscoleNumeri&Maiuscole");
 
-            h.has("uint8_t"    ) && cout << *h.get<uint8_t    >("uint8_t"    ) << endl;
-            h.has("uint16_t"   ) && cout << *h.get<uint16_t   >("uint16_t"   ) << endl;
-            h.has("uint32_t"   ) && cout << *h.get<uint32_t   >("uint32_t"   ) << endl;
-            h.has("int8_t"     ) && cout << *h.get<int8_t     >("int8_t"     ) << endl;
-            h.has("int16_t"    ) && cout << *h.get<int16_t    >("int16_t"    ) << endl;
-            h.has("int32_t"    ) && cout << *h.get<int32_t    >("int32_t"    ) << endl;
-            h.has("bool"       ) && cout << *h.get<bool       >("bool"       ) << endl;
-            h.has("float"      ) && cout << *h.get<float      >("float"      ) << endl;
-            h.has("double"     ) && cout << *h.get<double     >("double"     ) << endl;
-            h.has("long double") && cout << *h.get<long double>("long double") << endl;
-            h.has("string"     ) && cout << *h.get<string     >("string"     ) << endl;
+            h.has("uint8_t" ) && cout << *h.get<uint8_t    >("uint8_t" ) << endl;
+            h.has("uint16_t") && cout << *h.get<uint16_t   >("uint16_t") << endl;
+            h.has("uint32_t") && cout << *h.get<uint32_t   >("uint32_t") << endl;
+            h.has("int8_t"  ) && cout << *h.get<int8_t     >("int8_t"  ) << endl;
+            h.has("int16_t" ) && cout << *h.get<int16_t    >("int16_t" ) << endl;
+            h.has("int32_t" ) && cout << *h.get<int32_t    >("int32_t" ) << endl;
+            h.has("bool"    ) && cout << *h.get<bool       >("bool"    ) << endl;
+            h.has("float"   ) && cout << *h.get<float      >("float"   ) << endl;
+            h.has("double"  ) && cout << *h.get<double     >("double"  ) << endl;
+            h.has("quadle"  ) && cout << *h.get<hob::quadle>("quadle"  ) << endl;
+            h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
 
             hob nh;
             string nested;
@@ -776,12 +777,15 @@ int main(int argc, char *argv[])
                     LOG(ms);
                 }
             }
+#endif
+            LOG(h);
 
             h >> *ps;
 
             cout << "-----------------------------------------------" << endl;
         }
-#if 0
+#endif // TEST_VARIANT_HOBS
+#ifdef TEST_FIXED_HOBS
         { MyStruct               m; m >> *ps; LOG(m); }
         {
             AnotherStruct m;
@@ -912,7 +916,7 @@ int main(int argc, char *argv[])
 
             LOG(m);
         }
-#endif
+#endif // TEST_FIXED_HOBS
         delete ps;
     }
 
