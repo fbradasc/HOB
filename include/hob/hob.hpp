@@ -131,7 +131,6 @@ class hob
 {
 public:
     typedef uint64_t    UID;
-    typedef long double quadle;
 
     enum hob_t
     {
@@ -289,18 +288,18 @@ public:
 
             switch (_t)
             {
-                case _t_uint8 : _v.uc = *static_cast<const uint8_t *>(p); break;
-                case _t_uint16: _v.us = *static_cast<const uint16_t*>(p); break;
-                case _t_uint32: _v.ui = *static_cast<const uint32_t*>(p); break;
-                case _t_uint64: _v.ul = *static_cast<const uint64_t*>(p); break;
-                case _t_int8  : _v.sc = *static_cast<const int8_t  *>(p); break;
-                case _t_int16 : _v.ss = *static_cast<const int16_t *>(p); break;
-                case _t_int32 : _v.si = *static_cast<const int32_t *>(p); break;
-                case _t_int64 : _v.sl = *static_cast<const int64_t *>(p); break;
-                case _t_bool  : _v.bd = *static_cast<const bool    *>(p); break;
-                case _t_float : _v.fd = *static_cast<const float   *>(p); break;
-                case _t_double: _v.dd = *static_cast<const double  *>(p); break;
-                case _t_quadle: _v.qd = *static_cast<const quadle  *>(p); break;
+                case _t_uint8 : _v.uc = *static_cast<const uint8_t     *>(p); break;
+                case _t_uint16: _v.us = *static_cast<const uint16_t    *>(p); break;
+                case _t_uint32: _v.ui = *static_cast<const uint32_t    *>(p); break;
+                case _t_uint64: _v.ul = *static_cast<const uint64_t    *>(p); break;
+                case _t_int8  : _v.sc = *static_cast<const int8_t      *>(p); break;
+                case _t_int16 : _v.ss = *static_cast<const int16_t     *>(p); break;
+                case _t_int32 : _v.si = *static_cast<const int32_t     *>(p); break;
+                case _t_int64 : _v.sl = *static_cast<const int64_t     *>(p); break;
+                case _t_bool  : _v.bd = *static_cast<const bool        *>(p); break;
+                case _t_float : _v.fd = *static_cast<const float       *>(p); break;
+                case _t_double: _v.dd = *static_cast<const double      *>(p); break;
+                case _t_quadle: _v.qd = *static_cast<const long double *>(p); break;
                 default       :                                           break;
             }
 
@@ -485,8 +484,7 @@ public:
 
                 retval += _v.pd->field_size(e);
             }
-            else
-            switch (v_type())
+            else switch (v_type())
             {
                 case hob::_t_uint8 : retval += e.field_size(_v.uc); break;
                 case hob::_t_uint16: retval += e.field_size(_v.us); break;
@@ -536,8 +534,7 @@ public:
                     encoded = _v.pd->encode(e);
                 }
             }
-            else
-            switch (v_type())
+            else switch (v_type())
             {
                 case hob::_t_uint8 : encoded = e.encode(_v.uc); break;
                 case hob::_t_uint16: encoded = e.encode(_v.us); break;
@@ -556,6 +553,54 @@ public:
             }
 
             return encoded && e.encode_variant_end();
+        }
+
+        template<class K, class V>
+        bool decode_map(hob::decoder &d, bool *changed = NULL)
+        {
+            map<K, V> m;
+
+            bool decoded = d.decode_field(m, changed);
+
+            if (decoded)
+            {
+                *this = m;
+
+                M_LOG("Decoded map");
+            }
+
+            return decoded;
+        }
+
+        template<class K>
+        bool decode_map(hob::decoder &d, bool *changed = NULL)
+        {
+            bool decoded = false;
+
+            switch (v_type())
+            {
+                case hob::_t_uint8 : decoded = decode_map<K, uint8_t    >(d, changed); break;
+                case hob::_t_uint16: decoded = decode_map<K, uint16_t   >(d, changed); break;
+                case hob::_t_uint32: decoded = decode_map<K, uint32_t   >(d, changed); break;
+                case hob::_t_uint64: decoded = decode_map<K, uint64_t   >(d, changed); break;
+                case hob::_t_int8  : decoded = decode_map<K, int8_t     >(d, changed); break;
+                case hob::_t_int16 : decoded = decode_map<K, int16_t    >(d, changed); break;
+                case hob::_t_int32 : decoded = decode_map<K, int32_t    >(d, changed); break;
+                case hob::_t_int64 : decoded = decode_map<K, int64_t    >(d, changed); break;
+                case hob::_t_bool  : decoded = decode_map<K, bool       >(d, changed); break;
+                case hob::_t_float : decoded = decode_map<K, float      >(d, changed); break;
+                case hob::_t_double: decoded = decode_map<K, double     >(d, changed); break;
+                case hob::_t_quadle: decoded = decode_map<K, long double>(d, changed); break;
+                case hob::_t_string: decoded = decode_map<K, string     >(d, changed); break;
+                case hob::_t_hob   : decoded = decode_map<K, hob        >(d, changed); break;
+                default:
+                    {
+                        M_LOG("Unknown map value type ID=%lu - type=%d", id(), v_type());
+                    }
+                    break;
+            }
+
+            return decoded;
         }
 
         template<class T>
@@ -594,8 +639,8 @@ public:
 
         bool decode(hob::decoder &d, bool *changed = NULL)
         {
-            UID     id_;
-            uint8_t type_;
+            UID     id_   = UNDEFINED;
+            uint8_t type_ = 0;
 
             if (!d.decode_field(id_) || !d.decode_field(type_))
             {
@@ -615,18 +660,20 @@ public:
             {
                 switch (v_type())
                 {
-                    case hob::_t_uint8 : decoded = decode_vector<uint8_t >(d, changed); break;
-                    case hob::_t_uint16: decoded = decode_vector<uint16_t>(d, changed); break;
-                    case hob::_t_uint32: decoded = decode_vector<uint32_t>(d, changed); break;
-                    case hob::_t_uint64: decoded = decode_vector<uint64_t>(d, changed); break;
-                    case hob::_t_int8  : decoded = decode_vector<int8_t  >(d, changed); break;
-                    case hob::_t_int16 : decoded = decode_vector<int16_t >(d, changed); break;
-                    case hob::_t_int32 : decoded = decode_vector<int32_t >(d, changed); break;
-                    case hob::_t_int64 : decoded = decode_vector<int64_t >(d, changed); break;
-                    case hob::_t_bool  : decoded = decode_vector<bool    >(d, changed); break;
-                    case hob::_t_float : decoded = decode_vector<float   >(d, changed); break;
-                    case hob::_t_double: decoded = decode_vector<double  >(d, changed); break;
-                    case hob::_t_quadle: decoded = decode_vector<quadle  >(d, changed); break;
+                    case hob::_t_uint8 : decoded = decode_vector<uint8_t    >(d, changed); break;
+                    case hob::_t_uint16: decoded = decode_vector<uint16_t   >(d, changed); break;
+                    case hob::_t_uint32: decoded = decode_vector<uint32_t   >(d, changed); break;
+                    case hob::_t_uint64: decoded = decode_vector<uint64_t   >(d, changed); break;
+                    case hob::_t_int8  : decoded = decode_vector<int8_t     >(d, changed); break;
+                    case hob::_t_int16 : decoded = decode_vector<int16_t    >(d, changed); break;
+                    case hob::_t_int32 : decoded = decode_vector<int32_t    >(d, changed); break;
+                    case hob::_t_int64 : decoded = decode_vector<int64_t    >(d, changed); break;
+                    case hob::_t_bool  : decoded = decode_vector<bool       >(d, changed); break;
+                    case hob::_t_float : decoded = decode_vector<float      >(d, changed); break;
+                    case hob::_t_double: decoded = decode_vector<double     >(d, changed); break;
+                    case hob::_t_quadle: decoded = decode_vector<long double>(d, changed); break;
+                    case hob::_t_string: decoded = decode_vector<string     >(d, changed); break;
+                    case hob::_t_hob   : decoded = decode_vector<hob        >(d, changed); break;
                     default:
                         {
                             M_LOG("Unknown vector type: ID=%lu - type=%d", id_, type_);
@@ -634,23 +681,24 @@ public:
                         break;
                 }
             }
-            else
-            if (is_optional())
+            else if (is_optional())
             {
                 switch (v_type())
                 {
-                    case hob::_t_uint8 : decoded = decode_optional<uint8_t >(d, changed); break;
-                    case hob::_t_uint16: decoded = decode_optional<uint16_t>(d, changed); break;
-                    case hob::_t_uint32: decoded = decode_optional<uint32_t>(d, changed); break;
-                    case hob::_t_uint64: decoded = decode_optional<uint64_t>(d, changed); break;
-                    case hob::_t_int8  : decoded = decode_optional<int8_t  >(d, changed); break;
-                    case hob::_t_int16 : decoded = decode_optional<int16_t >(d, changed); break;
-                    case hob::_t_int32 : decoded = decode_optional<int32_t >(d, changed); break;
-                    case hob::_t_int64 : decoded = decode_optional<int64_t >(d, changed); break;
-                    case hob::_t_bool  : decoded = decode_optional<bool    >(d, changed); break;
-                    case hob::_t_float : decoded = decode_optional<float   >(d, changed); break;
-                    case hob::_t_double: decoded = decode_optional<double  >(d, changed); break;
-                    case hob::_t_quadle: decoded = decode_optional<quadle  >(d, changed); break;
+                    case hob::_t_uint8 : decoded = decode_optional<uint8_t    >(d, changed); break;
+                    case hob::_t_uint16: decoded = decode_optional<uint16_t   >(d, changed); break;
+                    case hob::_t_uint32: decoded = decode_optional<uint32_t   >(d, changed); break;
+                    case hob::_t_uint64: decoded = decode_optional<uint64_t   >(d, changed); break;
+                    case hob::_t_int8  : decoded = decode_optional<int8_t     >(d, changed); break;
+                    case hob::_t_int16 : decoded = decode_optional<int16_t    >(d, changed); break;
+                    case hob::_t_int32 : decoded = decode_optional<int32_t    >(d, changed); break;
+                    case hob::_t_int64 : decoded = decode_optional<int64_t    >(d, changed); break;
+                    case hob::_t_bool  : decoded = decode_optional<bool       >(d, changed); break;
+                    case hob::_t_float : decoded = decode_optional<float      >(d, changed); break;
+                    case hob::_t_double: decoded = decode_optional<double     >(d, changed); break;
+                    case hob::_t_quadle: decoded = decode_optional<long double>(d, changed); break;
+                    case hob::_t_string: decoded = decode_optional<string     >(d, changed); break;
+                    case hob::_t_hob   : decoded = decode_optional<hob        >(d, changed); break;
                     default:
                         {
                             M_LOG("Unknown optional type: ID=%lu - type=%d", id_, type_);
@@ -658,13 +706,32 @@ public:
                         break;
                 }
             }
-            else
-            if (is_map())
+            else if (is_map())
             {
-                M_LOG("TODO: decode map variant");
+                switch (k_type())
+                {
+                    case hob::_t_uint8 : decoded = decode_map<uint8_t    >(d, changed); break;
+                    case hob::_t_uint16: decoded = decode_map<uint16_t   >(d, changed); break;
+                    case hob::_t_uint32: decoded = decode_map<uint32_t   >(d, changed); break;
+                    case hob::_t_uint64: decoded = decode_map<uint64_t   >(d, changed); break;
+                    case hob::_t_int8  : decoded = decode_map<int8_t     >(d, changed); break;
+                    case hob::_t_int16 : decoded = decode_map<int16_t    >(d, changed); break;
+                    case hob::_t_int32 : decoded = decode_map<int32_t    >(d, changed); break;
+                    case hob::_t_int64 : decoded = decode_map<int64_t    >(d, changed); break;
+                    case hob::_t_bool  : decoded = decode_map<bool       >(d, changed); break;
+                    case hob::_t_float : decoded = decode_map<float      >(d, changed); break;
+                    case hob::_t_double: decoded = decode_map<double     >(d, changed); break;
+                    case hob::_t_quadle: decoded = decode_map<long double>(d, changed); break;
+                    case hob::_t_string: decoded = decode_map<string     >(d, changed); break;
+                    case hob::_t_hob   : decoded = decode_map<hob        >(d, changed); break;
+                    default:
+                        {
+                            M_LOG("Unknown map key type: ID=%lu - type=%d", id_, k_type());
+                        }
+                        break;
+                }
             }
-            else
-            if (v_type() == hob::_t_string)
+            else if (v_type() == hob::_t_string)
             {
                 string s;
 
@@ -677,8 +744,7 @@ public:
                     M_LOG("Decoded string -> %s", s.c_str());
                 }
             }
-            else
-            if (v_type() == hob::_t_hob)
+            else if (v_type() == hob::_t_hob)
             {
                 M_LOG("Decoding hob");
 
@@ -797,21 +863,21 @@ public:
 
         union data_t
         {
-            uint8_t   uc;
-            uint16_t  us;
-            uint32_t  ui;
-            uint64_t  ul;
-            int8_t    sc;
-            int16_t   ss;
-            int32_t   si;
-            int64_t   sl;
-            bool      bd;
-            float     fd;
-            double    dd;
-            quadle    qd;
-            IPointer *pd;
+            uint8_t      uc;
+            uint16_t     us;
+            uint32_t     ui;
+            uint64_t     ul;
+            int8_t       sc;
+            int16_t      ss;
+            int32_t      si;
+            int64_t      sl;
+            bool         bd;
+            float        fd;
+            double       dd;
+            long double  qd;
+            IPointer    *pd;
 
-            char _d[sizeof(quadle)];
+            char _d[sizeof(long double)];
         };
 
         UID     _id;
@@ -821,21 +887,21 @@ public:
         template<typename T>
         inline hob_t __whois() const
         {
-            return (typeid(T) == typeid(uint8_t )) ? _t_uint8  :
-                   (typeid(T) == typeid(uint16_t)) ? _t_uint16 :
-                   (typeid(T) == typeid(uint32_t)) ? _t_uint32 :
-                   (typeid(T) == typeid(uint64_t)) ? _t_uint64 :
-                   (typeid(T) == typeid(int8_t  )) ? _t_int8   :
-                   (typeid(T) == typeid(int16_t )) ? _t_int16  :
-                   (typeid(T) == typeid(int32_t )) ? _t_int32  :
-                   (typeid(T) == typeid(int64_t )) ? _t_int64  :
-                   (typeid(T) == typeid(bool    )) ? _t_bool   :
-                   (typeid(T) == typeid(float   )) ? _t_float  :
-                   (typeid(T) == typeid(double  )) ? _t_double :
-                   (typeid(T) == typeid(quadle  )) ? _t_quadle :
-                   (typeid(T) == typeid(string  )) ? _t_string :
-                   (typeid(T) == typeid(hob     )) ? _t_hob    :
-                                                     _t_unknown;
+            return (typeid(T) == typeid(uint8_t    )) ? _t_uint8  :
+                   (typeid(T) == typeid(uint16_t   )) ? _t_uint16 :
+                   (typeid(T) == typeid(uint32_t   )) ? _t_uint32 :
+                   (typeid(T) == typeid(uint64_t   )) ? _t_uint64 :
+                   (typeid(T) == typeid(int8_t     )) ? _t_int8   :
+                   (typeid(T) == typeid(int16_t    )) ? _t_int16  :
+                   (typeid(T) == typeid(int32_t    )) ? _t_int32  :
+                   (typeid(T) == typeid(int64_t    )) ? _t_int64  :
+                   (typeid(T) == typeid(bool       )) ? _t_bool   :
+                   (typeid(T) == typeid(float      )) ? _t_float  :
+                   (typeid(T) == typeid(double     )) ? _t_double :
+                   (typeid(T) == typeid(long double)) ? _t_quadle :
+                   (typeid(T) == typeid(string     )) ? _t_string :
+                   (typeid(T) == typeid(hob        )) ? _t_hob    :
+                                                        _t_unknown;
         }
 
         inline uint8_t __type(hob_t h, hob_t l)
@@ -1945,6 +2011,13 @@ public:
     inline bool operator!=(const hob &ref) const
     {
         bool rv = (_id != ref._id);
+
+        return rv;
+    }
+
+    inline bool operator<(const hob &ref) const
+    {
+        bool rv = (_id < ref._id);
 
         return rv;
     }

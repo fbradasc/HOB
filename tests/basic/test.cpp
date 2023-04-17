@@ -689,7 +689,7 @@ int main(int argc, char *argv[])
              .set< bool            >("bool"           , true   )
              .set< float           >("float"          , 1.3f   )
              .set< double          >("double"         , 1.313f )
-             .set< hob::quadle     >("quadle"         , 1.3131313131313131313)
+             .set< long double     >("quadle"         , 1.3131313131313131313)
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
              .set<hob>(
                 "hob",
@@ -723,7 +723,7 @@ int main(int argc, char *argv[])
             h.has("bool"    ) && cout << *h.get<bool       >("bool"    ) << endl;
             h.has("float"   ) && cout << *h.get<float      >("float"   ) << endl;
             h.has("double"  ) && cout << *h.get<double     >("double"  ) << endl;
-            h.has("quadle"  ) && cout << *h.get<hob::quadle>("quadle"  ) << endl;
+            h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
 
             if (h.has("hob"))
@@ -756,7 +756,7 @@ int main(int argc, char *argv[])
             h.has("bool"    ) && cout << *h.get<bool       >("bool"    ) << endl;
             h.has("float"   ) && cout << *h.get<float      >("float"   ) << endl;
             h.has("double"  ) && cout << *h.get<double     >("double"  ) << endl;
-            h.has("quadle"  ) && cout << *h.get<hob::quadle>("quadle"  ) << endl;
+            h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
 
             hob nh;
