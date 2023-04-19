@@ -12,6 +12,15 @@ using namespace std;
 
 namespace hobio
 {
+    static const char * CODE_TAG   = "\"id\"    : ";
+    static const char * FIELDS_TAG = "\"fields\": ";
+    static const char * TYPE_TAG   = "\"type\"  : ";
+    static const char * SIZE_TAG   = "\"size\"  : ";
+    static const char * NAME_TAG   = "\"name\"  : ";
+    static const char * DESC_TAG   = "\"desc\"  : ";
+    static const char * VALUE_TAG  = "\"value\" : ";
+    static const char * KEY_TAG    = "\"key\"   : ";
+
     namespace json
     {
         enum Format
@@ -84,14 +93,15 @@ namespace hobio
                     {
                         _os << endl
                             << padding(1)
-                            << "\"t\": \""
+                            << TYPE_TAG
+                            << "\""
                             << name
                             << "\",";
                     }
 
                     _os << endl
                         << padding(1)
-                        << "\"i\": ";
+                        << CODE_TAG;
                 }
 
                 indentation(+1);
@@ -105,7 +115,8 @@ namespace hobio
                     _os << ","
                         << endl
                         << padding(1)
-                        << "\"s\": \""
+                        << DESC_TAG
+                        << "\""
                         << value
                         << "\"";
                 }
@@ -118,7 +129,7 @@ namespace hobio
                     {
                         _os << endl
                             << padding(1)
-                            << "\"b\": ";
+                            << SIZE_TAG;
                     }
 
                     indentation(+1);
@@ -132,7 +143,8 @@ namespace hobio
                         _os << ","
                             << endl
                             << padding(1)
-                            << "\"f\": ["
+                            << FIELDS_TAG
+                            << "["
                             << endl;
                     }
                 }
@@ -155,7 +167,8 @@ namespace hobio
                     if (NULL != type)
                     {
                         _os << padding(3)
-                            << "\"t\": \""
+                            << TYPE_TAG
+                            << "\""
                             << type
                             << "\","
                             << endl;
@@ -164,14 +177,15 @@ namespace hobio
                     if (NULL != name)
                     {
                         _os << padding(3)
-                            << "\"n\": \""
+                            << NAME_TAG
+                            << "\""
                             << name
                             << "\","
                             << endl;
                     }
 
                     _os << padding(3)
-                        << "\"v\": ";
+                        << VALUE_TAG;
                 }
 
                 indentation(+3);
@@ -483,7 +497,7 @@ namespace hobio
                 {
                     _os << endl
                         << padding(1)
-                        << "\"i\": ";
+                        << CODE_TAG;
 
                 }
 
@@ -495,10 +509,24 @@ namespace hobio
 
                 if (_format == VERBOSE)
                 {
+                    _os << endl
+                        << padding(1)
+                        << TYPE_TAG;
+
+                }
+
+                indentation(+1);
+
+                encode(type);
+
+                indentation(-1);
+
+                if (_format == VERBOSE)
+                {
                     _os << ","
                         << endl
                         << padding(1)
-                        << "\"f\": ";
+                        << FIELDS_TAG;
                 }
 
                 indentation(+1);
@@ -597,7 +625,7 @@ namespace hobio
                 {
                     _os << endl;
                     _os << padding(3)
-                        << "\"k\": ";
+                        << KEY_TAG;
                 }
 
                 indentation(+1);
@@ -616,7 +644,7 @@ namespace hobio
                 {
                     _os << endl
                         << padding(3)
-                        << "\"v\": ";
+                        << VALUE_TAG;
                 }
 
                 indentation(+3);
