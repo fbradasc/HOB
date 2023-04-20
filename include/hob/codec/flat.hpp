@@ -340,6 +340,7 @@ namespace hobio
                 return (NULL != bits) && encode(((size_+7)>>3),bits);
             }
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
             virtual bool encode_variant_begin(hob::UID id, uint8_t type)
             {
                 return encode(id) && encode(type);
@@ -349,6 +350,7 @@ namespace hobio
             {
                 return true;
             }
+#endif // ENABLE_DYNAMIC_FIELDS
 
             virtual bool encode_vector_begin(size_t len)
             {
@@ -670,12 +672,16 @@ namespace hobio
             template <class T>
             inline bool decode_integer(T &v, bool *changed = NULL)
             {
+                M_LOG("{");
+
                 if (NATIVE == _encoding)
                 {
                     T rv = T();
 
                     if (!read_field(&rv,sizeof(T)))
                     {
+                        M_LOG("} - 0");
+
                         return false;
                     }
 
@@ -686,10 +692,16 @@ namespace hobio
 
                     v = rv;
 
+                    M_LOG("} - 1");
+
                     return true;
                 }
 
-                return decode_varint<T>(v, changed);
+                bool retval = decode_varint<T>(v, changed);
+
+                M_LOG("} - %d", retval);
+
+                return retval;
             }
 
             // VARINT decoding
@@ -702,8 +714,12 @@ namespace hobio
                 uint8_t c;
                 uint8_t m;
 
+                M_LOG("{");
+
                 if (!read_field(&d[7], sizeof(uint8_t)))
                 {
+                    M_LOG("} - 0");
+
                     return false;
                 }
 
@@ -718,6 +734,8 @@ namespace hobio
                 {
                     if (!read_field(&d[8], b-1))
                     {
+                        M_LOG("} - 0");
+
                         return false;
                     }
                 }
@@ -747,6 +765,8 @@ namespace hobio
                 }
 
                 v = rv;
+
+                M_LOG("} - 1");
 
                 return true;
             }

@@ -150,7 +150,6 @@ int getsubopt(char **optionp, char *const *tokens, char **valuep)
 }
 #endif
 
-DynamicFields          m_DynamicFields         ;
 MyStruct               m_MyStruct              ;
 AnotherStruct          m_AnotherStruct         ;
 NoParamMessage         m_NoParamMessage        ;
@@ -667,7 +666,7 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING HOBS ]------------------\n\n");
 
-#ifdef TEST_VARIANT_HOBS
+#if defined(TEST_VARIANT_HOBS) && defined(ENABLE_DYNAMIC_FIELDS)
         if (true) // for now avoid to print these out
         {
             MyStruct m;
@@ -784,7 +783,7 @@ int main(int argc, char *argv[])
 
             cout << "-----------------------------------------------" << endl;
         }
-#endif // TEST_VARIANT_HOBS
+#endif // TEST_VARIANT_HOBS && ENABLE_DYNAMIC_FIELDS
 #ifdef TEST_FIXED_HOBS
         { MyStruct               m; m >> *ps; LOG(m); }
         {

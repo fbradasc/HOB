@@ -488,6 +488,7 @@ namespace hobio
                 return true;
             }
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
             virtual bool encode_variant_begin(hob::UID id, uint8_t type)
             {
                 _os << noshowpos
@@ -547,6 +548,7 @@ namespace hobio
 
                 return true;
             }
+#endif // ENABLE_DYNAMIC_FIELDS
 
             virtual bool encode_optional_begin(const bool &has_value)
             {

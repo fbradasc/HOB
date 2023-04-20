@@ -61,15 +61,18 @@
 #include <typeinfo>
 #include "hob/std/optional.hpp"
 
-#define M_LOG(...)            printf("%s:%s:%d: ",        \
-                                     __FILE__,            \
-                                     __PRETTY_FUNCTION__, \
-                                     __LINE__);           \
-                              printf(__VA_ARGS__);        \
+#if defined(HOB_DEBUG)
+#define M_LOG(...)            printf(__VA_ARGS__); \
+                              printf(" @ %s:%d", __PRETTY_FUNCTION__, __LINE__); \
                               printf("\n");
+#else
+#define M_LOG(...)
+#endif
 
 #define _PAYLOAD_FLAG_POS_    0
+#if defined(ENABLE_DYNAMIC_FIELDS)
 #define _DYNFLDS_FLAG_POS_    1
+#endif
 
 #define HSEED                 65599llu
 // #define HSEED                 11400714819323198485llu
@@ -132,6 +135,7 @@ class hob
 public:
     typedef uint64_t    UID;
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
     enum hob_t
     {
         _t_unknown  = 0x00,
@@ -154,9 +158,11 @@ public:
 
     class encoder; // forward declaration
     class decoder; // forward declaration
+#endif // ENABLE_DYNAMIC_FIELDS
 
     static const UID UNDEFINED = ULLONG_MAX;
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
     //                     Dynamic fields interface                          //
@@ -560,14 +566,16 @@ public:
         {
             map<K, V> m;
 
+            M_LOG("{");
+
             bool decoded = d.decode_field(m, changed);
 
             if (decoded)
             {
                 *this = m;
-
-                M_LOG("Decoded map");
             }
+
+            M_LOG("} - %d", decoded);
 
             return decoded;
         }
@@ -576,6 +584,8 @@ public:
         bool decode_map(hob::decoder &d, bool *changed = NULL)
         {
             bool decoded = false;
+
+            M_LOG("{");
 
             switch (v_type())
             {
@@ -600,6 +610,8 @@ public:
                     break;
             }
 
+            M_LOG("} - %d", decoded);
+
             return decoded;
         }
 
@@ -608,14 +620,16 @@ public:
         {
             vector<T> v;
 
+            M_LOG("{");
+
             bool decoded = d.decode_field(v, changed);
 
             if (decoded)
             {
                 *this = v;
-
-                M_LOG("Decoded vector");
             }
+
+            M_LOG("} - %d", decoded);
 
             return decoded;
         }
@@ -625,14 +639,16 @@ public:
         {
             optional<T> o;
 
+            M_LOG("{");
+
             bool decoded = d.decode_field(o, changed);
 
             if (decoded)
             {
                 *this = o;
-
-                M_LOG("Decoded optional");
             }
+
+            M_LOG("} - %d", decoded);
 
             return decoded;
         }
@@ -642,9 +658,11 @@ public:
             UID     id_   = UNDEFINED;
             uint8_t type_ = 0;
 
+            M_LOG("{");
+
             if (!d.decode_field(id_) || !d.decode_field(type_))
             {
-                M_LOG("Invalid ID(%lu) or type(%u)", id_, type_);
+                M_LOG("} - Invalid ID(%lu) or type(%u)", id_, type_);
 
                 return false;
             }
@@ -740,8 +758,6 @@ public:
                 if (decoded)
                 {
                     *this = s;
-
-                    M_LOG("Decoded string -> %s", s.c_str());
                 }
             }
             else if (v_type() == hob::_t_hob)
@@ -755,8 +771,6 @@ public:
                 if (decoded)
                 {
                     *this = h;
-
-                    M_LOG("Decoded hob");
                 }
             }
             else
@@ -765,18 +779,18 @@ public:
 
                 switch (v_type())
                 {
-                    case hob::_t_u8  : decoded = d.decode_field(_v.uc, changed); M_LOG("Decoded  -> %u -> %d",_v.uc,decoded); break;
-                    case hob::_t_u16 : decoded = d.decode_field(_v.us, changed); M_LOG("Decoded  -> %u -> %d",_v.us,decoded); break;
-                    case hob::_t_u32 : decoded = d.decode_field(_v.ui, changed); M_LOG("Decoded  -> %u -> %d",_v.ui,decoded); break;
-                    case hob::_t_u64 : decoded = d.decode_field(_v.ul, changed); M_LOG("Decoded  -> %lu -> %d",_v.ul,decoded); break;
-                    case hob::_t_i8  : decoded = d.decode_field(_v.sc, changed); M_LOG("Decoded  -> %d -> %d",_v.sc,decoded); break;
-                    case hob::_t_i16 : decoded = d.decode_field(_v.ss, changed); M_LOG("Decoded  -> %d -> %d",_v.ss,decoded); break;
-                    case hob::_t_i32 : decoded = d.decode_field(_v.si, changed); M_LOG("Decoded  -> %d -> %d",_v.si,decoded); break;
-                    case hob::_t_i64 : decoded = d.decode_field(_v.sl, changed); M_LOG("Decoded  -> %ld -> %d",_v.sl,decoded); break;
-                    case hob::_t_bool: decoded = d.decode_field(_v.bd, changed); M_LOG("Decoded  -> %c -> %d",_v.bd ? 't' : 'f',decoded); break;
-                    case hob::_t_f32 : decoded = d.decode_field(_v.fd, changed); M_LOG("Decoded  -> %f -> %d",_v.fd,decoded); break;
-                    case hob::_t_f64 : decoded = d.decode_field(_v.dd, changed); M_LOG("Decoded  -> %lf -> %d",_v.dd,decoded); break;
-                    case hob::_t_f128: decoded = d.decode_field(_v.qd, changed); M_LOG("Decoded  -> %Lf -> %d",_v.qd,decoded); break;
+                    case hob::_t_u8  : decoded = d.decode_field(_v.uc, changed); break;
+                    case hob::_t_u16 : decoded = d.decode_field(_v.us, changed); break;
+                    case hob::_t_u32 : decoded = d.decode_field(_v.ui, changed); break;
+                    case hob::_t_u64 : decoded = d.decode_field(_v.ul, changed); break;
+                    case hob::_t_i8  : decoded = d.decode_field(_v.sc, changed); break;
+                    case hob::_t_i16 : decoded = d.decode_field(_v.ss, changed); break;
+                    case hob::_t_i32 : decoded = d.decode_field(_v.si, changed); break;
+                    case hob::_t_i64 : decoded = d.decode_field(_v.sl, changed); break;
+                    case hob::_t_bool: decoded = d.decode_field(_v.bd, changed); break;
+                    case hob::_t_f32 : decoded = d.decode_field(_v.fd, changed); break;
+                    case hob::_t_f64 : decoded = d.decode_field(_v.dd, changed); break;
+                    case hob::_t_f128: decoded = d.decode_field(_v.qd, changed); break;
                     default:
                         {
                             M_LOG("Unknown variant type: ID=%lu - type=%d", id_, type_);
@@ -785,10 +799,7 @@ public:
                 }
             }
 
-            if (!decoded)
-            {
-                M_LOG("Error decoding variant: ID=%lu - type=%d", id_, type_);
-            }
+            M_LOG("} - %d", decoded);
 
             return decoded;
         }
@@ -1213,6 +1224,7 @@ public:
 
         return true;
     }
+#endif // ENABLE_DYNAMIC_FIELDS
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -1273,10 +1285,12 @@ public:
         virtual size_t field_size(const double      &v) = 0;
         virtual size_t field_size(const long double &v) = 0;
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
         inline size_t field_size(const variant &v)
         {
             return v.field_size(*this);
         }
+#endif // ENABLE_DYNAMIC_FIELDS
 
         inline size_t field_size(const string &v)
         {
@@ -1356,7 +1370,9 @@ public:
 
     protected:
         friend class hobio::json::decoder;
+#if defined(ENABLE_DYNAMIC_FIELDS)
         friend class variant;
+#endif // ENABLE_DYNAMIC_FIELDS
 
         virtual bool encode(const uint8_t      &v) = 0;
         virtual bool encode(const uint16_t     &v) = 0;
@@ -1374,6 +1390,7 @@ public:
         virtual bool encode(const hob          &v) = 0;
         virtual bool encode(const vector<bool> &v) = 0;
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
         bool encode(const variant &v)
         {
             return v.encode(*this);
@@ -1381,6 +1398,7 @@ public:
 
         virtual bool encode_variant_begin(UID id, uint8_t type) = 0;
         virtual bool encode_variant_end() = 0;
+#endif // ENABLE_DYNAMIC_FIELDS
 
         template<size_t N>
         bool encode(const std::bitset<N>& v)
@@ -1536,17 +1554,29 @@ public:
         virtual bool decode_field(int32_t  &v, bool *changed = NULL) = 0;
         virtual bool decode_field(int64_t  &v, bool *changed = NULL) = 0;
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
         bool decode_field(variant &v, bool *changed = NULL)
         {
-            return v.decode(*this, changed);
+            M_LOG("{");
+
+            bool retval = v.decode(*this, changed);
+
+            M_LOG("} - %d", retval);
+
+            return retval;
         }
+#endif // ENABLE_DYNAMIC_FIELDS
 
         bool decode_field(bool &v, bool *changed = NULL)
         {
             bool rv;
 
+            M_LOG("{");
+
             if (!read_field(&rv, sizeof(v)))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1556,6 +1586,8 @@ public:
             }
 
             v = rv;
+
+            M_LOG("} - 1");
 
             return true;
         }
@@ -1564,8 +1596,12 @@ public:
         {
             float rv;
 
+            M_LOG("{");
+
             if (!read_field(&rv, sizeof(v)))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1575,6 +1611,8 @@ public:
             }
 
             v = rv;
+
+            M_LOG("} - 1");
 
             return true;
         }
@@ -1583,8 +1621,12 @@ public:
         {
             double rv;
 
+            M_LOG("{");
+
             if (!read_field(&rv, sizeof(v)))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1594,6 +1636,8 @@ public:
             }
 
             v = rv;
+
+            M_LOG("} - 1");
 
             return true;
         }
@@ -1602,8 +1646,12 @@ public:
         {
             long double rv;
 
+            M_LOG("{");
+
             if (!read_field(&rv, sizeof(v)))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1614,6 +1662,8 @@ public:
 
             v = rv;
 
+            M_LOG("} - 1");
+
             return true;
         }
 
@@ -1621,8 +1671,12 @@ public:
         {
             size_t len;
 
+            M_LOG("{");
+
             if (!decode_field(len))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1630,6 +1684,8 @@ public:
 
             if (!read_field(tmp.data(), len))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1644,6 +1700,8 @@ public:
 
             v = rv;
 
+            M_LOG("} - 1");
+
             return true;
         }
 
@@ -1652,6 +1710,8 @@ public:
             // return is_.__deserialize(*this,v,field);
 
             hob h;
+
+            M_LOG("{");
 
             if (h.__decode(*this,false))
             {
@@ -1664,9 +1724,13 @@ public:
                         *changed = static_cast<bool>(v);
                     }
 
+                    M_LOG("} - 1");
+
                     return true;
                 }
             }
+
+            M_LOG("} - 0");
 
             return false;
         }
@@ -1676,8 +1740,12 @@ public:
         {
             size_t len;
 
+            M_LOG("{");
+
             if (!decode_field(len) || (len != ((N + 7) >> 3)))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1687,6 +1755,8 @@ public:
 
             if (!read_field(bits, len))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1704,6 +1774,8 @@ public:
 
             v = rv;
 
+            M_LOG("} - 1");
+
             return true;
         }
 
@@ -1711,8 +1783,12 @@ public:
         {
             size_t count;
 
+            M_LOG("{");
+
             if (!decode_field(count))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1722,6 +1798,8 @@ public:
 
                 if (!decode_field(len) || (len != ((count + 7) >> 3)))
                 {
+                    M_LOG("} - 0");
+
                     return false;
                 }
 
@@ -1731,6 +1809,8 @@ public:
 
                 if (!read_field(bits, len))
                 {
+                    M_LOG("} - 0");
+
                     return false;
                 }
 
@@ -1748,6 +1828,8 @@ public:
 
                 v = rv;
 
+                M_LOG("} - 1");
+
                 return true;
             }
             else
@@ -1760,6 +1842,8 @@ public:
                 v = vector<bool>();
             }
 
+            M_LOG("} - 1");
+
             return true;
         }
 
@@ -1768,8 +1852,12 @@ public:
         {
             size_t len;
 
+            M_LOG("{");
+
             if (!decode_field(len))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1781,6 +1869,8 @@ public:
                 {
                     if (!decode_field(static_cast<T&>(rv[i])))
                     {
+                        M_LOG("} - 0");
+
                         return false;
                     }
                 }
@@ -1802,6 +1892,8 @@ public:
                 v = vector<T>();
             }
 
+            M_LOG("} - 1");
+
             return true;
         }
 
@@ -1810,8 +1902,12 @@ public:
         {
             bool has_field;
 
+            M_LOG("{");
+
             if (!decode_field(has_field))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1821,6 +1917,8 @@ public:
 
                 if (!decode_field(static_cast<T&>(rv)))
                 {
+                    M_LOG("} - 0");
+
                     return false;
                 }
 
@@ -1841,6 +1939,8 @@ public:
                 v = optional<T>();
             }
 
+            M_LOG("} - 1");
+
             return true;
         }
 
@@ -1849,8 +1949,12 @@ public:
         {
             size_t len;
 
+            M_LOG("{");
+
             if (!decode_field(len))
             {
+                M_LOG("} - 0");
+
                 return false;
             }
 
@@ -1865,11 +1969,15 @@ public:
 
                     if (!decode_field(static_cast<K&>(key)))
                     {
+                        M_LOG("} - 0");
+
                         return false;
                     }
 
                     if (!decode_field(static_cast<V&>(val)))
                     {
+                        M_LOG("} - 0");
+
                         return false;
                     }
 
@@ -1892,6 +2000,8 @@ public:
 
                 v = map<K,V>();
             }
+
+            M_LOG("} - 1");
 
             return true;
         }
@@ -1955,7 +2065,9 @@ public:
         _is = ref._is;
         _sp = ref._sp;
         _ep = ref._ep;
+#if defined(ENABLE_DYNAMIC_FIELDS)
         _df = ref._df;
+#endif // ENABLE_DYNAMIC_FIELDS
 
         return *this;
     }
@@ -1974,12 +2086,24 @@ public:
     {
         __flush_pending();
 
-        return __decode(is);
+        M_LOG("{");
+
+        bool retval = __decode(is);
+
+        M_LOG("} - %d", retval);
+
+        return retval;
     }
 
     inline bool operator<<(hob & ref)
     {
-        return ((_id == ref._id) && __decode(ref));
+        M_LOG("{");
+
+        bool retval = ((_id == ref._id) && __decode(ref));
+
+        M_LOG("} - %d", retval);
+
+        return retval;
     }
 
     virtual bool operator>>(encoder &os) const
@@ -1994,9 +2118,9 @@ public:
                                  __get_id(),
                                  __payload(os))
                 &&
-                __encode_dynamic_fields(os)
+                encode_head(os)
                 &&
-                os.encode_footer()
+                encode_tail(os)
             )
         );
     }
@@ -2066,31 +2190,43 @@ protected:
         _sp = 0;
         _ep = 0;
 
+        M_LOG("{");
+
         if (!is.load(update))
         {
-            M_LOG("Load error");
+            M_LOG("} - Load error");
+
             return false;
         }
 
         if (!is.decode_field(id_))
         {
-            M_LOG("ID decoding error");
+            M_LOG("} - ID decoding error");
+
             return false;
         }
 
         size_t sz_ = 0;
 
-        if ((__has_payload(id_) || __has_dynamic_payload(id_))
+        if ((
+             __has_payload(id_)
+#if defined(ENABLE_DYNAMIC_FIELDS)
+             ||
+             __has_dynamic_payload(id_)
+#endif // ENABLE_DYNAMIC_FIELDS
+            )
             &&
             !is.decode_field(sz_))
         {
-            M_LOG("Size decoding error");
+            M_LOG("} - Size decoding error");
+
             return false;
         }
 
         if (update && !is.bufferize(sz_))
         {
-            M_LOG("Buffer allocation error");
+            M_LOG("} - Buffer allocation error");
+
             return false;
         }
 
@@ -2099,13 +2235,24 @@ protected:
         _ep = _sp + sz_;
         _id = id_;
 
-        return __decode_dynamic_fields();
+        bool retval = decode_head() && decode_tail();
+
+        M_LOG("} - %d", retval);
+
+        return retval;
     }
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
     inline uint64_t __get_id() const
     {
         return _id | ( !_df.empty() << _DYNFLDS_FLAG_POS_ );
     }
+#else // !ENABLE_DYNAMIC_FIELDS
+    inline const uint64_t& __get_id() const
+    {
+        return _id;
+    }
+#endif // ENABLE_DYNAMIC_FIELDS
 
     inline void __update_id(const uint64_t &in)
     {
@@ -2142,10 +2289,18 @@ protected:
         //
         if (_np >= 0)
         {
+#if defined(ENABLE_DYNAMIC_FIELDS)
             _id <<= 2;
 
             _id |= ( (_np > 0)    << _PAYLOAD_FLAG_POS_ );
             _id |= ( !_df.empty() << _DYNFLDS_FLAG_POS_ );
+#else // !ENABLE_DYNAMIC_FIELDS
+            // HOBs with    parameters have an odd  ID
+            // HOBs without parameters have an even ID
+
+            _id <<= 1;
+            _id |= (_np > 0);
+#endif // ENABLE_DYNAMIC_FIELDS
 
             // Avoid parameters check multiple appliance
             //
@@ -2155,7 +2310,11 @@ protected:
 
     size_t __payload(hob::encoder &os) const
     {
+#if defined(ENABLE_DYNAMIC_FIELDS)
         return __static_payload(os) + __dynamic_payload(os);
+#else // !ENABLE_DYNAMIC_FIELDS
+        return __static_payload(os);
+#endif // ENABLE_DYNAMIC_FIELDS
     }
 
     virtual size_t __static_payload(hob::encoder &os) const
@@ -2170,6 +2329,7 @@ protected:
         return ( ( id >> _PAYLOAD_FLAG_POS_ ) & 1 );
     }
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
     inline bool __has_dynamic_payload(uint64_t id)
     {
         return ( ( id >> _DYNFLDS_FLAG_POS_ ) & 1 );
@@ -2194,14 +2354,68 @@ protected:
 
     bool __decode_dynamic_fields()
     {
+        M_LOG("{");
+
         if (!__has_dynamic_payload(_id))
         {
+            M_LOG("} - 1");
+
             return true;
         }
 
-        M_LOG("Called");
+        bool retval = ( (NULL == _is) || _is->decode_field(_df) );
 
-        return ( (NULL == _is) || _is->decode_field(_df) );
+        M_LOG("} - %d", retval);
+
+        return retval;
+    }
+#endif // ENABLE_DYNAMIC_FIELDS
+
+    bool decode_head()
+    {
+        bool retval = true;
+
+        M_LOG("{");
+
+#if defined(ENABLE_DYNAMIC_FIELDS)
+        retval = __decode_dynamic_fields();
+#endif // ENABLE_DYNAMIC_FIELDS
+
+        M_LOG("} - %d", retval);
+
+        return retval;
+    }
+
+    bool decode_tail(bool force_flush_pending=false)
+    {
+        M_LOG("{");
+
+#if defined(ENABLE_DYNAMIC_FIELDS)
+        if (force_flush_pending)
+#endif // !ENABLE_DYNAMIC_FIELDS
+        {
+            __flush_pending();
+        }
+
+        M_LOG("} - 1");
+
+        return true;
+    }
+
+    bool encode_head(encoder &os) const
+    {
+        bool retval = true;
+
+#if defined(ENABLE_DYNAMIC_FIELDS)
+        retval = __encode_dynamic_fields(os);
+#endif // ENABLE_DYNAMIC_FIELDS
+
+        return retval;
+    }
+
+    bool encode_tail(encoder &os) const
+    {
+        return os.encode_footer();
     }
 
     virtual void __reset_changes()
@@ -2224,8 +2438,12 @@ protected:
 
     virtual void __flush_pending()
     {
+        M_LOG("{");
+
         if (NULL == _is)
         {
+            M_LOG("}");
+
             return;
         }
 
@@ -2233,8 +2451,12 @@ protected:
 
         if ((cp >= 0) && (cp < _ep))
         {
+            M_LOG("Skipping %lu bytes", _ep - cp);
+
             _is->skip(_ep - cp);
         }
+
+        M_LOG("}");
     }
 
 private:
@@ -2244,7 +2466,9 @@ private:
     ssize_t  _ep;
     ssize_t  _np;
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
     dynamic_fields_t _df;
+#endif // ENABLE_DYNAMIC_FIELDS
 };
 
 inline bool operator<<(hob::encoder &e, hob &h) { return h >> e; }
@@ -2419,11 +2643,11 @@ public:                                                                         
                                  __get_id(),                                      \
                                  payload)                                         \
                 &&                                                                \
-                hob::__encode_dynamic_fields(os)                                  \
+                hob::encode_head(os)                                              \
                 SCAN_FIELDS(ENCODE_FIELD, PP_FIRST(__VA_ARGS__))                  \
                 SCAN_FIELDS(ENCODE_FIELD, PP_REMAIN(__VA_ARGS__))                 \
                 &&                                                                \
-                os.encode_footer()                                                \
+                hob::encode_tail(os)                                               \
             )                                                                     \
         );                                                                        \
     }                                                                             \
@@ -2459,8 +2683,12 @@ protected:                                                                      
     {                                                                             \
         hob::decoder *is = static_cast<hob::decoder*>(ref);                       \
                                                                                   \
+        M_LOG("{");                                                               \
+                                                                                  \
         if (NULL == is)                                                           \
         {                                                                         \
+            M_LOG("} - 0");                                                       \
+                                                                                  \
             return false;                                                         \
         }                                                                         \
                                                                                   \
@@ -2470,10 +2698,14 @@ protected:                                                                      
                                                                                   \
         if (!__decode(*is))                                                       \
         {                                                                         \
+            M_LOG("} - 0");                                                       \
+                                                                                  \
             return false;                                                         \
         }                                                                         \
                                                                                   \
         *this = ref;                                                              \
+                                                                                  \
+        M_LOG("} - 1");                                                           \
                                                                                   \
         return true;                                                              \
     }                                                                             \
@@ -2487,19 +2719,22 @@ protected:                                                                      
                                                                                   \
         (void)c;                                                                  \
                                                                                   \
-        /* Read mandatory fields : fail on error */                               \
+        M_LOG("{");                                                               \
                                                                                   \
-        if (true SCAN_FIELDS(DECODE_FIELD, PP_FIRST(__VA_ARGS__)))                \
+        /* Read dynamic fields then mandatory fields : fail on error */           \
+                                                                                  \
+        if (hob::decode_head() &&                                                 \
+            (true SCAN_FIELDS(DECODE_FIELD, PP_FIRST(__VA_ARGS__))))              \
         {                                                                         \
             /* Read optional fields : ignore errors */                            \
                                                                                   \
             if ((true SCAN_FIELDS(DECODE_FIELD, PP_REMAIN(__VA_ARGS__))) || true) \
             {                                                                     \
-                hob::__flush_pending();                                           \
-                                                                                  \
-                return true;                                                      \
+                return hob::decode_tail(true);                                    \
             }                                                                     \
         }                                                                         \
+                                                                                  \
+        M_LOG("} - 0");                                                           \
                                                                                   \
         return false;                                                             \
     }                                                                             \
