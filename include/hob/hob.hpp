@@ -58,7 +58,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#if defined(ENABLE_DYNAMIC_FIELDS)
 #include <typeinfo>
+#endif
 #include "hob/std/optional.hpp"
 
 #if defined(HOB_DEBUG)
@@ -2086,24 +2088,12 @@ public:
     {
         __flush_pending();
 
-        M_LOG("{");
-
-        bool retval = __decode(is);
-
-        M_LOG("} - %d", retval);
-
-        return retval;
+        return __decode(is);
     }
 
     inline bool operator<<(hob & ref)
     {
-        M_LOG("{");
-
-        bool retval = ((_id == ref._id) && __decode(ref));
-
-        M_LOG("} - %d", retval);
-
-        return retval;
+        return ((_id == ref._id) && __decode(ref));
     }
 
     virtual bool operator>>(encoder &os) const
@@ -2139,12 +2129,14 @@ public:
         return rv;
     }
 
+#if defined(ENABLE_DYNAMIC_FIELDS)
     inline bool operator<(const hob &ref) const
     {
         bool rv = (_id < ref._id);
 
         return rv;
     }
+#endif
 
     inline operator decoder *()
     {
@@ -2208,15 +2200,7 @@ protected:
 
         size_t sz_ = 0;
 
-        if ((
-             __has_payload(id_)
-#if defined(ENABLE_DYNAMIC_FIELDS)
-             ||
-             __has_dynamic_payload(id_)
-#endif // ENABLE_DYNAMIC_FIELDS
-            )
-            &&
-            !is.decode_field(sz_))
+        if (__has_payload(id_) && !is.decode_field(sz_))
         {
             M_LOG("} - Size decoding error");
 
@@ -2325,6 +2309,16 @@ protected:
     }
 
     inline bool __has_payload(uint64_t id)
+    {
+        return __has_static_payload(id)
+#if defined(ENABLE_DYNAMIC_FIELDS)
+               ||
+               __has_dynamic_payload(id)
+#endif // ENABLE_DYNAMIC_FIELDS
+               ;
+    }
+
+    inline bool __has_static_payload(uint64_t id)
     {
         return ( ( id >> _PAYLOAD_FLAG_POS_ ) & 1 );
     }
@@ -2647,7 +2641,7 @@ public:                                                                         
                 SCAN_FIELDS(ENCODE_FIELD, PP_FIRST(__VA_ARGS__))                  \
                 SCAN_FIELDS(ENCODE_FIELD, PP_REMAIN(__VA_ARGS__))                 \
                 &&                                                                \
-                hob::encode_tail(os)                                               \
+                hob::encode_tail(os)                                              \
             )                                                                     \
         );                                                                        \
     }                                                                             \
@@ -2721,7 +2715,7 @@ protected:                                                                      
                                                                                   \
         M_LOG("{");                                                               \
                                                                                   \
-        /* Read dynamic fields then mandatory fields : fail on error */           \
+        /* Read non optional fields : fail on error */                            \
                                                                                   \
         if (hob::decode_head() &&                                                 \
             (true SCAN_FIELDS(DECODE_FIELD, PP_FIRST(__VA_ARGS__))))              \
