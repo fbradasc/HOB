@@ -2024,9 +2024,9 @@ public:
                                  __get_id(),
                                  __payload(os))
                 &&
-                encode_head(os)
+                __encode_head(os)
                 &&
-                encode_tail(os)
+                __encode_tail(os)
             )
         );
     }
@@ -2125,7 +2125,7 @@ protected:
         _ep = _sp + sz_;
         _id = id_;
 
-        return ( decode_head() && decode_tail() );
+        return (__decode_head() && __decode_tail(false));
     }
 
 #if defined(ENABLE_DYNAMIC_FIELDS)
@@ -2176,17 +2176,17 @@ protected:
         if (_np >= 0)
         {
 #if defined(ENABLE_DYNAMIC_FIELDS)
+            // Reserve bit for dynamic fields flag
+            //
             _id <<= 2;
-
-            _id |= ( (_np > 0)    << _PAYLOAD_FLAG_POS_ );
-            _id |= ( !_df.empty() << _DYNFLDS_FLAG_POS_ );
 #else // !ENABLE_DYNAMIC_FIELDS
+            _id <<= 1;
+#endif // ENABLE_DYNAMIC_FIELDS
+
             // HOBs with    parameters have an odd  ID
             // HOBs without parameters have an even ID
-
-            _id <<= 1;
+            //
             _id |= (_np > 0);
-#endif // ENABLE_DYNAMIC_FIELDS
 
             // Avoid parameters check multiple appliance
             //
@@ -2194,7 +2194,7 @@ protected:
         }
     }
 
-    virtual size_t __payload(hob::encoder &os) const
+    size_t __payload(hob::encoder &os) const
     {
 #if defined(ENABLE_DYNAMIC_FIELDS)
         return __static_payload(os) + __dynamic_payload(os);
@@ -2238,28 +2238,18 @@ protected:
 
     bool __encode_dynamic_fields(hob::encoder &os) const
     {
-        (void)os;
-
-        if (_df.empty())
-        {
-            return true;
-        }
-
-        return os.encode_field(_df, "variant");
+        return (_df.empty()) ? true : os.encode_field(_df, "variant");
     }
 
     bool __decode_dynamic_fields()
     {
         M_LOG("{");
 
-        if (!__has_dynamic_payload(_id))
-        {
-            M_LOG("} - 1");
-
-            return true;
-        }
-
-        bool retval = ( (NULL == _is) || _is->decode_field(_df) );
+        bool retval = ( !__has_dynamic_payload(_id)
+                        ||
+                        (NULL == _is)
+                        ||
+                        _is->decode_field(_df) );
 
         M_LOG("} - %d", retval);
 
@@ -2267,38 +2257,44 @@ protected:
     }
 #endif // ENABLE_DYNAMIC_FIELDS
 
-    bool decode_head()
+    bool __decode_head()
     {
-#if defined(ENABLE_DYNAMIC_FIELDS)
-        return __decode_dynamic_fields();
-#else // ENABLE_DYNAMIC_FIELDS
         return true;
-#endif // ENABLE_DYNAMIC_FIELDS
     }
 
-    bool decode_tail(bool force_flush_pending=false)
+    bool __decode_tail(bool force_flush_pending=false)
     {
+        (void)force_flush_pending;
+
 #if defined(ENABLE_DYNAMIC_FIELDS)
+        if (!__decode_dynamic_fields())
+        {
+            return false;
+        }
+#else // ENABLE_DYNAMIC_FIELDS
         if (force_flush_pending)
-#endif // !ENABLE_DYNAMIC_FIELDS
         {
             __flush_pending();
         }
+#endif // ENABLE_DYNAMIC_FIELDS
 
         return true;
     }
 
-    bool encode_head(encoder &os) const
+    bool __encode_head(encoder &os) const
+    {
+        return true;
+    }
+
+    bool __encode_tail(encoder &os) const
     {
 #if defined(ENABLE_DYNAMIC_FIELDS)
-        return __encode_dynamic_fields(os);
-#else // ENABLE_DYNAMIC_FIELDS
-        return true;
+        if (!__encode_dynamic_fields(os))
+        {
+            return false;
+        }
 #endif // ENABLE_DYNAMIC_FIELDS
-    }
 
-    bool encode_tail(encoder &os) const
-    {
         return os.encode_footer();
     }
 
@@ -2519,11 +2515,11 @@ public:                                                                         
                                  __get_id(),                                      \
                                  payload)                                         \
                 &&                                                                \
-                hob::encode_head(os)                                              \
+                hob::__encode_head(os)                                            \
                 SCAN_FIELDS(ENCODE_FIELD, PP_FIRST(__VA_ARGS__))                  \
                 SCAN_FIELDS(ENCODE_FIELD, PP_REMAIN(__VA_ARGS__))                 \
                 &&                                                                \
-                hob::encode_tail(os)                                              \
+                hob::__encode_tail(os)                                            \
             )                                                                     \
         );                                                                        \
     }                                                                             \
@@ -2589,14 +2585,14 @@ protected:                                                                      
                                                                                   \
         /* Read non optional fields : fail on error */                            \
                                                                                   \
-        if (hob::decode_head() &&                                                 \
+        if (hob::__decode_head() &&                                               \
             (true SCAN_FIELDS(DECODE_FIELD, PP_FIRST(__VA_ARGS__))))              \
         {                                                                         \
             /* Read optional fields : ignore errors */                            \
                                                                                   \
             if ((true SCAN_FIELDS(DECODE_FIELD, PP_REMAIN(__VA_ARGS__))) || true) \
             {                                                                     \
-                return hob::decode_tail(true);                                    \
+                return hob::__decode_tail(true);                                  \
             }                                                                     \
         }                                                                         \
                                                                                   \
@@ -2622,7 +2618,7 @@ protected:                                                                      
     {                                                                             \
     }                                                                             \
                                                                                   \
-    virtual size_t __payload(hob::encoder &os) const                              \
+    virtual size_t __static_payload(hob::encoder &os) const                       \
     {                                                                             \
         (void)os;                                                                 \
                                                                                   \
