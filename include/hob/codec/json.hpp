@@ -350,6 +350,11 @@ namespace hobio
 
                 encode(&v, sizeof(v));
 
+                if (_format == VERBOSE)
+                {
+                   _os << "=" << v;
+                }
+
                 _os << "\"}";
 
                 return true;
@@ -362,6 +367,11 @@ namespace hobio
 
                 encode(&v, sizeof(v));
 
+                if (_format == VERBOSE)
+                {
+                   _os << "=" << v;
+                }
+
                 _os << "\"}";
 
                 return true;
@@ -373,6 +383,11 @@ namespace hobio
                     << "{\"" << F128_TAG << "\":\"";
 
                 encode(&v, sizeof(v));
+
+                if (_format == VERBOSE)
+                {
+                   _os << "=" << v;
+                }
 
                 _os << "\"}";
 

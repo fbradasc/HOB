@@ -6,9 +6,10 @@ project(Message VERSION 0.1.0)
 
 # set(DUMP_ALL DUMP_ALL)
 # set(DEBUG_WRITE DEBUG_WRITE)
+# set(HOB_DEBUG HOB_DEBUG)
 set(TEST_VARIANT_HOBS TEST_VARIANT_HOBS)
 set(ENABLE_DYNAMIC_FIELDS ENABLE_DYNAMIC_FIELDS)
-set(TEST_FIXED_HOBS TEST_FIXED_HOBS)
+#set(TEST_FIXED_HOBS TEST_FIXED_HOBS)
 
 set(BASIC_TEST_SRC
     tests/basic/test.cpp)
@@ -61,6 +62,7 @@ endif()
 target_compile_definitions(test_hob
                            PUBLIC
                            ${BINARY_ONLY}
+                           ${HOB_DEBUG}
                            ${TEST_VARIANT_HOBS}
                            ${TEST_FIXED_HOBS}
                            ${ENABLE_DYNAMIC_FIELDS}

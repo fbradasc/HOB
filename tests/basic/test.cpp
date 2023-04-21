@@ -669,10 +669,8 @@ int main(int argc, char *argv[])
 #if defined(TEST_VARIANT_HOBS) && defined(ENABLE_DYNAMIC_FIELDS)
         if (true) // for now avoid to print these out
         {
-            MyStruct m;
-
             hob h("DYNAMIC_FIELDS");
-            hob h1("NESTED_DYNAMIC_FIELDS");
+            hob h1("DEEP_NESTED_DYNAMIC_FIELDS");
 
             vector<uint8_t> v;
             v.push_back(42);
@@ -690,12 +688,14 @@ int main(int argc, char *argv[])
              .set< double          >("double"         , 1.313f )
              .set< long double     >("quadle"         , 1.3131313131313131313)
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
+/*
              .set<hob>(
                 "hob",
                 hob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
-                                            .set<hob   >("MyStruct",
-                                                         m.set<string>("nested2",
-                                                                       "deepest")))
+                                            .set<hob   >("MyHob",
+                                                         h1.set<string>("nested2",
+                                                                        "deepest")))
+*/
             ;
 #if 0
             cout << "12 items expected:" << endl << endl;

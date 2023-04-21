@@ -1681,9 +1681,13 @@ public:
 
             hob h;
 
+            M_LOG("{");
+
             if (h.__decode(*this,false))
             {
                 v = h;
+
+                M_LOG("Decoded hob: %lu", v._id);
 
                 if (v << static_cast<hob::decoder*>(h))
                 {
@@ -1692,9 +1696,13 @@ public:
                         *changed = static_cast<bool>(v);
                     }
 
+                    M_LOG("} - 1");
+
                     return true;
                 }
             }
+
+            M_LOG("} - 0");
 
             return false;
         }
@@ -2004,12 +2012,24 @@ public:
     {
         __flush_pending();
 
-        return __decode(is);
+        M_LOG("{");
+
+        bool retval = __decode(is);
+
+        M_LOG("} - %d", retval);
+
+        return retval;
     }
 
     inline bool operator<<(hob & ref)
     {
-        return ((_id == ref._id) && __decode(ref));
+        M_LOG("{");
+
+        bool retval = ((_id == ref._id) && __decode(ref));
+
+        M_LOG("} - %d", retval);
+
+        return retval;
     }
 
     virtual bool operator>>(encoder &os) const
@@ -2098,13 +2118,19 @@ protected:
         _sp = 0;
         _ep = 0;
 
+        M_LOG("{");
+
         if (!is.load(update))
         {
+            M_LOG("} - 0");
+
             return false;
         }
 
         if (!is.decode_field(id_))
         {
+            M_LOG("} - 0");
+
             return false;
         }
 
@@ -2112,11 +2138,15 @@ protected:
 
         if (__has_payload(id_) && !is.decode_field(sz_))
         {
+            M_LOG("} - 0");
+
             return false;
         }
 
         if (update && !is.bufferize(sz_))
         {
+            M_LOG("} - 0");
+
             return false;
         }
 
@@ -2125,7 +2155,11 @@ protected:
         _ep = _sp + sz_;
         _id = id_;
 
-        return (__decode_head() && __decode_tail(false));
+        bool retval = (__decode_head() && __decode_tail(false));
+
+        M_LOG("} - %d", retval);
+
+        return retval;
     }
 
 #if defined(ENABLE_DYNAMIC_FIELDS)
@@ -2267,10 +2301,17 @@ protected:
         (void)force_flush_pending;
 
 #if defined(ENABLE_DYNAMIC_FIELDS)
+        M_LOG("{");
+
         if (!__decode_dynamic_fields())
         {
+            M_LOG("} - 0");
+
             return false;
         }
+
+        M_LOG("} - 1");
+
 #else // ENABLE_DYNAMIC_FIELDS
         if (force_flush_pending)
         {
