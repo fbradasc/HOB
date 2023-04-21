@@ -67,4 +67,4 @@ from_json_file      > hobs_from_json_file.txt
 
 echo
 
-md5sum hobs_*.txt
+md5sum hobs_*.txt *.dat dump.*

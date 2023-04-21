@@ -79,10 +79,10 @@
 #define HSEED                 65599llu
 // #define HSEED                 11400714819323198485llu
 #define HLEN(s)               ((sizeof(s)/sizeof(s[0])) - 1)
-#define H1(s,i,x)             (static_cast<uint64_t>(x)*(((i)<HLEN(s))?HSEED:1)\
-                               +                                               \
-                               static_cast<uint8_t>(s[((i)<HLEN(s))            \
-                                                      ?HLEN(s)-1-(i)           \
+#define H1(s,i,x)             (static_cast<UID>(x)*(((i)<HLEN(s))?HSEED:1) \
+                               +                                           \
+                               static_cast<uint8_t>(s[((i)<HLEN(s))        \
+                                                      ?HLEN(s)-1-(i)       \
                                                       :HLEN(s)]))
 
 #define H4(s,i,x)             H1(s,(i)    , \
@@ -105,15 +105,15 @@
                               H64(s,(i)+128, \
                               H64(s,(i)+192, (x)))))
 
-#define HASH(x)               (static_cast<uint64_t>((x)^((x)>>32)))
+#define HASH(x)               (static_cast<UID>((x)^((x)>>32)))
 
 #if defined(ENABLE_CPP_HASH)
 #if defined(ENABLE_CPP_MAX_SIZE_HASH)
-#define HUPDATE(s)   __update_id(static_cast<uint64_t>( \
+#define HUPDATE(s)   __update_id(static_cast<UID>(                  \
                                  (HLEN(s)>0) ? H256(s,0,__get_id()) \
                                              : __get_id()))
 #else // !ENABLE_CPP_MAX_SIZE_HASH
-#define HUPDATE(s)   __update_id(static_cast<uint64_t>( \
+#define HUPDATE(s)   __update_id(static_cast<UID>(                 \
                                  (HLEN(s)>0) ? H64(s,0,__get_id()) \
                                              : __get_id()))
 #endif // !ENABLE_CPP_MAX_SIZE_HASH
@@ -1573,12 +1573,8 @@ public:
         {
             bool rv;
 
-            M_LOG("{");
-
             if (!read_field(&rv, sizeof(v)))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1588,8 +1584,6 @@ public:
             }
 
             v = rv;
-
-            M_LOG("} - 1");
 
             return true;
         }
@@ -1598,12 +1592,8 @@ public:
         {
             float rv;
 
-            M_LOG("{");
-
             if (!read_field(&rv, sizeof(v)))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1613,8 +1603,6 @@ public:
             }
 
             v = rv;
-
-            M_LOG("} - 1");
 
             return true;
         }
@@ -1623,12 +1611,8 @@ public:
         {
             double rv;
 
-            M_LOG("{");
-
             if (!read_field(&rv, sizeof(v)))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1638,8 +1622,6 @@ public:
             }
 
             v = rv;
-
-            M_LOG("} - 1");
 
             return true;
         }
@@ -1648,12 +1630,8 @@ public:
         {
             long double rv;
 
-            M_LOG("{");
-
             if (!read_field(&rv, sizeof(v)))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1664,8 +1642,6 @@ public:
 
             v = rv;
 
-            M_LOG("} - 1");
-
             return true;
         }
 
@@ -1673,12 +1649,8 @@ public:
         {
             size_t len;
 
-            M_LOG("{");
-
             if (!decode_field(len))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1686,8 +1658,6 @@ public:
 
             if (!read_field(tmp.data(), len))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1702,8 +1672,6 @@ public:
 
             v = rv;
 
-            M_LOG("} - 1");
-
             return true;
         }
 
@@ -1712,8 +1680,6 @@ public:
             // return is_.__deserialize(*this,v,field);
 
             hob h;
-
-            M_LOG("{");
 
             if (h.__decode(*this,false))
             {
@@ -1726,13 +1692,9 @@ public:
                         *changed = static_cast<bool>(v);
                     }
 
-                    M_LOG("} - 1");
-
                     return true;
                 }
             }
-
-            M_LOG("} - 0");
 
             return false;
         }
@@ -1742,12 +1704,8 @@ public:
         {
             size_t len;
 
-            M_LOG("{");
-
             if (!decode_field(len) || (len != ((N + 7) >> 3)))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1757,8 +1715,6 @@ public:
 
             if (!read_field(bits, len))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1776,8 +1732,6 @@ public:
 
             v = rv;
 
-            M_LOG("} - 1");
-
             return true;
         }
 
@@ -1785,12 +1739,8 @@ public:
         {
             size_t count;
 
-            M_LOG("{");
-
             if (!decode_field(count))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1800,8 +1750,6 @@ public:
 
                 if (!decode_field(len) || (len != ((count + 7) >> 3)))
                 {
-                    M_LOG("} - 0");
-
                     return false;
                 }
 
@@ -1811,8 +1759,6 @@ public:
 
                 if (!read_field(bits, len))
                 {
-                    M_LOG("} - 0");
-
                     return false;
                 }
 
@@ -1830,8 +1776,6 @@ public:
 
                 v = rv;
 
-                M_LOG("} - 1");
-
                 return true;
             }
             else
@@ -1844,8 +1788,6 @@ public:
                 v = vector<bool>();
             }
 
-            M_LOG("} - 1");
-
             return true;
         }
 
@@ -1854,12 +1796,8 @@ public:
         {
             size_t len;
 
-            M_LOG("{");
-
             if (!decode_field(len))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1871,8 +1809,6 @@ public:
                 {
                     if (!decode_field(static_cast<T&>(rv[i])))
                     {
-                        M_LOG("} - 0");
-
                         return false;
                     }
                 }
@@ -1894,8 +1830,6 @@ public:
                 v = vector<T>();
             }
 
-            M_LOG("} - 1");
-
             return true;
         }
 
@@ -1904,12 +1838,8 @@ public:
         {
             bool has_field;
 
-            M_LOG("{");
-
             if (!decode_field(has_field))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1919,8 +1849,6 @@ public:
 
                 if (!decode_field(static_cast<T&>(rv)))
                 {
-                    M_LOG("} - 0");
-
                     return false;
                 }
 
@@ -1941,8 +1869,6 @@ public:
                 v = optional<T>();
             }
 
-            M_LOG("} - 1");
-
             return true;
         }
 
@@ -1951,12 +1877,8 @@ public:
         {
             size_t len;
 
-            M_LOG("{");
-
             if (!decode_field(len))
             {
-                M_LOG("} - 0");
-
                 return false;
             }
 
@@ -1971,15 +1893,11 @@ public:
 
                     if (!decode_field(static_cast<K&>(key)))
                     {
-                        M_LOG("} - 0");
-
                         return false;
                     }
 
                     if (!decode_field(static_cast<V&>(val)))
                     {
-                        M_LOG("} - 0");
-
                         return false;
                     }
 
@@ -2002,8 +1920,6 @@ public:
 
                 v = map<K,V>();
             }
-
-            M_LOG("} - 1");
 
             return true;
         }
@@ -2176,25 +2092,19 @@ protected:
 
     virtual bool __decode(decoder &is, bool update=true)
     {
-        uint64_t id_;
+        UID id_;
 
         _is = NULL;
         _sp = 0;
         _ep = 0;
 
-        M_LOG("{");
-
         if (!is.load(update))
         {
-            M_LOG("} - Load error");
-
             return false;
         }
 
         if (!is.decode_field(id_))
         {
-            M_LOG("} - ID decoding error");
-
             return false;
         }
 
@@ -2202,15 +2112,11 @@ protected:
 
         if (__has_payload(id_) && !is.decode_field(sz_))
         {
-            M_LOG("} - Size decoding error");
-
             return false;
         }
 
         if (update && !is.bufferize(sz_))
         {
-            M_LOG("} - Buffer allocation error");
-
             return false;
         }
 
@@ -2219,26 +2125,22 @@ protected:
         _ep = _sp + sz_;
         _id = id_;
 
-        bool retval = decode_head() && decode_tail();
-
-        M_LOG("} - %d", retval);
-
-        return retval;
+        return ( decode_head() && decode_tail() );
     }
 
 #if defined(ENABLE_DYNAMIC_FIELDS)
-    inline uint64_t __get_id() const
+    inline UID __get_id() const
     {
         return _id | ( !_df.empty() << _DYNFLDS_FLAG_POS_ );
     }
 #else // !ENABLE_DYNAMIC_FIELDS
-    inline const uint64_t& __get_id() const
+    inline const UID & __get_id() const
     {
         return _id;
     }
 #endif // ENABLE_DYNAMIC_FIELDS
 
-    inline void __update_id(const uint64_t &in)
+    inline void __update_id(const UID &in)
     {
         _np++;
 
@@ -2292,7 +2194,7 @@ protected:
         }
     }
 
-    size_t __payload(hob::encoder &os) const
+    virtual size_t __payload(hob::encoder &os) const
     {
 #if defined(ENABLE_DYNAMIC_FIELDS)
         return __static_payload(os) + __dynamic_payload(os);
@@ -2308,7 +2210,7 @@ protected:
         return 0;
     }
 
-    inline bool __has_payload(uint64_t id)
+    inline bool __has_payload(const UID &id)
     {
         return __has_static_payload(id)
 #if defined(ENABLE_DYNAMIC_FIELDS)
@@ -2318,13 +2220,13 @@ protected:
                ;
     }
 
-    inline bool __has_static_payload(uint64_t id)
+    inline bool __has_static_payload(const UID &id)
     {
         return ( ( id >> _PAYLOAD_FLAG_POS_ ) & 1 );
     }
 
 #if defined(ENABLE_DYNAMIC_FIELDS)
-    inline bool __has_dynamic_payload(uint64_t id)
+    inline bool __has_dynamic_payload(const UID &id)
     {
         return ( ( id >> _DYNFLDS_FLAG_POS_ ) & 1 );
     }
@@ -2367,23 +2269,15 @@ protected:
 
     bool decode_head()
     {
-        bool retval = true;
-
-        M_LOG("{");
-
 #if defined(ENABLE_DYNAMIC_FIELDS)
-        retval = __decode_dynamic_fields();
+        return __decode_dynamic_fields();
+#else // ENABLE_DYNAMIC_FIELDS
+        return true;
 #endif // ENABLE_DYNAMIC_FIELDS
-
-        M_LOG("} - %d", retval);
-
-        return retval;
     }
 
     bool decode_tail(bool force_flush_pending=false)
     {
-        M_LOG("{");
-
 #if defined(ENABLE_DYNAMIC_FIELDS)
         if (force_flush_pending)
 #endif // !ENABLE_DYNAMIC_FIELDS
@@ -2391,20 +2285,16 @@ protected:
             __flush_pending();
         }
 
-        M_LOG("} - 1");
-
         return true;
     }
 
     bool encode_head(encoder &os) const
     {
-        bool retval = true;
-
 #if defined(ENABLE_DYNAMIC_FIELDS)
-        retval = __encode_dynamic_fields(os);
+        return __encode_dynamic_fields(os);
+#else // ENABLE_DYNAMIC_FIELDS
+        return true;
 #endif // ENABLE_DYNAMIC_FIELDS
-
-        return retval;
     }
 
     bool encode_tail(encoder &os) const
@@ -2432,12 +2322,8 @@ protected:
 
     virtual void __flush_pending()
     {
-        M_LOG("{");
-
         if (NULL == _is)
         {
-            M_LOG("}");
-
             return;
         }
 
@@ -2445,12 +2331,8 @@ protected:
 
         if ((cp >= 0) && (cp < _ep))
         {
-            M_LOG("Skipping %lu bytes", _ep - cp);
-
             _is->skip(_ep - cp);
         }
-
-        M_LOG("}");
     }
 
 private:
@@ -2677,12 +2559,8 @@ protected:                                                                      
     {                                                                             \
         hob::decoder *is = static_cast<hob::decoder*>(ref);                       \
                                                                                   \
-        M_LOG("{");                                                               \
-                                                                                  \
         if (NULL == is)                                                           \
         {                                                                         \
-            M_LOG("} - 0");                                                       \
-                                                                                  \
             return false;                                                         \
         }                                                                         \
                                                                                   \
@@ -2692,14 +2570,10 @@ protected:                                                                      
                                                                                   \
         if (!__decode(*is))                                                       \
         {                                                                         \
-            M_LOG("} - 0");                                                       \
-                                                                                  \
             return false;                                                         \
         }                                                                         \
                                                                                   \
         *this = ref;                                                              \
-                                                                                  \
-        M_LOG("} - 1");                                                           \
                                                                                   \
         return true;                                                              \
     }                                                                             \
@@ -2713,8 +2587,6 @@ protected:                                                                      
                                                                                   \
         (void)c;                                                                  \
                                                                                   \
-        M_LOG("{");                                                               \
-                                                                                  \
         /* Read non optional fields : fail on error */                            \
                                                                                   \
         if (hob::decode_head() &&                                                 \
@@ -2727,8 +2599,6 @@ protected:                                                                      
                 return hob::decode_tail(true);                                    \
             }                                                                     \
         }                                                                         \
-                                                                                  \
-        M_LOG("} - 0");                                                           \
                                                                                   \
         return false;                                                             \
     }                                                                             \
@@ -2752,7 +2622,7 @@ protected:                                                                      
     {                                                                             \
     }                                                                             \
                                                                                   \
-    virtual size_t __static_payload(hob::encoder &os) const                       \
+    virtual size_t __payload(hob::encoder &os) const                              \
     {                                                                             \
         (void)os;                                                                 \
                                                                                   \
