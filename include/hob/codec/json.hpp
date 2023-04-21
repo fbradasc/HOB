@@ -12,6 +12,10 @@ using namespace std;
 
 namespace hobio
 {
+    static const uint8_t INDENT_WIDTH = 1;
+
+    // Verbose fields description tags
+    //
     static const char * CODE_TAG   = "\"id\"    : ";
     static const char * FIELDS_TAG = "\"fields\": ";
     static const char * TYPE_TAG   = "\"type\"  : ";
@@ -20,6 +24,25 @@ namespace hobio
     static const char * DESC_TAG   = "\"desc\"  : ";
     static const char * VALUE_TAG  = "\"value\" : ";
     static const char * KEY_TAG    = "\"key\"   : ";
+
+    // Data types tags
+    //
+    static const char * I8_TAG     = "C" ; // uint8_t, int8_t
+    static const char * I16_TAG    = "S" ; // uint16_t, int16_t
+    static const char * I32_TAG    = "I" ; // uint32_t, int32_t
+    static const char * I64_TAG    = "L" ; // uint64_t, int64_t
+
+    static const char * F32_TAG    = "F" ; // float
+    static const char * F64_TAG    = "D" ; // double
+    static const char * F128_TAG   = "Q" ; // long double
+
+    static const char * TEXT_TAG   = "T" ; // char *, string
+    static const char * BOOL_TAG   = "B" ; // bool, bitset<>
+
+    static const char * BITS_TAG   = "B("; // vector<bool>
+    static const char * VECT_TAG   = "V("; // vector<>
+    static const char * MAP_TAG    = "M("; // map<>
+    static const char * OPTION_TAG = "O("; // optional<>
 
     namespace json
     {
@@ -123,11 +146,10 @@ namespace hobio
 
                 if (_has_payload[level()])
                 {
-                    _os << ",";
-
                     if (_format == VERBOSE)
                     {
-                        _os << endl
+                        _os << ","
+                            << endl
                             << padding(1)
                             << SIZE_TAG;
                     }
@@ -240,7 +262,7 @@ namespace hobio
             virtual bool encode(const uint8_t &v)
             {
                 _os << noshowpos
-                    << "{\"C\":"
+                    << "{\"" << I8_TAG << "\":"
                     << static_cast<unsigned int>(v)
                     << "}";
 
@@ -250,7 +272,7 @@ namespace hobio
             virtual bool encode(const uint16_t &v)
             {
                 _os << noshowpos
-                    << "{\"S\":"
+                    << "{\"" << I16_TAG << "\":"
                     << v
                     << "}";
 
@@ -260,7 +282,7 @@ namespace hobio
             virtual bool encode(const uint32_t &v)
             {
                 _os << noshowpos
-                    << "{\"I\":"
+                    << "{\"" << I32_TAG << "\":"
                     << v
                     << "}";
 
@@ -270,7 +292,7 @@ namespace hobio
             virtual bool encode(const uint64_t &v)
             {
                 _os << noshowpos
-                    << "{\"L\":"
+                    << "{\"" << I64_TAG << "\":"
                     << v
                     << "}";
 
@@ -279,7 +301,7 @@ namespace hobio
 
             virtual bool encode(const int8_t &v)
             {
-                _os << "{\"C\":"
+                _os << "{\"" << I8_TAG << "\":"
                     << showpos
                     << static_cast<int>(v)
                     << noshowpos
@@ -290,7 +312,7 @@ namespace hobio
 
             virtual bool encode(const int16_t &v)
             {
-                _os << "{\"S\":"
+                _os << "{\"" << I16_TAG << "\":"
                     << showpos
                     << v
                     << noshowpos
@@ -301,7 +323,7 @@ namespace hobio
 
             virtual bool encode(const int32_t &v)
             {
-                _os << "{\"I\":"
+                _os << "{\"" << I32_TAG << "\":"
                     << showpos
                     << v
                     << noshowpos
@@ -312,7 +334,7 @@ namespace hobio
 
             virtual bool encode(const int64_t &v)
             {
-                _os << "{\"L\":"
+                _os << "{\"" << I64_TAG << "\":"
                     << showpos
                     << v
                     << noshowpos
@@ -324,7 +346,7 @@ namespace hobio
             virtual bool encode(const float &v)
             {
                 _os << noshowpos
-                    << "{\"F\":\"";
+                    << "{\"" << F32_TAG << "\":\"";
 
                 encode(&v, sizeof(v));
 
@@ -336,7 +358,7 @@ namespace hobio
             virtual bool encode(const double &v)
             {
                 _os << noshowpos
-                    << "{\"D\":\"";
+                    << "{\"" << F64_TAG << "\":\"";
 
                 encode(&v, sizeof(v));
 
@@ -348,7 +370,7 @@ namespace hobio
             virtual bool encode(const long double &v)
             {
                 _os << noshowpos
-                    << "{\"Q\":\"";
+                    << "{\"" << F128_TAG << "\":\"";
 
                 encode(&v, sizeof(v));
 
@@ -360,7 +382,7 @@ namespace hobio
             virtual bool encode(const char *v)
             {
                 _os << noshowpos
-                    << "{\"T\":\""
+                    << "{\"" << TEXT_TAG << "\":\""
                     << v
                     << "\"}";
 
@@ -370,7 +392,7 @@ namespace hobio
             virtual bool encode(const string &v)
             {
                 _os << noshowpos
-                    << "{\"T\":\""
+                    << "{\"" << TEXT_TAG << "\":\""
                     << v
                     << "\"}";
 
@@ -379,7 +401,7 @@ namespace hobio
 
             virtual bool encode(const bool &v)
             {
-                _os << (v ? "{\"B\":true}" : "{\"B\":false}");
+                _os << "{\"" << BOOL_TAG << "\":" << (v ? "true}" : "false}");
 
                 return true;
             }
@@ -397,7 +419,7 @@ namespace hobio
                 }
 
                 _os << noshowpos
-                    << "{\"B\":\"";
+                    << "{\"" << BOOL_TAG << "\":\"";
 
                 for (ssize_t i=size_-1; i>=0; i--)
                 {
@@ -420,7 +442,7 @@ namespace hobio
                 }
 
                 _os << padding(1)
-                    << "\"V("
+                    << "\"" << VECT_TAG
                     << len
                     << ")\":[";
 
@@ -474,7 +496,7 @@ namespace hobio
             virtual bool encode(const vector<bool> &v)
             {
                 _os << noshowpos
-                    << "{\"B("
+                    << "{\"" << BITS_TAG
                     << v.size()
                     << ")\":\"";
 
@@ -510,7 +532,8 @@ namespace hobio
 
                 if (_format == VERBOSE)
                 {
-                    _os << endl
+                    _os << ","
+                        << endl
                         << padding(1)
                         << TYPE_TAG;
 
@@ -561,7 +584,7 @@ namespace hobio
                 }
 
                 _os << padding(1)
-                    << "\"O("
+                    << "\"" << OPTION_TAG
                     << has_value
                     << ")\":";
 
@@ -606,7 +629,7 @@ namespace hobio
                 }
 
                 _os << padding(1)
-                    << "\"M("
+                    << "\"" << MAP_TAG
                     << len
                     << ")\":[";
 
@@ -730,7 +753,7 @@ namespace hobio
 
             inline string padding(size_t p)
             {
-                return string(((_format == VERBOSE)?(indentation() + (p)):0)*4,' ');
+                return string(((_format == VERBOSE)?(indentation() + (p)):0)*INDENT_WIDTH,' ');
             }
         };
 
@@ -851,57 +874,57 @@ namespace hobio
                             bool   is_optional = false;
                             size_t count_pos   = 0;
 
-                            if (("C" == token) || // [u]int8_t  (char)
-                                ("S" == token) || // [u]int16_t (short)
-                                ("I" == token) || // [u]int32_t (int)
-                                ("L" == token))   // [u]int64_t (long)
+                            if ((I8_TAG  == token) || // [u]int8_t  (char)
+                                (I16_TAG == token) || // [u]int16_t (short)
+                                (I32_TAG == token) || // [u]int32_t (int)
+                                (I64_TAG == token))   // [u]int64_t (long)
                             {
                                 dump = true;
                             }
-                            else if ("F" == token) // float
+                            else if (F32_TAG == token) // float
                             {
                                 dump = true;
                             }
-                            else if ("D" == token) // double
+                            else if (F64_TAG == token) // double
                             {
                                 dump = true;
                             }
-                            else if ("Q" == token) // long double
+                            else if (F128_TAG == token) // long double
                             {
                                 dump = true;
                             }
-                            else if ("B" == token) // bool / bitset<>
+                            else if (BOOL_TAG == token) // bool / bitset<>
                             {
                                 dump = true;
                             }
-                            else if ("T" == token) // string / char*
+                            else if (TEXT_TAG == token) // string / char*
                             {
                                 dump = true;
                             }
-                            else if (token.find("V(") == 0) // vector<>
+                            else if (token.find(VECT_TAG) == 0) // vector<>
                             {
                                 dump      = true;
                                 has_value = false;
-                                count_pos = strlen("V(");
+                                count_pos = strlen(VECT_TAG);
                             }
-                            else if (token.find("M(") == 0) // map<>
+                            else if (token.find(MAP_TAG) == 0) // map<>
                             {
                                 dump      = true;
                                 has_value = false;
-                                count_pos = strlen("M(");
+                                count_pos = strlen(MAP_TAG);
                             }
-                            else if (token.find("O(") == 0) // optional<>
+                            else if (token.find(OPTION_TAG) == 0) // optional<>
                             {
                                 dump        = true;
                                 has_value   = false;
-                                count_pos   = strlen("O(");
+                                count_pos   = strlen(OPTION_TAG);
                                 is_optional = true;
                             }
-                            else if (token.find("B(") == 0) // vector<bool>
+                            else if (token.find(BITS_TAG) == 0) // vector<bool>
                             {
                                 dump      = true;
                                 has_value = true;
-                                // count_pos = strlen("B(");
+                                // count_pos = strlen(BITS_TAG);
                             }
 
                             if (dump)
@@ -971,10 +994,10 @@ namespace hobio
 
                                 if (has_value)
                                 {
-                                    if (("C" == token) || // [u]int8_t  (char)
-                                        ("S" == token) || // [u]int16_t (short)
-                                        ("I" == token) || // [u]int32_t (int)
-                                        ("L" == token))   // [u]int64_t (long)
+                                    if ((I8_TAG  == token) || // [u]int8_t  (char)
+                                        (I16_TAG == token) || // [u]int16_t (short)
+                                        (I32_TAG == token) || // [u]int32_t (int)
+                                        (I64_TAG == token))   // [u]int64_t (long)
                                     {
                                         if (value[0] == '+' || value[0] == '-')
                                         {
@@ -982,7 +1005,7 @@ namespace hobio
 
                                             int64_t v = strtoll(value.c_str(),NULL,10);
 
-                                            if ("C" == token)
+                                            if (I8_TAG == token)
                                             {
                                                 if (!os.encode_field(static_cast<int8_t>(v)))
                                                 {
@@ -990,7 +1013,7 @@ namespace hobio
                                                 }
                                             }
                                             else
-                                            if ("S" == token)
+                                            if (I16_TAG == token)
                                             {
                                                 if (!os.encode_field(static_cast<int16_t>(v)))
                                                 {
@@ -998,7 +1021,7 @@ namespace hobio
                                                 }
                                             }
                                             else
-                                            if ("I" == token)
+                                            if (I32_TAG == token)
                                             {
                                                 if (!os.encode_field(static_cast<int32_t>(v)))
                                                 {
@@ -1006,7 +1029,7 @@ namespace hobio
                                                 }
                                             }
                                             else
-                                            if ("L" == token)
+                                            if (I64_TAG == token)
                                             {
                                                 if (!os.encode_field(static_cast<int64_t>(v)))
                                                 {
@@ -1020,7 +1043,7 @@ namespace hobio
 
                                             uint64_t v = strtoull(value.c_str(),NULL,10);
 
-                                            if ("C" == token)
+                                            if (I8_TAG == token)
                                             {
                                                 if (!os.encode_field(static_cast<uint8_t>(v)))
                                                 {
@@ -1028,7 +1051,7 @@ namespace hobio
                                                 }
                                             }
                                             else
-                                            if ("S" == token)
+                                            if (I16_TAG == token)
                                             {
                                                 if (!os.encode_field(static_cast<uint16_t>(v)))
                                                 {
@@ -1036,7 +1059,7 @@ namespace hobio
                                                 }
                                             }
                                             else
-                                            if ("I" == token)
+                                            if (I32_TAG == token)
                                             {
                                                 if (!os.encode_field(static_cast<uint32_t>(v)))
                                                 {
@@ -1044,7 +1067,7 @@ namespace hobio
                                                 }
                                             }
                                             else
-                                            if ("L" == token)
+                                            if (I64_TAG == token)
                                             {
                                                 if (!os.encode_field(static_cast<uint64_t>(v)))
                                                 {
@@ -1054,7 +1077,7 @@ namespace hobio
                                         }
                                     }
                                     else
-                                    if ("F" == token) // float
+                                    if (F32_TAG == token) // float
                                     {
                                         if (!os.encode_field(hex_to_val<float>(value)))
                                         {
@@ -1062,7 +1085,7 @@ namespace hobio
                                         }
                                     }
                                     else
-                                    if ("D" == token) // double
+                                    if (F64_TAG == token) // double
                                     {
                                         if (!os.encode_field(hex_to_val<double>(value)))
                                         {
@@ -1070,7 +1093,7 @@ namespace hobio
                                         }
                                     }
                                     else
-                                    if ("Q" == token) // long double
+                                    if (F128_TAG == token) // long double
                                     {
                                         if (!os.encode_field(hex_to_val<long double>(value)))
                                         {
@@ -1078,7 +1101,7 @@ namespace hobio
                                         }
                                     }
                                     else
-                                    if ("T" == token) // string / char*
+                                    if (TEXT_TAG == token) // string / char*
                                     {
                                         if (!os.encode_field(value))
                                         {
@@ -1086,7 +1109,7 @@ namespace hobio
                                         }
                                     }
                                     else
-                                    if ("B" == token)        // bool // bitset<>
+                                    if (BOOL_TAG == token) // bool // bitset<>
                                     {
                                         if (("true" == value) || ("false" == value))
                                         {
@@ -1117,7 +1140,7 @@ namespace hobio
                                         }
                                     }
                                     else
-                                    if (token.find("B(") == 0) // vector<bool>
+                                    if (token.find(BITS_TAG) == 0) // vector<bool>
                                     {
                                         vector<bool> v_value;
 
