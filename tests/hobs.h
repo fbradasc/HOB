@@ -17,10 +17,10 @@
 #define LOG(hob_)
 #endif
 
-HOBSTRUCT(Hello, hob::UID(0), (uint32_t, my_id))
-HOBSTRUCT(Put  , hob::UID(1), (uint32_t, my_id) (string, data))
-HOBSTRUCT(Get  , hob::UID(2), (uint32_t, my_id) (string, data))
-HOBSTRUCT(Bye  , hob::UID(3), (uint32_t, my_id))
+HOBSTRUCT(Hello, hobio::UID(0), (uint32_t, my_id))
+HOBSTRUCT(Put  , hobio::UID(1), (uint32_t, my_id) (string, data))
+HOBSTRUCT(Get  , hobio::UID(2), (uint32_t, my_id) (string, data))
+HOBSTRUCT(Bye  , hobio::UID(3), (uint32_t, my_id))
 
 #if defined(MINIMAL)
 
@@ -111,9 +111,9 @@ HOBSTRUCT(ComplexStruct, "COMPLEX_STRUCT",
 
 HOBSTRUCT(NoParamMessage, "NO_PARAMS")
 
-HOBSTRUCT(NumericNoParamMessage, hob::UID(42))
+HOBSTRUCT(NumericNoParamMessage, hobio::UID(42))
 
-HOBSTRUCT(NumericMessage, hob::UID(42),
+HOBSTRUCT(NumericMessage, hobio::UID(42),
      (bool              , valid, false)
      /*(long double       , bignum, 1.23456789123456789)*/
      (string            , text , "1Po'DiMaiuscoleMinuscole&Numeri")
@@ -126,7 +126,7 @@ HOBSTRUCT(NumericMessage, hob::UID(42),
      (vector<MyStruct>  , structs)
 )
 
-HOBSTRUCT(NumericExtraParameters, hob::UID(43),
+HOBSTRUCT(NumericExtraParameters, hobio::UID(43),
      ,
      (bool, extra, true)
 )

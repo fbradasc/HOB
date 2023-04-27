@@ -23,7 +23,7 @@ Bye   m_bye;
 hobio::ostream std_ostream;
 hobio::json::encoder enc_stdout(std_ostream);
 
-static void handleServer(hob::decoder *io)
+static void handleServer(hobio::decoder *io)
 {
     hob m;
 
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     enc_stdout << hobio::json::VERBOSE;
     enc_stdout << hobio::flat::VARINT;
 
-    std::thread<hob::decoder *> th1 = std::thread<hob::decoder *>(handleServer, &dec);
+    std::thread<hobio::decoder *> th1 = std::thread<hobio::decoder *>(handleServer, &dec);
 
     srandom(time(NULL));
 

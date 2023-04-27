@@ -2,14 +2,51 @@
 #define __HOB_COMMON_HPP__
 
 #include <unistd.h>
-#include <inttypes.h>
 #include <iostream>
 #include <cstdio>
 
+#include <stdio.h>
+#include <cstring>
+#include <climits>
+
+#include <inttypes.h>
+#include <bitset>
+#include <string>
+#include <vector>
+#include <map>
+#include "hob/std/optional.hpp"
+
+#if defined(HOB_DEBUG)
+#define M_LOG(...)            printf(__VA_ARGS__); \
+                              printf(" @ %s:%d", __PRETTY_FUNCTION__, __LINE__); \
+                              printf("\n");
+#else
+#define M_LOG(...)
+#endif
+
+#define HSEED                 65599llu
+// #define HSEED                 11400714819323198485llu
+
 using namespace std;
+using namespace nonstd;
 
 namespace hobio
 {
+    typedef uint64_t UID;
+
+    static const UID UNDEFINED = ULLONG_MAX;
+
+    class encoder;
+    class decoder;
+
+    class codec
+    {
+    public:
+        virtual size_t size  (hobio::encoder &e) const = 0;
+        virtual bool   encode(hobio::encoder &e) const = 0;
+        virtual bool   decode(hobio::decoder &d, bool *changed = NULL) = 0;
+    };
+
     class common
     {
     public:

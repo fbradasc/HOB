@@ -28,12 +28,12 @@ NumericMessage         m_NumericMessage        ;
 NumericExtraParameters m_NumericExtraParameters;
 ComplexStruct          m_ComplexStruct         ;
 
-static std::list<hob::encoder *> streamList;
+static std::list<hobio::encoder *> streamList;
 
 hobio::ostream os;
 hobio::json::encoder std_out(os);
 
-static void wall(hob &m, hob::encoder *s)
+static void wall(hob &m, hobio::encoder *s)
 {
     // for (auto s : streamList)
     {

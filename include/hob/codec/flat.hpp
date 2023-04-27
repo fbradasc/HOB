@@ -5,7 +5,7 @@
 #include <limits>
 #include <climits>
 #include "hob/io/buffer.hpp"
-#include "hob/hob.hpp"
+#include "hob/io/encoder.hpp"
 
 using namespace std;
 using namespace nonstd;
@@ -76,11 +76,11 @@ namespace hobio
         };
 
         class encoder
-            : public hob::encoder
+            : public hobio::encoder
         {
         public:
             encoder(hobio::writer &os_, Encoding encoding_=VARINT)
-                : hob::encoder()
+                : hobio::encoder()
                 , _encoding(encoding_)
                 , _os(os_)
             {
@@ -102,10 +102,10 @@ namespace hobio
                 return _encoding;
             }
 
-            virtual bool encode_header(const char     *name ,
-                                       const string   &value,
-                                       const hob::UID &id   ,
-                                       const size_t   &payload)
+            virtual bool encode_header(const char       *name ,
+                                       const string     &value,
+                                       const hobio::UID &id   ,
+                                       const size_t     &payload)
             {
                 (void)name;
                 (void)value;
@@ -115,10 +115,10 @@ namespace hobio
                                      id,payload);
             }
 
-            virtual bool encode_header(const char     *name ,
-                                       const hob::UID &value,
-                                       const hob::UID &id   ,
-                                       const size_t   &payload)
+            virtual bool encode_header(const char       *name ,
+                                       const hobio::UID &value,
+                                       const hobio::UID &id   ,
+                                       const size_t     &payload)
             {
                 (void)name;
                 (void)value;
@@ -128,10 +128,10 @@ namespace hobio
                                      id,payload);
             }
 
-            virtual bool encode_header(const char     *name ,
-                                       const char     *value,
-                                       const hob::UID &id   ,
-                                       const size_t   &payload)
+            virtual bool encode_header(const char       *name ,
+                                       const char       *value,
+                                       const hobio::UID &id   ,
+                                       const size_t     &payload)
             {
                 (void)name;
                 (void)value;
@@ -311,9 +311,9 @@ namespace hobio
                 return encode(v.size(),v.data());
             }
 
-            virtual inline bool encode(const hob &v)
+            virtual inline bool encode(const hobio::codec &c)
             {
-                return (v >> *this);
+                return c.encode(*this);
             }
 
             virtual bool encode(const vector<bool> &v)
@@ -340,8 +340,7 @@ namespace hobio
                 return (NULL != bits) && encode(((size_+7)>>3),bits);
             }
 
-#if defined(ENABLE_DYNAMIC_FIELDS)
-            virtual bool encode_variant_begin(hob::UID id, uint8_t type)
+            virtual bool encode_variant_begin(hobio::UID id, uint8_t type)
             {
                 return encode(id) && encode(type);
             }
@@ -350,7 +349,6 @@ namespace hobio
             {
                 return true;
             }
-#endif // ENABLE_DYNAMIC_FIELDS
 
             virtual bool encode_vector_begin(size_t len)
             {
@@ -507,11 +505,11 @@ namespace hobio
         };
 
         class decoder
-            : public hob::decoder
+            : public hobio::decoder
         {
         public:
             decoder(hobio::reader &is_, Encoding encoding_=VARINT)
-                : hob::decoder()
+                : hobio::decoder()
                 , _encoding(encoding_)
                 , _is(is_)
                 , _bs(NULL)

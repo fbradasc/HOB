@@ -68,11 +68,17 @@ diff3 f.txt i.txt s.txt
 #include <inttypes.h>
 #include <limits.h>
 #include <getopt.h>
+#if defined(TEST_FIXED_HOBS)
 #include "../hobs.h"
+#endif // TEST_FIXED_HOBS
 #include "hob/codec/flat.hpp"
 #include "hob/codec/json.hpp"
 #include "hob/io/buffer.hpp"
 #include "hob/io/stream.hpp"
+
+#if defined(TEST_VARIANT_HOBS)
+#include "hob/vhob.hpp"
+#endif // TEST_VARIANT_HOBS
 
 #if defined(__ANDROID__)
 #include <stdlib.h>
@@ -583,7 +589,7 @@ int main(int argc, char *argv[])
             os = new hobio::obuffer();
         }
 
-        hob::encoder *ps = NULL;
+        hobio::encoder *ps = NULL;
 
         switch (dump_mode)
         {
@@ -666,11 +672,11 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING HOBS ]------------------\n\n");
 
-#if defined(TEST_VARIANT_HOBS) && defined(ENABLE_DYNAMIC_FIELDS)
+#if defined(TEST_VARIANT_HOBS)
         if (true) // for now avoid to print these out
         {
-            hob h("DYNAMIC_FIELDS");
-            hob h1("DEEP_NESTED_DYNAMIC_FIELDS");
+            vhob h("DYNAMIC_FIELDS");
+            vhob h1("DEEP_NESTED_DYNAMIC_FIELDS");
 
             vector<uint8_t> v;
             v.push_back(42);
@@ -689,19 +695,19 @@ int main(int argc, char *argv[])
              .set< long double     >("quadle"         , 1.3131313131313131313)
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
 /*
-             .set<hob>(
+             .set<vhob>(
                 "hob",
-                hob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
-                                            .set<hob   >("MyHob",
-                                                         h1.set<string>("nested2",
-                                                                        "deepest")))
+                vhob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
+                                             .set<hob   >("MyHob",
+                                                          h1.set<string>("nested2",
+                                                                         "deepest")))
 */
             ;
 #if 0
             cout << "12 items expected:" << endl << endl;
 
             {
-                const hob * nh = h.get<hob>("hob");
+                const vhob * nh = h.get<vhob>("vhob");
 
                 if (NULL != nh)
                 {
@@ -725,18 +731,11 @@ int main(int argc, char *argv[])
             h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
 
-            if (h.has("hob"))
+            if (h.has("vhob"))
             {
-                const hob * nh = h.get<hob>("hob");
+                const vhob * nh = h.get<vhob>("vhob");
 
                 LOG((*nh));
-
-                if ((*nh).has("MyStruct"))
-                {
-                    const hob * ms = (*nh).get<hob>("MyStruct");
-
-                    LOG((*ms));
-                }
             }
 
             cout << endl << "Using operator[]:" << endl << endl;
@@ -758,22 +757,14 @@ int main(int argc, char *argv[])
             h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
 
-            hob nh;
+            vhob nh;
             string nested;
 
-            if (h.get("hob",nh))
+            if (h.get("vhob",nh))
             {
                 if (nh.get("nested",nested))
                 {
                     cout << "nested     : " << nested << endl;
-                }
-
-                hob ms;
-
-                if (nh.get("MyStruct",ms))
-                {
-                    cout << "MyStruct   : ";
-                    LOG(ms);
                 }
             }
 #endif
@@ -783,7 +774,7 @@ int main(int argc, char *argv[])
 
             cout << "-----------------------------------------------" << endl;
         }
-#endif // TEST_VARIANT_HOBS && ENABLE_DYNAMIC_FIELDS
+#endif // TEST_VARIANT_HOBS
 #ifdef TEST_FIXED_HOBS
         { MyStruct               m; m >> *ps; LOG(m); }
         {
@@ -931,7 +922,7 @@ int main(int argc, char *argv[])
             is = new hobio::ibuffer(static_cast<const hobio::obuffer&>(*os));
         }
 
-        hob::decoder *pp = NULL;
+        hobio::decoder *pp = NULL;
 
         switch (dump_mode)
         {
