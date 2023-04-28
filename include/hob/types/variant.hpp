@@ -173,8 +173,9 @@ namespace hobio
             return *this;
         }
 
-        inline hobio::UID id  () const { return _id; }
-        inline uint8_t    type() const { return _t ; }
+        inline const hobio::UID & id  () const { return _id; }
+
+        inline uint8_t            type() const { return _t ; }
 
         inline var_t v_type() const
         {
@@ -327,7 +328,7 @@ namespace hobio
             return id_;
         }
 
-        virtual size_t field_size(encoder &e) const
+        virtual size_t size(encoder &e) const
         {
             if (type() == _t_unknown)
             {

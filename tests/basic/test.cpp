@@ -68,9 +68,7 @@ diff3 f.txt i.txt s.txt
 #include <inttypes.h>
 #include <limits.h>
 #include <getopt.h>
-#if defined(TEST_FIXED_HOBS)
 #include "../hobs.h"
-#endif // TEST_FIXED_HOBS
 #include "hob/codec/flat.hpp"
 #include "hob/codec/json.hpp"
 #include "hob/io/buffer.hpp"
@@ -78,6 +76,9 @@ diff3 f.txt i.txt s.txt
 
 #if defined(TEST_VARIANT_HOBS)
 #include "hob/vhob.hpp"
+
+vhob vh("DYNAMIC_FIELDS");
+vhob vh1("DEEP_NESTED_DYNAMIC_FIELDS");
 #endif // TEST_VARIANT_HOBS
 
 #if defined(__ANDROID__)
@@ -156,6 +157,7 @@ int getsubopt(char **optionp, char *const *tokens, char **valuep)
 }
 #endif
 
+#if defined(TEST_FIXED_HOBS)
 MyStruct               m_MyStruct              ;
 AnotherStruct          m_AnotherStruct         ;
 NoParamMessage         m_NoParamMessage        ;
@@ -163,6 +165,7 @@ NumericNoParamMessage  m_NumericNoParamMessage ;
 NumericMessage         m_NumericMessage        ;
 NumericExtraParameters m_NumericExtraParameters;
 ComplexStruct          m_ComplexStruct         ;
+#endif // TEST_FIXED_HOBS
 
 static struct option const long_options[] =
 {
@@ -249,6 +252,18 @@ bool handle_message(hob &m)
 
     bool handled = true;
 
+#if defined(TEST_VARIANT_HOBS)
+    if (m >> vh)
+    {
+        LOG(vh);
+    }
+    else
+    if (m >> vh1)
+    {
+        LOG(vh1);
+    }
+#endif // TEST_VARIANT_HOBS
+#if defined(TEST_FIXED_HOBS)
     if ((m == m_MyStruct              ) ||
         (m == m_AnotherStruct         ) ||
         (m == m_NoParamMessage        ) ||
@@ -439,6 +454,7 @@ bool handle_message(hob &m)
     }
 */
     else
+#endif // TEST_FIXED_HOBS
     {
         printf("Unknown HOB\n");
         LOG(m);
@@ -982,9 +998,10 @@ int main(int argc, char *argv[])
 
         while (*pp >> m) // same of (m << *is)
         {
-LOG(m);
             handle_message(m);
+LOG(m);
 
+#if defined(TEST_FIXED_HOBS)
             if (m == m_AnotherStruct)
             {
                 m_AnotherStruct.bnil         = 1;
@@ -994,6 +1011,7 @@ LOG(m);
             }
 
             handle_message(m);
+#endif // TEST_FIXED_HOBS
         }
 
         delete pp;

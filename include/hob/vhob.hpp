@@ -1,6 +1,7 @@
 #if !defined(__VHOB_HPP__)
 #define __VHOB_HPP__
 #include "hob/hob.hpp"
+#include "hob/types/variant.hpp"
 
 class vhob : public hob
 {
@@ -51,6 +52,8 @@ public:
 
     virtual bool operator>>(hobio::encoder &os) const
     {
+        M_LOG("-");
+
         return
         (
             (hobio::UNDEFINED == hob::__get_id())
@@ -68,6 +71,11 @@ public:
         );
     }
 
+    inline bool operator<(const hobio::UID &id) const
+    {
+        return (__get_id() < id);
+    }
+
     inline bool operator<(const vhob &ref) const
     {
         return (__get_id() < ref.__get_id());
@@ -76,6 +84,11 @@ public:
     inline bool operator!=(const vhob &ref) const
     {
         return (__get_id() != ref.__get_id());
+    }
+
+    inline bool operator!=(const hobio::UID &id) const
+    {
+        return (__get_id() != id);
     }
 
     inline operator bool()
@@ -228,7 +241,7 @@ public:
     }
 
     template<typename T>
-    inline hob & set(const string &n, const T &v)
+    inline vhob & set(const string &n, const T &v)
     {
         hobio::variant & v_ = get_or_create(n);
 
@@ -238,7 +251,7 @@ public:
     }
 
     template<typename T>
-    inline hob & set(const hobio::UID &id, const T &v)
+    inline vhob & set(const hobio::UID &id, const T &v)
     {
         hobio::variant & v_ = get_or_create(id);
 
@@ -248,7 +261,7 @@ public:
     }
 
     template<typename T>
-    inline hob & set(const char *n, const T &v)
+    inline vhob & set(const char *n, const T &v)
     {
         hobio::variant & v_ = get_or_create(n);
 
@@ -401,7 +414,17 @@ protected:
 
     virtual bool __decode(hobio::decoder &is, bool update=true)
     {
-        return ( hod::__decode(is, update) && __decode_dynamic_fields(is) );
+        return (
+            hob::__decode(is, update)
+            &&
+            (
+                (
+                    ( hob::__get_id() & 1 ) == 0
+                )
+                ||
+                is.decode_field(_df)
+            )
+        );
     }
 
     virtual hobio::UID __get_id() const
@@ -413,23 +436,12 @@ protected:
     {
         (void)os;
 
-        return (_has_payload()) ? 0 : os.field_size(_df);
+        return (__has_payload()) ? os.field_size(_df) : 0;
     }
 
     inline bool __has_payload() const
     {
         return !_df.empty();
-    }
-
-    bool __decode_dynamic_fields(hobio::decoder &is)
-    {
-        M_LOG("{");
-
-        bool retval = ( !( hob::__get_id() & 1 ) || is.decode_field(_df) );
-
-        M_LOG("} - %d", retval);
-
-        return retval;
     }
 
     virtual void __reset_changes()
@@ -454,6 +466,9 @@ private:
     dynamic_fields_t _df;
 };
 
-inline bool operator>>(vhob &f, vhob &t) { return t << f; }
+// inline bool operator<<(hobio::encoder &e, vhob &h) { M_LOG("-"); return h >> e; }
+// inline bool operator>>(hobio::decoder &d, vhob &h) { M_LOG("-"); return h << d; }
+// inline bool operator>>(vhob           &f, vhob &t) { M_LOG("-"); return t << f; }
+// inline bool operator>>(hob            &f, vhob &t) { M_LOG("-"); return t << f; }
 
 #endif // __VHOB_HPP__
