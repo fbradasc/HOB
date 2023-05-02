@@ -252,17 +252,6 @@ bool handle_message(hob &m)
 
     bool handled = true;
 
-#if defined(TEST_VARIANT_HOBS)
-    if (m >> vh)
-    {
-        LOG(vh);
-    }
-    else
-    if (m >> vh1)
-    {
-        LOG(vh1);
-    }
-#endif // TEST_VARIANT_HOBS
 #if defined(TEST_FIXED_HOBS)
     if ((m == m_MyStruct              ) ||
         (m == m_AnotherStruct         ) ||
@@ -294,7 +283,21 @@ bool handle_message(hob &m)
         return;
     }
 #endif
+#endif
 
+#if defined(TEST_VARIANT_HOBS)
+    if (m >> vh)
+    {
+        LOG(vh);
+    }
+    else
+    if (m >> vh1)
+    {
+        LOG(vh1);
+    }
+    else
+#endif // TEST_VARIANT_HOBS
+#if defined(TEST_FIXED_HOBS)
     if (m >> m_MyStruct)
     {
         LOG(m_MyStruct);
@@ -708,16 +711,20 @@ int main(int argc, char *argv[])
              .set< bool            >("bool"           , true   )
              .set< float           >("float"          , 1.3f   )
              .set< double          >("double"         , 1.313f )
-             .set< long double     >("quadle"         , 1.3131313131313131313)
+             // .set< long double     >("quadle"         , 1.3131313131313131313)
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
-/*
+#if 0
              .set<vhob>(
-                "hob",
+                "vhob",
                 vhob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
-                                             .set<hob   >("MyHob",
+// #endif
+                                             .set<vhob  >("MyHob",
                                                           h1.set<string>("nested2",
-                                                                         "deepest")))
-*/
+                                                                         "deepest")
+                                                          )
+// #if 0
+                                             )
+#endif
             ;
 #if 0
             cout << "12 items expected:" << endl << endl;
@@ -999,7 +1006,6 @@ int main(int argc, char *argv[])
         while (*pp >> m) // same of (m << *is)
         {
             handle_message(m);
-LOG(m);
 
 #if defined(TEST_FIXED_HOBS)
             if (m == m_AnotherStruct)

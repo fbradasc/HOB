@@ -152,7 +152,7 @@ public:
     {
     }
 
-    hob * clone() const
+    virtual hob * clone() const
     {
         return new hob(*this);
     }
@@ -169,12 +169,8 @@ public:
 
     inline bool operator<<(hobio::decoder *is)
     {
-        M_LOG("-");
-
         if (NULL == is)
         {
-            M_LOG("-");
-
             return false;
         }
 
@@ -226,12 +222,12 @@ public:
         );
     }
 
-    inline bool operator==(const hob &ref) const
+    inline /**/ bool operator==(const hob &ref) const
     {
         return (_id == ref._id);
     }
 
-    inline bool operator!=(const hob &ref) const
+    inline /*virtual*/ bool operator!=(const hob &ref) const
     {
         return (_id != ref._id);
     }
@@ -309,6 +305,11 @@ public:
         return (NULL != _is) && _is->seek(_sp,SEEK_SET);
     }
 
+    virtual hobio::UID __get_id() const
+    {
+        return _id;
+    }
+
 protected:
     virtual bool __decode(hob &ref)
     {
@@ -363,11 +364,6 @@ protected:
         _id = id_;
 
         return true;
-    }
-
-    virtual hobio::UID __get_id() const
-    {
-        return _id;
     }
 
     inline void __update_id(const hobio::UID &in)
@@ -471,9 +467,9 @@ private:
     ssize_t         _np;
 };
 
-inline bool operator<<(hobio::encoder &e, hob &h) { M_LOG("-"); return h >> e; }
-inline bool operator>>(hobio::decoder &d, hob &h) { M_LOG("-"); return h << d; }
-inline bool operator>>(hob            &f, hob &t) { M_LOG("-"); return t << f; }
+inline bool operator<<(hobio::encoder &e, hob &h) { return h >> e; }
+inline bool operator>>(hobio::decoder &d, hob &h) { return h << d; }
+inline bool operator>>(hob            &f, hob &t) { return t << f; }
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m PP_CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))

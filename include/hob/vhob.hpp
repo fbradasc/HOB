@@ -8,7 +8,7 @@ class vhob : public hob
 public:
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
-    //                          VHOB implementation                          //
+    //                              HOB interface                            //
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
@@ -22,7 +22,7 @@ public:
     {
     }
 
-    vhob * clone() const
+    virtual vhob * clone() const
     {
         return new vhob(*this);
     }
@@ -50,18 +50,33 @@ public:
                  (_df == ref._df));
     }
 
+    bool operator==(const hob &ref) const
+    {
+        return !__ne(ref.__get_id());
+    }
+
+    virtual bool operator!=(const hob &ref) const
+    {
+        return __ne(ref.__get_id());
+    }
+
+    inline bool operator<(const vhob &ref) const
+    {
+        return __lt(ref.__get_id());
+    }
+
     virtual bool operator>>(hobio::encoder &os) const
     {
         M_LOG("-");
 
         return
         (
-            (hobio::UNDEFINED == hob::__get_id())
+            (hobio::UNDEFINED == __get_id())
             ||
             (
                 os.encode_header(static_cast<const char *>(NULL),
                                  static_cast<const char *>(NULL),
-                                 __get_id(),
+                                 ( __get_id() & ~1 ) | __has_payload(),
                                  __payload(os))
                 &&
                 ( !__has_payload() || os.encode_field(_df, "variant") )
@@ -73,22 +88,12 @@ public:
 
     inline bool operator<(const hobio::UID &id) const
     {
-        return (__get_id() < id);
-    }
-
-    inline bool operator<(const vhob &ref) const
-    {
-        return (__get_id() < ref.__get_id());
-    }
-
-    inline bool operator!=(const vhob &ref) const
-    {
-        return (__get_id() != ref.__get_id());
+        return __lt(id);
     }
 
     inline bool operator!=(const hobio::UID &id) const
     {
-        return (__get_id() != id);
+        return __ne(id);
     }
 
     inline operator bool()
@@ -398,8 +403,6 @@ protected:
             return false;
         }
 
-        __reset_changes();
-
         ref.__rewind();
 
         if (!__decode(*is))
@@ -414,22 +417,10 @@ protected:
 
     virtual bool __decode(hobio::decoder &is, bool update=true)
     {
-        return (
-            hob::__decode(is, update)
-            &&
-            (
-                (
-                    ( hob::__get_id() & 1 ) == 0
-                )
-                ||
-                is.decode_field(_df)
-            )
-        );
-    }
+        (void)is;
+        (void)update;
 
-    virtual hobio::UID __get_id() const
-    {
-        return ( hob::__get_id() | __has_payload() );
+        return is.decode_field(_df);
     }
 
     virtual size_t __payload(hobio::encoder &os) const
@@ -464,6 +455,16 @@ protected:
 
 private:
     dynamic_fields_t _df;
+
+    inline bool __lt(const hobio::UID &id) const
+    {
+        return ( ( __get_id() & ~1 ) < ( id & ~1 ) );
+    }
+
+    inline bool __ne(const hobio::UID &id) const
+    {
+        return ( ( ( __get_id() ^ id ) & ~1 ) != 0 );
+    }
 };
 
 // inline bool operator<<(hobio::encoder &e, vhob &h) { M_LOG("-"); return h >> e; }

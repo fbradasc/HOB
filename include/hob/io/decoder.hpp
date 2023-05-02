@@ -38,11 +38,7 @@ namespace hobio
 
         bool decode_field(hobio::codec &c, bool *changed = NULL)
         {
-            M_LOG("{");
-
             bool retval = c.decode(*this, changed);
-
-            M_LOG("} - %d", retval);
 
             return retval;
         }

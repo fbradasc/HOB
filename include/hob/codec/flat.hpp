@@ -670,16 +670,12 @@ namespace hobio
             template <class T>
             inline bool decode_integer(T &v, bool *changed = NULL)
             {
-                M_LOG("{");
-
                 if (NATIVE == _encoding)
                 {
                     T rv = T();
 
                     if (!read_field(&rv,sizeof(T)))
                     {
-                        M_LOG("} - 0");
-
                         return false;
                     }
 
@@ -690,14 +686,10 @@ namespace hobio
 
                     v = rv;
 
-                    M_LOG("} - 1");
-
                     return true;
                 }
 
                 bool retval = decode_varint<T>(v, changed);
-
-                M_LOG("} - %d", retval);
 
                 return retval;
             }
@@ -712,12 +704,8 @@ namespace hobio
                 uint8_t c;
                 uint8_t m;
 
-                M_LOG("{");
-
                 if (!read_field(&d[7], sizeof(uint8_t)))
                 {
-                    M_LOG("} - 0");
-
                     return false;
                 }
 
@@ -732,8 +720,6 @@ namespace hobio
                 {
                     if (!read_field(&d[8], b-1))
                     {
-                        M_LOG("} - 0");
-
                         return false;
                     }
                 }
@@ -763,8 +749,6 @@ namespace hobio
                 }
 
                 v = rv;
-
-                M_LOG("} - 1");
 
                 return true;
             }
