@@ -1,14 +1,22 @@
 #if !defined(__HOB_VARIANT_HPP__)
 #define __HOB_VARIANT_HPP__
 
+#if !defined(EMBED_VARIANT)
 #include "hob/hob.hpp"
 #include "hob/std/type_traits.hpp"
 #include <typeinfo>
 
-class vhob;
+#define encoder_t encoder
+#define decoder_t decoder
+#define hob_t     hob
 
 namespace hobio
 {
+#else // EMBED_VARIANT
+#define encoder_t hobio::encoder
+#define decoder_t hobio::decoder
+#define hob_t     vhob
+#endif // EMBED_VARIANT
     class variant : public hobio::codec
     {
     public:
@@ -73,22 +81,14 @@ namespace hobio
         template<class K, class V>
         inline variant & operator=(const map<K,V> & m)
         {
-            // M_LOG("{");
-
             __clear();
 
             _t = __type(__whois<K>(), __whois<V>());
 
-            // M_LOG("- %d", _t);
-
             if (v_type() != _t_unknown)
             {
-                // M_LOG("-");
-
                 _v.pd = new Map<K,V>(m);
             }
-
-            // M_LOG("}");
 
             return *this;
         }
@@ -96,22 +96,14 @@ namespace hobio
         template<class T>
         inline variant & operator=(const optional<T> & v)
         {
-            // M_LOG("{");
-
             __clear();
 
             _t = __type(__whois<T>(), _t_special);
 
-            // M_LOG("- %d", _t);
-
             if (v_type() != _t_unknown)
             {
-                // M_LOG("-");
-
                 _v.pd = new Optional<T>(v);
             }
-
-            // M_LOG("}");
 
             return *this;
         }
@@ -119,66 +111,42 @@ namespace hobio
         template<class T>
         inline variant & operator=(const vector<T> & v)
         {
-            // M_LOG("{");
-
             __clear();
 
             _t = __type(_t_special, __whois<T>());
 
-            // M_LOG("- %d", _t);
-
             if (v_type() != _t_unknown)
             {
-                // M_LOG("-");
-
                 _v.pd = new Vector<T>(v);
             }
-
-            // M_LOG("}");
 
             return *this;
         }
 
         inline variant & operator=(const string & v)
         {
-            // M_LOG("{");
-
             __clear();
 
             _t = __type(_t_unknown, __whois<string>());
 
-            // M_LOG("- %d", _t);
-
             if (v_type() != _t_unknown)
             {
-                // M_LOG("-");
-
                 _v.pd = new String(v);
             }
-
-            // M_LOG("}");
 
             return *this;
         }
 
-        inline variant & operator=(const hob & v)
+        inline variant & operator=(const hob_t & v)
         {
-            // M_LOG("{");
-
             __clear();
 
-            _t = __type(_t_unknown, __whois<hob>());
-
-            // M_LOG("- %d", _t);
+            _t = __type(_t_unknown, __whois<hob_t>());
 
             if (v_type() != _t_unknown)
             {
-                // M_LOG("-");
-
                 _v.pd = new Hob(v);
             }
-
-            // M_LOG("}");
 
             return *this;
         }
@@ -186,15 +154,11 @@ namespace hobio
         template<typename T>
         inline variant & operator=(const T & v)
         {
-            // M_LOG("{");
-
             const void *p = &v;
 
             __clear();
 
             _t = __type(_t_unknown, __whois<T>());
-
-            // M_LOG("- %d", _t);
 
             switch (_t)
             {
@@ -213,8 +177,6 @@ namespace hobio
                 case _t_hob   : _v.pd = new Hob                          (v); break;
                 default: break;
             }
-
-            // M_LOG("}");
 
             return *this;
         }
@@ -374,7 +336,7 @@ namespace hobio
             return id_;
         }
 
-        virtual size_t size(encoder &e) const
+        virtual size_t size(encoder_t &e) const
         {
             if (type() == _t_unknown)
             {
@@ -424,21 +386,15 @@ namespace hobio
         }
 
     protected:
-        virtual bool encode(encoder &e) const
+        virtual bool encode(encoder_t &e) const
         {
-            // M_LOG("{");
-
             if (type() == _t_unknown)
             {
-                // M_LOG("} - false");
-
                 return false;
             }
 
             if (!e.encode_variant_begin(id(), type()))
             {
-                // M_LOG("} - false");
-
                 return false;
             }
 
@@ -450,24 +406,10 @@ namespace hobio
                 ||
                 (v_type() == _t_hob))
             {
-                // M_LOG("{ - %s",
-                      // (v_type() == _t_string) ? "string"   :
-                      // (v_type() == _t_hob   ) ? "hob"      :
-                      // is_vector  ()           ? "vector"   :
-                      // is_optional()           ? "optional" :
-                      // is_map     ()           ? "map"      :
-                                                // "unknown"  );
-
                 if (NULL != _v.pd)
                 {
-                    // M_LOG("{");
-
                     encoded = _v.pd->encode(e);
-
-                    // M_LOG("} - encoded: %s", encoded ? "true" : "false");
                 }
-
-                // M_LOG("}");
             }
             else switch (v_type())
             {
@@ -487,27 +429,11 @@ namespace hobio
                     break;
             }
 
-            if (!encoded)
-            {
-                // M_LOG("} - false");
-
-                return false;
-            }
-
-            if (!e.encode_variant_end())
-            {
-                // M_LOG("} - false");
-
-                return false;
-            }
-
-            // M_LOG("} - true");
-
-            return true;
+            return encoded && e.encode_variant_end();
         }
 
         template<class K, class V>
-        bool decode_map(decoder &d, bool *changed = NULL)
+        bool decode_map(decoder_t &d, bool *changed = NULL)
         {
             map<K, V> m;
 
@@ -526,7 +452,7 @@ namespace hobio
         }
 
         template<class K>
-        bool decode_map(decoder &d, bool *changed = NULL)
+        bool decode_map(decoder_t &d, bool *changed = NULL)
         {
             bool decoded = false;
 
@@ -547,7 +473,7 @@ namespace hobio
                 case _t_f64   : decoded = decode_map<K, double     >(d, changed); break;
                 case _t_f128  : decoded = decode_map<K, long double>(d, changed); break;
                 case _t_string: decoded = decode_map<K, string     >(d, changed); break;
-                case _t_hob   : decoded = decode_map<K, hob        >(d, changed); break;
+                case _t_hob   : decoded = decode_map<K, hob_t      >(d, changed); break;
                 default:
                     {
                         M_LOG("Unknown map value type ID=%lu - type=%d", id(), v_type());
@@ -561,7 +487,7 @@ namespace hobio
         }
 
         template<class T>
-        bool decode_vector(decoder &d, bool *changed = NULL)
+        bool decode_vector(decoder_t &d, bool *changed = NULL)
         {
             vector<T> v;
 
@@ -580,7 +506,7 @@ namespace hobio
         }
 
         template<class T>
-        bool decode_optional(decoder &d, bool *changed = NULL)
+        bool decode_optional(decoder_t &d, bool *changed = NULL)
         {
             optional<T> o;
 
@@ -598,7 +524,7 @@ namespace hobio
             return decoded;
         }
 
-        virtual bool decode(decoder &d, bool *changed = NULL)
+        virtual bool decode(decoder_t &d, bool *changed = NULL)
         {
             hobio::UID id_   = hobio::UNDEFINED;
             uint8_t    type_ = 0;
@@ -636,7 +562,7 @@ namespace hobio
                     case _t_f64   : decoded = decode_vector<double     >(d, changed); break;
                     case _t_f128  : decoded = decode_vector<long double>(d, changed); break;
                     case _t_string: decoded = decode_vector<string     >(d, changed); break;
-                    case _t_hob   : decoded = decode_vector<hob        >(d, changed); break;
+                    case _t_hob   : decoded = decode_vector<hob_t      >(d, changed); break;
                     default:
                         {
                             M_LOG("Unknown vector type: ID=%lu - type=%d", id_, type_);
@@ -661,7 +587,7 @@ namespace hobio
                     case _t_f64   : decoded = decode_optional<double     >(d, changed); break;
                     case _t_f128  : decoded = decode_optional<long double>(d, changed); break;
                     case _t_string: decoded = decode_optional<string     >(d, changed); break;
-                    case _t_hob   : decoded = decode_optional<hob        >(d, changed); break;
+                    case _t_hob   : decoded = decode_optional<hob_t      >(d, changed); break;
                     default:
                         {
                             M_LOG("Unknown optional type: ID=%lu - type=%d", id_, type_);
@@ -686,7 +612,7 @@ namespace hobio
                     case _t_f64   : decoded = decode_map<double     >(d, changed); break;
                     case _t_f128  : decoded = decode_map<long double>(d, changed); break;
                     case _t_string: decoded = decode_map<string     >(d, changed); break;
-                    case _t_hob   : decoded = decode_map<hob        >(d, changed); break;
+                    case _t_hob   : decoded = decode_map<hob_t      >(d, changed); break;
                     default:
                         {
                             M_LOG("Unknown map key type: ID=%lu - type=%d", id_, k_type());
@@ -707,9 +633,9 @@ namespace hobio
             }
             else if (v_type() == _t_hob)
             {
-                M_LOG("Decoding hob");
+                M_LOG("Decoding variant hob");
 
-                hob h;
+                hob_t h;
 
                 decoded = d.decode_field(h, changed);
 
@@ -744,7 +670,7 @@ namespace hobio
                 }
             }
 
-            M_LOG("} - %d", decoded);
+            M_LOG("} - %s", decoded ? "true" : "false");
 
             return decoded;
         }
@@ -754,28 +680,28 @@ namespace hobio
         {
         public:
             virtual ~IPointer() {}
-            virtual size_t field_size(encoder &e) = 0;
-            virtual bool   encode    (encoder &e) = 0;
+            virtual size_t field_size(encoder_t &e) = 0;
+            virtual bool   encode    (encoder_t &e) = 0;
             virtual const void *data() = 0;
         };
 
         class Hob : public IPointer
         {
         public:
-            Hob(const hob & v): _d(v.clone()) {}
-            virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
-            virtual bool   encode    (encoder &e) { /*M_LOG("hob");*/ return e.encode    (*_d); }
+            Hob(const hob_t & v): _d(v.clone()) {}
+            virtual size_t field_size(encoder_t &e) { return e.field_size(*_d); }
+            virtual bool   encode    (encoder_t &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
         private:
-            hob *_d;
+            hob_t *_d;
         };
 
         class String : public IPointer
         {
         public:
             String(const string & v): _d(new string(v)) {}
-            virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
-            virtual bool   encode    (encoder &e) { /*M_LOG("string");*/ return e.encode    (*_d); }
+            virtual size_t field_size(encoder_t &e) { return e.field_size(*_d); }
+            virtual bool   encode    (encoder_t &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             string *_d;
@@ -786,8 +712,8 @@ namespace hobio
         {
         public:
             Optional(const optional<T> & v): _d(new optional<T>(v)) {}
-            virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
-            virtual bool   encode    (encoder &e) { /*M_LOG("optional");*/ return e.encode    (*_d); }
+            virtual size_t field_size(encoder_t &e) { return e.field_size(*_d); }
+            virtual bool   encode    (encoder_t &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             optional<T> *_d;
@@ -798,8 +724,8 @@ namespace hobio
         {
         public:
             Vector(const vector<T> & v): _d(new vector<T>(v)) {}
-            virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
-            virtual bool   encode    (encoder &e) { /*M_LOG("vector");*/ return e.encode    (*_d); }
+            virtual size_t field_size(encoder_t &e) { return e.field_size(*_d); }
+            virtual bool   encode    (encoder_t &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             vector<T> *_d;
@@ -810,8 +736,8 @@ namespace hobio
         {
         public:
             Map(const map<K,V> & v): _d(new map<K,V>(v)) {}
-            virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
-            virtual bool   encode    (encoder &e) { /*M_LOG("map");*/ return e.encode    (*_d); }
+            virtual size_t field_size(encoder_t &e) { return e.field_size(*_d); }
+            virtual bool   encode    (encoder_t &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
         private:
             map<K,V> *_d;
@@ -843,16 +769,7 @@ namespace hobio
         template<typename T>
         inline var_t __whois() const
         {
-            if (is_base_of<hob, T>::value)
-            {
-                // M_LOG("%s", typeid(hob).name());
-
-                return _t_hob;
-            }
-
             const std::type_info & tref = typeid(T);
-
-            // M_LOG("%s", tref.name());
 
             return (tref == typeid(uint8_t    )) ? _t_u8     :
                    (tref == typeid(uint16_t   )) ? _t_u16    :
@@ -867,7 +784,8 @@ namespace hobio
                    (tref == typeid(double     )) ? _t_f64    :
                    (tref == typeid(long double)) ? _t_f128   :
                    (tref == typeid(string     )) ? _t_string :
-                   (tref == typeid(hob        )) ? _t_hob    :
+                   (tref == typeid(hob_t      )) ? _t_hob    :
+                   (is_base_of<hob_t, T>::value) ? _t_hob    :
                                                    _t_unknown;
         }
 
@@ -898,6 +816,8 @@ namespace hobio
             _v.pd = NULL;
         }
     };
+#if !defined(EMBED_VARIANT)
 } // namespace hobio
+#endif // EMBED_VARIANT
 
 #endif // __HOB_VARIANT_HPP__

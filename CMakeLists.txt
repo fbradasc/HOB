@@ -6,8 +6,10 @@ project(Message VERSION 0.1.0)
 
 # set(DUMP_ALL DUMP_ALL)
 # set(DEBUG_WRITE DEBUG_WRITE)
-set(HOB_DEBUG HOB_DEBUG)
-set(TEST_VARIANT_HOBS TEST_VARIANT_HOBS)
+set(EMBED_VARIANT EMBED_VARIANT)
+# set(HOB_DEBUG HOB_DEBUG)
+# set(TEST_VARIANT_HOBS TEST_VARIANT_HOBS)
+set(TEST_LONG_DOUBLE TEST_LONG_DOUBLE)
 # set(TEST_FIXED_HOBS TEST_FIXED_HOBS)
 
 set(BASIC_TEST_SRC
@@ -62,9 +64,19 @@ target_compile_definitions(test_hob
                            PUBLIC
                            ${BINARY_ONLY}
                            ${HOB_DEBUG}
+                           ${EMBED_VARIANT}
+                           ${TEST_LONG_DOUBLE}
                            ${TEST_VARIANT_HOBS}
                            ${TEST_FIXED_HOBS}
                            ${DEBUG_WRITE})
+
+target_compile_definitions(test_server
+                           PUBLIC
+                           ${EMBED_VARIANT})
+
+target_compile_definitions(test_client
+                           PUBLIC
+                           ${EMBED_VARIANT})
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

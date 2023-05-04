@@ -74,11 +74,14 @@ diff3 f.txt i.txt s.txt
 #include "hob/io/buffer.hpp"
 #include "hob/io/stream.hpp"
 
-#if defined(TEST_VARIANT_HOBS)
+#if defined(TEST_VARIANT_HOBS) || defined(TEST_LONG_DOUBLE)
 #include "hob/vhob.hpp"
 
 vhob vh("DYNAMIC_FIELDS");
+
+#if !defined(TEST_LONG_DOUBLE)
 vhob vh1("DEEP_NESTED_DYNAMIC_FIELDS");
+#endif
 #endif // TEST_VARIANT_HOBS
 
 #if defined(__ANDROID__)
@@ -285,17 +288,19 @@ bool handle_message(hob &m)
 #endif
 #endif
 
-#if defined(TEST_VARIANT_HOBS)
+#if defined(TEST_VARIANT_HOBS) || defined(TEST_LONG_DOUBLE)
     if (m >> vh)
     {
         LOG(vh);
     }
     else
+#if !defined(TEST_LONG_DOUBLE)
     if (m >> vh1)
     {
         LOG(vh1);
     }
     else
+#endif // TEST_LONG_DOUBLE
 #endif // TEST_VARIANT_HOBS
 #if defined(TEST_FIXED_HOBS)
     if (m >> m_MyStruct)
@@ -691,8 +696,20 @@ int main(int argc, char *argv[])
 
         printf("------------------[ WRITING HOBS ]------------------\n\n");
 
+#if defined(TEST_LONG_DOUBLE)
+        {
+            vhob h("DYNAMIC_FIELDS");
+
+            h.set<long double>("ld", 1.3131313131313131313);
+
+            LOG(h);
+
+            h >> *ps;
+
+            cout << "-----------------------------------------------" << endl;
+        }
+#endif
 #if defined(TEST_VARIANT_HOBS)
-        if (true) // for now avoid to print these out
         {
             vhob h("DYNAMIC_FIELDS");
             vhob h1("DEEP_NESTED_DYNAMIC_FIELDS");
@@ -711,24 +728,18 @@ int main(int argc, char *argv[])
              .set< bool            >("bool"           , true   )
              .set< float           >("float"          , 1.3f   )
              .set< double          >("double"         , 1.313f )
-             // .set< long double     >("quadle"         , 1.3131313131313131313)
+             .set< long double     >("quadle"         , 1.3131313131313131313)
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
-#if 1
              .set<vhob>(
                 "vhob",
                 vhob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
-// #endif
-#if 0
                                              .set<vhob  >("MyHob",
                                                           h1.set<string>("nested2",
                                                                          "deepest")
                                                           )
-#endif
-// #if 0
                                              )
-#endif
             ;
-#if 0
+
             cout << "12 items expected:" << endl << endl;
 
             {
@@ -792,7 +803,7 @@ int main(int argc, char *argv[])
                     cout << "nested     : " << nested << endl;
                 }
             }
-#endif
+
             LOG(h);
 
             h >> *ps;

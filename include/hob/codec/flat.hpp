@@ -313,18 +313,7 @@ namespace hobio
 
             virtual inline bool encode(const hobio::codec &c)
             {
-                // M_LOG("{");
-
-                if (!c.encode(*this))
-                {
-                    // M_LOG("} - false");
-
-                    return false;
-                }
-
-                // M_LOG("} - true");
-
-                return true;
+                return c.encode(*this);
             }
 
             virtual bool encode(const vector<bool> &v)
