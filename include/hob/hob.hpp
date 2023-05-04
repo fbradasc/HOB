@@ -185,7 +185,7 @@ public:
 
         bool retval = __decode(is);
 
-        M_LOG("} - %d", retval);
+        M_LOG("} - %s", retval ? "true" : "false");
 
         return retval;
     }
@@ -198,7 +198,7 @@ public:
                        &&
                        __decode(ref));
 
-        M_LOG("} - %d", retval);
+        M_LOG("} - %s", retval ? "true" : "false");
 
         return retval;
     }
@@ -287,13 +287,13 @@ public:
                     *changed = static_cast<bool>(*this);
                 }
 
-                M_LOG("} - 1");
+                M_LOG("} - true");
 
                 return true;
             }
         }
 
-        M_LOG("} - 0");
+        M_LOG("} - false");
 
         return false;
     }
@@ -330,14 +330,14 @@ protected:
 
         if (!is.load(update))
         {
-            M_LOG("} - 0");
+            M_LOG("} - false");
 
             return false;
         }
 
         if (!is.decode_field(id_))
         {
-            M_LOG("} - 0");
+            M_LOG("} - false");
 
             return false;
         }
@@ -346,14 +346,14 @@ protected:
 
         if (__has_payload(id_) && !is.decode_field(sz_))
         {
-            M_LOG("} - 0");
+            M_LOG("} - false");
 
             return false;
         }
 
         if (update && !is.bufferize(sz_))
         {
-            M_LOG("} - 0");
+            M_LOG("} - false");
 
             return false;
         }
@@ -470,6 +470,9 @@ private:
 inline bool operator<<(hobio::encoder &e, hob &h) { return h >> e; }
 inline bool operator>>(hobio::decoder &d, hob &h) { return h << d; }
 inline bool operator>>(hob            &f, hob &t) { return t << f; }
+
+template<class T>
+struct TypeInfo;
 
 #define SCAN_FIELDS(m, ...) \
     SCAN_FIELDS_I(m PP_CAT(FOR_EACH_FIELD_0 __VA_ARGS__, _END))
@@ -747,6 +750,6 @@ protected:                                                                      
                                                                                   \
 private:                                                                          \
     CHANGED_FIELDS(name_, __VA_ARGS__)                                            \
-};
+};                                                                                \
 
 #endif // __HOB_HPP__

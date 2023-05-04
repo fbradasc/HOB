@@ -2,11 +2,10 @@
 #define __HOB_ENCODER_HPP__
 
 #include "hob/io/common.hpp"
+#include <typeinfo>
 
 namespace hobio
 {
-    class variant;
-
     namespace json
     {
         class decoder;
@@ -141,9 +140,9 @@ namespace hobio
             return retval;
         }
 
-    protected:
-        friend class hobio::json::decoder;
-        friend class hobio::variant;
+//    protected:
+//        friend class hobio::json::decoder;
+//        friend class vhob::variant;
 
         virtual bool encode(const uint8_t      &v) = 0;
         virtual bool encode(const uint16_t     &v) = 0;
@@ -185,10 +184,14 @@ namespace hobio
         template<class T>
         bool encode(const vector<T> &v)
         {
+            // M_LOG("{");
+
             size_t len = v.size();
 
             if (!encode_vector_begin(len))
             {
+                // M_LOG("} - false");
+
                 return false;
             }
 
@@ -196,15 +199,28 @@ namespace hobio
             {
                 encode_vector_item_pre(i,len);
 
+                // M_LOG("Encoding %s -> %s", typeid(v[i]).name(), typeid(T).name());
+
                 if (!encode(static_cast<const T &>(v[i])))
                 {
+                    // M_LOG("} - false");
+
                     return false;
                 }
 
                 encode_vector_item_post(i,len);
             }
 
-            return encode_vector_end();
+            if (!encode_vector_end())
+            {
+                // M_LOG("} - false");
+
+                return false;
+            }
+
+            // M_LOG("} - true");
+
+            return true;
         }
 
         virtual bool encode_vector_begin(size_t len) = 0;

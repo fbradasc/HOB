@@ -713,15 +713,17 @@ int main(int argc, char *argv[])
              .set< double          >("double"         , 1.313f )
              // .set< long double     >("quadle"         , 1.3131313131313131313)
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
-#if 0
+#if 1
              .set<vhob>(
                 "vhob",
                 vhob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
 // #endif
+#if 0
                                              .set<vhob  >("MyHob",
                                                           h1.set<string>("nested2",
                                                                          "deepest")
                                                           )
+#endif
 // #if 0
                                              )
 #endif

@@ -18,7 +18,7 @@
 
 #if defined(HOB_DEBUG)
 #define M_LOG(...)            printf(__VA_ARGS__); \
-                              printf(" @ %s:%d", __PRETTY_FUNCTION__, __LINE__); \
+                              printf(" @ %s:%s:%d", __FUNCTION__, __FILE__, __LINE__); \
                               printf("\n");
 #else
 #define M_LOG(...)
