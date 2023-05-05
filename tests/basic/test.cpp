@@ -728,7 +728,9 @@ int main(int argc, char *argv[])
              .set< bool            >("bool"           , true   )
              .set< float           >("float"          , 1.3f   )
              .set< double          >("double"         , 1.313f )
+#if defined(TEST_LONG_DOUBLE)
              .set< long double     >("quadle"         , 1.3131313131313131313)
+#endif
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
              .set<vhob>(
                 "vhob",
@@ -764,7 +766,9 @@ int main(int argc, char *argv[])
             h.has("bool"    ) && cout << *h.get<bool       >("bool"    ) << endl;
             h.has("float"   ) && cout << *h.get<float      >("float"   ) << endl;
             h.has("double"  ) && cout << *h.get<double     >("double"  ) << endl;
+#if defined(TEST_LONG_DOUBLE)
             h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
+#endif
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
 
             if (h.has("vhob"))
@@ -790,7 +794,9 @@ int main(int argc, char *argv[])
             h.has("bool"    ) && cout << *h.get<bool       >("bool"    ) << endl;
             h.has("float"   ) && cout << *h.get<float      >("float"   ) << endl;
             h.has("double"  ) && cout << *h.get<double     >("double"  ) << endl;
+#if defined(TEST_LONG_DOUBLE)
             h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
+#endif
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
 
             vhob nh;

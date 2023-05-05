@@ -1199,30 +1199,15 @@ namespace hobio
             template<class T>
             inline T hex_to_val(const string &s)
             {
-#if 0
-                union { T n; uint8_t x[sizeof(T)]; } x2n;
+                union { uint8_t b[sizeof(T)]; T v; } b2v;
 
                 for (size_t i = 0; i < sizeof(T); i++)
                 {
-                    x2n.x[i] = (hex_to_int(s[(2*i)+0]) & 0x0f) << 4 |
+                    b2v.b[i] = (hex_to_int(s[(2*i)+0]) & 0x0f) << 4 |
                                (hex_to_int(s[(2*i)+1]) & 0x0f);
                 }
 
-                return x2n.n;
-#else
-                T rv;
-                uint8_t b[sizeof(T)];
-
-                for (size_t i = 0; i < sizeof(T); i++)
-                {
-                    b[i] = (hex_to_int(s[(2*i)+0]) & 0x0f) << 4 |
-                           (hex_to_int(s[(2*i)+1]) & 0x0f);
-                }
-
-                memcpy(&rv, b, sizeof(T));
-
-                return rv;
-#endif
+                return b2v.v;
             }
         };
     } // namespace json

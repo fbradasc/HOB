@@ -114,7 +114,7 @@ namespace hobio
                 *changed = ( v != rv );
             }
 
-            memcpy(&v,&rv,sizeof(v));
+            v = rv;
 
             return true;
         }

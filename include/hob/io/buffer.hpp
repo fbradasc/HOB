@@ -89,6 +89,9 @@ namespace hobio
                 *reinterpret_cast<uint32_t*>(&_buffer[_size]) = *reinterpret_cast<const uint32_t *>(data_);
                 break;
             case 8:
+                *reinterpret_cast<uint64_t*>(&_buffer[_size]) = *reinterpret_cast<const uint64_t *>(data_);
+                break;
+            case 16:
                 *reinterpret_cast<long double*>(&_buffer[_size]) = *reinterpret_cast<const long double *>(data_);
                 break;
             default:
@@ -520,6 +523,9 @@ namespace hobio
                 *reinterpret_cast<uint32_t*>(&_buffer[_size]) = *reinterpret_cast<const uint32_t *>(data_);
                 break;
             case 8:
+                *reinterpret_cast<uint64_t*>(&_buffer[_size]) = *reinterpret_cast<const uint64_t *>(data_);
+                break;
+            case 16:
                 *reinterpret_cast<long double*>(&_buffer[_size]) = *reinterpret_cast<const long double *>(data_);
                 break;
             default:

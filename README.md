@@ -85,26 +85,6 @@ Extra parameters are defined in the same way as core parameters.
 
 The extra parameters are **not** used to update the **HOB** *UID*.
 
-## Dynamic data interface
-
-Unstructured data (dynamic fields) can be added / removed on the fly to an **HOB** 
-object either through the same **std::map**'s API and/or through additional handful
-methods:
-```
-template<class    T> hob  & set (const string & filed_name, const T & value)
-
-template<class    T> bool   get (const string & filed_name, T & value)
-template<class    T> bool   get (const string & filed_name, T & value) const
-
-template<class    T> bool   has (const string & filed_name) const
-
-template<typename T> T    & at  (const string & filed_name)
-template<typename T> T    & at  (const string & filed_name) const
-```
-
-**TODO**: Currently the serialization and deserialization of **HOB**'s Dynamic
-data is not yet implemented.
-
 ## Parameter types
 
 The **HOB** parameters are C++ variables by value (references and pointers are
@@ -114,6 +94,31 @@ not supported) and can be any of the following types:
 
     int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
     boot, float, double
+
+### Base types - architecture dependent
+
+> ***Do not use these types for cross platfom data transmission***
+
+    long double
+
+        Matches IEEE-754 binary128 format if supported,
+        otherwise matches IEEE-754 binary64-extended format if supported,
+        otherwise matches some non-IEEE-754 extended floating-point format
+                          as long as its precision is better than binary64
+                          and range is at least as good as binary64,
+        otherwise matches IEEE-754 binary64 format.
+
+        binary128 format is used by some HP-UX, SPARC, MIPS, ARM64, and z/OS
+        implementations.
+
+        The most well known IEEE-754 binary64-extended format is x87 80-bit
+        extended precision format.
+
+        It is used by many x86 and x86-64 implementations (a notable exception
+        is MSVC, which implements long double in the same format as double,
+        i.e. binary64). 
+
+> Reference: [C++ language types in en.cppreference.com](https://en.cppreference.com/w/cpp/language/types)
 
 ### Complex types
 
