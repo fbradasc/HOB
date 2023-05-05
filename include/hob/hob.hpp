@@ -25,7 +25,7 @@
 //
 //      bool, bitset<N>
 //
-//  - Fixed lenght array of bits:
+//  - Fixed length array of bits:
 //
 //      bitset<N>
 //
@@ -39,7 +39,7 @@
 //
 //  - Containers for all the above data types:
 //
-//      - variable lenght array:
+//      - variable length array:
 //
 //          vector<T>
 //

@@ -4,14 +4,13 @@
 preprocessor macro to define C++ structured buffers classes which can be binary
 and text/JSON serialize-able over a memory area, a file or a stream.
   
-The **HOB** object can have a statically defined structure with the option
-to add dynamic data on the fly.
+The **HOB** object has a statically defined structure which defines a type by
+itself, a C++ class.
   
-An **HOB** with a statically defined structure is a type by itself, a C++ class.
+An **HOB** object could have no structure at all as well.
   
-An **HOB** object could have no structure at all, containing only dynamic data.
-  
-Dynamic data can be added to an instance of a **HOB** type as well.
+A special kind of **HOB** object, the **VHOB** object, can be used to store data
+dynamically, programmatically, on run time.
 
 ## Static structure definition
 
@@ -94,7 +93,7 @@ not supported) and can be any of the following types:
 
 ### Base types - architecture dependent
 
-> ***Do not use these types for cross platfom data transmission***
+> **_Do not use these types for cross platform data transmission_**
 
     long double
 
@@ -164,6 +163,101 @@ HOBSTRUCT(MyMessageT, ...)
 
 MyMessageT myMessage;
 ```
+
+## Dynamic collections - the **VHOB** objects
+
+**VHOB**s objects are simple instances of the **vhob** class.
+
+Fields and data can then be attached, enquired and modified by mean of a simple
+API emulating the _std::vector_.
+
+The data types that can be stored in a **vhob** object are the same used in the
+**HOB** structures, **HOB** type excluded, plus the **vhob** themselves.
+
+The values are stored in a **vhob** object as ``variant_t`` objects.
+
+The stored values are identified by a ``${FIELD_ID}`` which can be...
+
+##### an ``UID``:
+
+    FIELD_ID := const hobio::UID & id;
+
+##### a ``std::string`` name:
+
+    FIELD_ID := const string & name;
+
+##### a ``char *`` name:
+
+    FIELD_ID := const char * name;
+
+And can be...
+
+##### iterated:
+
+    iterator               begin   ()      ;
+    const_iterator         begin   () const;
+    iterator               end     ()      ;
+    const_iterator         end     () const;
+    reverse_iterator       rbegin  ()      ;
+    const_reverse_iterator rbegin  () const;
+    reverse_iterator       rend    ()      ;
+    const_reverse_iterator rend    () const;
+
+##### counted:
+
+    bool                   empty   () const;
+    size_type              count   () const;
+    size_type              max_size() const;
+
+##### searched regardless of their type:
+
+    iterator       find(${FIELD_ID});
+
+    const_iterator find(${FIELD_ID}) const;
+
+##### searched given their type:
+
+    iterator       find<T>(${FIELD_ID});
+
+    const_iterator find<T>(${FIELD_ID}) const;
+
+##### removed:
+
+    void clear();
+
+    void erase(iterator pos);
+
+    void erase(iterator first, iterator last);
+
+    void erase(${FIELD_ID});
+
+##### read / created as in an array:
+
+    variant_t & operator[](${FIELD_ID});
+
+##### read / created with an explicit API:
+
+    variant_t & get_or_create(${FIELD_ID});
+
+##### added / modified in place (_the builder design pattern_):
+
+    vhob & set<T>(${FIELD_ID}, const T & v);
+
+##### checked for existence regardless of their type:
+
+    bool has(${FIELD_ID}) const;
+
+##### checked for existence given their type:
+
+    bool has<T>(${FIELD_ID}) const;
+
+##### accessed given their type
+
+    const T * get<T>(${FIELD_ID}) const;
+
+##### checked and read given their type
+
+    bool get<T>(${FIELD_ID}, T & v) const;
 
 ### Serialization
 

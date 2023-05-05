@@ -234,7 +234,7 @@ public:
         return get_or_create(n);
     }
 
-    inline variant_t& get_or_create(const hobio::UID id)
+    inline variant_t& get_or_create(const hobio::UID &id)
     {
         iterator it = find(id);
 
