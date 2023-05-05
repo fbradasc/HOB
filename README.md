@@ -12,9 +12,6 @@ An **HOB** with a statically defined structure is a type by itself, a C++ class.
 An **HOB** object could have no structure at all, containing only dynamic data.
   
 Dynamic data can be added to an instance of a **HOB** type as well.
-  
-**TODO**: Currently the serialization and deserialization of **HOB**'s Dynamic
-data is not yet implemented.
 
 ## Static structure definition
 
