@@ -64,9 +64,18 @@ namespace hobio
             return _id /* | (HAS_DYNAMIC_FIELDS_FLAG_BIT_POS << has_variants) */;
         }
 
+        inline UID & operator=(const uid_t & ref)
+        {
+            _id = DYNAMIC_MASK(ref);
+            _np = -1;
+
+            return *this;
+        }
+
         inline UID & operator=(const UID & ref)
         {
             _id = DYNAMIC_MASK(ref._id);
+            _np = ref._np;
 
             return *this;
         }

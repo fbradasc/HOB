@@ -3,7 +3,7 @@
 
 #if !defined(EMBED_VARIANT)
 #include "hob/hob.hpp"
-// #include "hob/std/type_traits.hpp"
+#include "hob/std/type_traits.hpp"
 #include <typeinfo>
 
 #define encoder_t encoder
@@ -781,7 +781,7 @@ namespace hobio
                    (tref == typeid(long double)) ? _t_f128   :
                    (tref == typeid(string     )) ? _t_string :
                    (tref == typeid(hob_t      )) ? _t_hob    :
-                   // (is_base_of<hob_t, T>::value) ? _t_hob    :
+                   (is_base_of<hob_t, T>::value) ? _t_hob    :
                                                    _t_unknown;
         }
 

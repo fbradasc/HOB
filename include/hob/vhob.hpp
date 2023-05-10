@@ -2,7 +2,7 @@
 #define __VHOB_HPP__
 #include "hob/hob.hpp"
 #if defined(EMBED_VARIANT)
-// #include "hob/std/type_traits.hpp"
+#include "hob/std/type_traits.hpp"
 #include <typeinfo>
 #define variant_t variant
 #else // EMBED_VARIANT
