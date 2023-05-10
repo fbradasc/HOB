@@ -54,10 +54,10 @@
 //========================================================================
 //
 #define HLEN(s)     ((sizeof(s)/sizeof(s[0])) - 1)
-#define H1(s,i,x)   (static_cast<hobio::UID>(x)*(((i)<HLEN(s))?HSEED:1) \
-                     +                                                  \
-                     static_cast<uint8_t>(s[((i)<HLEN(s))               \
-                                            ?HLEN(s)-1-(i)              \
+#define H1(s,i,x)   (static_cast<hobio::uid_t>(x)*(((i)<HLEN(s))?HSEED:1) \
+                     +                                                    \
+                     static_cast<uint8_t>(s[((i)<HLEN(s))                 \
+                                            ?HLEN(s)-1-(i)                \
                                             :HLEN(s)]))
 
 #define H4(s,i,x)   H1(s,(i)    , \
@@ -80,20 +80,18 @@
                     H64(s,(i)+128, \
                     H64(s,(i)+192, (x)))))
 
-#define HASH(x)     (static_cast<hobio::UID>((x)^((x)>>32)))
+#define HASH(x)     (static_cast<hobio::uid_t>((x)^((x)>>32)))
 
 #if defined(ENABLE_CPP_HASH)
 #if defined(ENABLE_CPP_MAX_SIZE_HASH)
-#define HUPDATE(s)   __update_id(static_cast<hobio::UID>(           \
-                                 (HLEN(s)>0) ? H256(s,0,__get_id()) \
-                                             : __get_id()))
+#define HUPDATE(s)   _id.update(static_cast<hobio::uid_t>(    \
+                           (HLEN(s)>0) ? H256(s,0,_id) : _id))
 #else // !ENABLE_CPP_MAX_SIZE_HASH
-#define HUPDATE(s)   __update_id(static_cast<hobio::UID>(           \
-                                 (HLEN(s)>0) ? H64(s,0,__get_id())  \
-                                             : __get_id()))
+#define HUPDATE(s)   _id.update(static_cast<hobio::uid_t>(   \
+                           (HLEN(s)>0) ? H64(s,0,_id) : _id))
 #endif // !ENABLE_CPP_MAX_SIZE_HASH
 #else // !ENABLE_CPP_HASH
-#define HUPDATE(s)   __update_id(s)
+#define HUPDATE(s)   _id.update(s)
 #endif // !ENABLE_CPP_HASH
 
 class hob : public hobio::codec
@@ -106,41 +104,17 @@ public:
     ///////////////////////////////////////////////////////////////////////////
 
     hob()
-        : _id(hobio::UNDEFINED)
-        , _is(            NULL)
-        , _sp(               0)
-        , _ep(               0)
-        , _np(              -1)
+        : _is(NULL)
+        , _sp(   0)
+        , _ep(   0)
     { }
 
     hob(const hobio::UID &id_)
-        : _id(   0)
+        : _id( id_)
         , _is(NULL)
         , _sp(   0)
         , _ep(   0)
-        , _np(  -1)
     {
-        __update_id(id_);
-    }
-
-    hob(const char *id_)
-        : _id(   0)
-        , _is(NULL)
-        , _sp(   0)
-        , _ep(   0)
-        , _np(  -1)
-    {
-        __update_id(id_);
-    }
-
-    hob(const string &id_)
-        : _id(   0)
-        , _is(NULL)
-        , _sp(   0)
-        , _ep(   0)
-        , _np(  -1)
-    {
-        __update_id(id_);
     }
 
     hob(const hob &ref)
@@ -214,7 +188,7 @@ public:
             (
                 os.encode_header(static_cast<const char *>(NULL),
                                  static_cast<const char *>(NULL),
-                                 __get_id(),
+                                 _id.with_variants(false),
                                  __payload(os))
                 &&
                 os.encode_footer()
@@ -230,6 +204,16 @@ public:
     inline /*virtual*/ bool operator!=(const hob &ref) const
     {
         return (_id != ref._id);
+    }
+
+    inline bool operator!=(const hobio::UID &id) const
+    {
+        return (_id != id);
+    }
+
+    inline bool operator<(const hobio::UID &id) const
+    {
+        return (_id < id);
     }
 
     inline bool operator<(const hob &ref) const
@@ -258,7 +242,7 @@ public:
     {
         size_t sz = __payload(os);
 
-        return os.field_size(__get_id())
+        return os.field_size(_id.with_variants(false))
                +
                ((sz > 0) ? (os.field_size(sz) + sz) : 0);
     }
@@ -305,12 +289,9 @@ public:
         return (NULL != _is) && _is->seek(_sp,SEEK_SET);
     }
 
-    virtual hobio::UID __get_id() const
-    {
-        return _id;
-    }
-
 protected:
+    hobio::UID _id;
+
     virtual bool __decode(hob &ref)
     {
         (void)ref;
@@ -320,7 +301,7 @@ protected:
 
     virtual bool __decode(hobio::decoder &is, bool update=true)
     {
-        hobio::UID id_;
+        hobio::uid_t id_;
 
         _is = NULL;
         _sp = 0;
@@ -366,54 +347,6 @@ protected:
         return true;
     }
 
-    inline void __update_id(const hobio::UID &in)
-    {
-        _np++;
-
-        _id = in;
-    }
-
-    inline void __update_id(const string &in)
-    {
-        __update_id(in.c_str());
-    }
-
-    void __update_id(const char *in)
-    {
-        //
-        // in != NULL -> update ID calculation
-        //
-        if (NULL != in)
-        {
-            //
-            // count hob parameters
-            //
-            _np++;
-
-            for (size_t i = 0; in[i]; ++i)
-            {
-                _id = HSEED * _id + in[i];
-            }
-        }
-        else
-        //
-        // in == NULL -> finalize ID calculation
-        //
-        if (_np >= 0)
-        {
-            _id <<= 1;
-
-            // HOBs with    parameters have an odd  ID
-            // HOBs without parameters have an even ID
-            //
-            _id |= (_np > 0);
-
-            // Avoid parameters check multiple appliance
-            //
-            _np = -1;
-        }
-    }
-
     virtual size_t __payload(hobio::encoder &os) const
     {
         (void)os;
@@ -421,7 +354,7 @@ protected:
         return 0;
     }
 
-    inline bool __has_payload(const hobio::UID &id)
+    inline bool __has_payload(const hobio::uid_t &id)
     {
         return ( id & 1 );
     }
@@ -460,11 +393,9 @@ protected:
     }
 
 private:
-    hobio::UID      _id;
     hobio::decoder *_is;
     ssize_t         _sp;
     ssize_t         _ep;
-    ssize_t         _np;
 };
 
 inline bool operator<<(hobio::encoder &e, hob &h) { return h >> e; }
@@ -507,7 +438,7 @@ struct TypeInfo;
 #define FIELD_SIZE(t, n, ...)    + os.field_size(n)
 #define COMPARE_FIELD(t, n, ...) && (n == ref.n)
 #define CLONE_FIELD(t, n, ...)   n = ref.n;
-#define UPDATE_NP(t, n, ...)     __update_id("");
+#define UPDATE_NP(t, n, ...)     _id.update("");
 #define UPDATE_ID(t, n, ...)     HUPDATE(PP_STR(name_)); \
                                  HUPDATE(PP_STR(t    )); \
                                  HUPDATE(PP_STR(n    ));
@@ -572,7 +503,7 @@ public:                                                                         
         /* Extra fields update parameters count */                                \
         SCAN_FIELDS(UPDATE_NP, PP_REMAIN(__VA_ARGS__))                            \
                                                                                   \
-        __update_id(static_cast<const char *>(NULL)); /* finalize hob ID */       \
+        _id.update(static_cast<const char *>(NULL)); /* finalize hob ID */        \
     }                                                                             \
                                                                                   \
     name_(const hob & ref): hob(ref)                                              \
@@ -629,12 +560,12 @@ public:                                                                         
                                                                                   \
         return                                                                    \
         (                                                                         \
-            (hobio::UNDEFINED == __get_id())                                      \
+            (hobio::UNDEFINED == _id)                                             \
             ||                                                                    \
             (                                                                     \
                 os.encode_header(PP_STR(name_),                                   \
                                  value_,                                          \
-                                 __get_id(),                                      \
+                                 _id.with_variants(false),                        \
                                  payload)                                         \
                 SCAN_FIELDS(ENCODE_FIELD, PP_FIRST(__VA_ARGS__))                  \
                 SCAN_FIELDS(ENCODE_FIELD, PP_REMAIN(__VA_ARGS__))                 \

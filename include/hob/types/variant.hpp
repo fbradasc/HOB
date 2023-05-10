@@ -3,7 +3,7 @@
 
 #if !defined(EMBED_VARIANT)
 #include "hob/hob.hpp"
-#include "hob/std/type_traits.hpp"
+// #include "hob/std/type_traits.hpp"
 #include <typeinfo>
 
 #define encoder_t encoder
@@ -42,9 +42,9 @@ namespace hobio
 
         variant(): _id(hobio::UNDEFINED), _t(_t_unknown) { _v.pd = NULL; }
 
-        variant(const hobio::UID & in): _t(_t_unknown) { _v.pd = NULL; _id = in    ; }
-        variant(const char       * in): _t(_t_unknown) { _v.pd = NULL; _id = id(in); }
-        variant(const string     & in): _t(_t_unknown) { _v.pd = NULL; _id = id(in); }
+        // variant(const hobio::UID id): _t(_t_unknown) { _v.pd = NULL; _id = id; }
+
+        variant(const hobio::UID & id): _t(_t_unknown) { _v.pd = NULL; _id = id; }
 
         variant(const variant & ref) { *this = ref; }
 
@@ -58,9 +58,19 @@ namespace hobio
             return *this;
         }
 
+        inline bool operator==(const hobio::UID &ref) const
+        {
+            return _id == ref;
+        }
+
         inline bool operator==(const variant &ref) const
         {
             return _id == ref._id;
+        }
+
+        inline bool operator!=(const hobio::UID &ref) const
+        {
+            return _id != ref;
         }
 
         inline bool operator!=(const variant &ref) const
@@ -68,9 +78,19 @@ namespace hobio
             return _id != ref._id;
         }
 
+        inline bool operator>(const hobio::UID &ref) const
+        {
+            return _id > ref;
+        }
+
         inline bool operator>(const variant &ref) const
         {
             return _id > ref._id;
+        }
+
+        inline bool operator<(const hobio::UID &ref) const
+        {
+            return _id < ref;
         }
 
         inline bool operator<(const variant &ref) const
@@ -174,7 +194,6 @@ namespace hobio
                 case _t_f32   : _v.fd = *static_cast<const float       *>(p); break;
                 case _t_f64   : _v.dd = *static_cast<const double      *>(p); break;
                 case _t_f128  : _v.qd = *static_cast<const long double *>(p); break;
-                case _t_hob   : _v.pd = new Hob                          (v); break;
                 default: break;
             }
 
@@ -311,29 +330,6 @@ namespace hobio
             const void *p = &_v._d;
 
             return static_cast<const T *>(p);
-        }
-
-        static hobio::UID id(const string &in)
-        {
-            return id(in.c_str());
-        }
-
-        static hobio::UID id(const char *in)
-        {
-            hobio::UID id_ = 0;
-
-            //
-            // in != NULL -> update ID calculation
-            //
-            if (NULL != in)
-            {
-                for (size_t i = 0; in[i]; ++i)
-                {
-                    id_ = HSEED * id_ + in[i];
-                }
-            }
-
-            return id_;
         }
 
         virtual size_t size(encoder_t &e) const
@@ -526,8 +522,8 @@ namespace hobio
 
         virtual bool decode(decoder_t &d, bool *changed = NULL)
         {
-            hobio::UID id_   = hobio::UNDEFINED;
-            uint8_t    type_ = 0;
+            hobio::uid_t id_   = hobio::UNDEFINED;
+            uint8_t      type_ = 0;
 
             M_LOG("{");
 
@@ -785,7 +781,7 @@ namespace hobio
                    (tref == typeid(long double)) ? _t_f128   :
                    (tref == typeid(string     )) ? _t_string :
                    (tref == typeid(hob_t      )) ? _t_hob    :
-                   (is_base_of<hob_t, T>::value) ? _t_hob    :
+                   // (is_base_of<hob_t, T>::value) ? _t_hob    :
                                                    _t_unknown;
         }
 

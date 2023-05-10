@@ -79,18 +79,18 @@ namespace hobio
                 return (*static_cast<flat::encoder*>(this)) << format;
             }
 
-            virtual bool encode_header(const char       *name ,
-                                       const string     &value,
-                                       const hobio::UID &id   ,
-                                       const size_t     &payload)
+            virtual bool encode_header(const char         *name ,
+                                       const string       &value,
+                                       const hobio::uid_t &id   ,
+                                       const size_t       &payload)
             {
                 return encode_header(name, value.c_str(), id, payload);
             }
 
-            virtual bool encode_header(const char       *name ,
-                                       const hobio::UID &value,
-                                       const hobio::UID &id   ,
-                                       const size_t     &payload)
+            virtual bool encode_header(const char         *name ,
+                                       const hobio::uid_t &value,
+                                       const hobio::uid_t &id   ,
+                                       const size_t       &payload)
             {
                 stringstream ss;
 
@@ -99,10 +99,10 @@ namespace hobio
                 return encode_header(name, ss.str().c_str(), id, payload);
             }
 
-            virtual bool encode_header(const char       *name ,
-                                       const char       *value,
-                                       const hobio::UID &id   ,
-                                       const size_t     &payload)
+            virtual bool encode_header(const char         *name ,
+                                       const char         *value,
+                                       const hobio::uid_t &id   ,
+                                       const size_t       &payload)
             {
                 level(+1);
 
@@ -525,7 +525,7 @@ namespace hobio
                 return true;
             }
 
-            virtual bool encode_variant_begin(hobio::UID id, uint8_t type)
+            virtual bool encode_variant_begin(const hobio::uid_t & id, uint8_t type)
             {
                 _os << noshowpos
                     << "{";

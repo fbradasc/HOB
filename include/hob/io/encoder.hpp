@@ -21,20 +21,20 @@ namespace hobio
         {
         }
 
-        virtual bool encode_header(const char       *name ,
-                                   const string     &value,
-                                   const hobio::UID &id   ,
-                                   const size_t     &payload) = 0;
+        virtual bool encode_header(const char         *name ,
+                                   const string       &value,
+                                   const hobio::uid_t &id   ,
+                                   const size_t       &payload) = 0;
 
-        virtual bool encode_header(const char       *name ,
-                                   const hobio::UID &value,
-                                   const hobio::UID &id   ,
-                                   const size_t     &payload) = 0;
+        virtual bool encode_header(const char         *name ,
+                                   const hobio::uid_t &value,
+                                   const hobio::uid_t &id   ,
+                                   const size_t       &payload) = 0;
 
-        virtual bool encode_header(const char       *name ,
-                                   const char       *value,
-                                   const hobio::UID &id   ,
-                                   const size_t     &payload) = 0;
+        virtual bool encode_header(const char         *name ,
+                                   const char         *value,
+                                   const hobio::uid_t &id   ,
+                                   const size_t       &payload) = 0;
 
         template<class T>
         bool encode_field(const T &v,
@@ -291,7 +291,7 @@ namespace hobio
         virtual void encode_map_item_value_post(const size_t &remaining) = 0;
         virtual bool encode_map_end() = 0;
 
-        virtual bool encode_variant_begin(hobio::UID id, uint8_t type) = 0;
+        virtual bool encode_variant_begin(const hobio::uid_t &id, uint8_t type) = 0;
         virtual bool encode_variant_end() = 0;
     };
 }
