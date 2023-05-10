@@ -157,7 +157,7 @@ namespace hobio
                 //                                                           //
                 //=============================================================
 
-                _id <<= 1 /*2*/;
+                _id <<= 2;
 
                 // HOBs with    parameters have an odd  ID
                 // HOBs without parameters have an even ID

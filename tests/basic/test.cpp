@@ -261,7 +261,7 @@ bool handle_message(hob &m)
         (m == m_NoParamMessage        ) ||
         (m == m_NumericNoParamMessage ) ||
         (m == m_NumericMessage        ) ||
-//        (m == m_NumericExtraParameters) ||
+        (m == m_NumericExtraParameters) ||
         (m == m_ComplexStruct         ))
     {
         printf("Known HOB\n");
@@ -455,12 +455,10 @@ bool handle_message(hob &m)
     {
         LOG(m_ComplexStruct);
     }
-/*
     else if (m_NumericExtraParameters << m)
     {
         LOG(m_NumericExtraParameters);
     }
-*/
     else
 #endif // TEST_FIXED_HOBS
     {
