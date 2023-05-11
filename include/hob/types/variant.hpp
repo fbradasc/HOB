@@ -40,7 +40,7 @@ namespace hobio
             _t_special  = 0x0f, // 00001111b
         };
 
-        variant(): _id(hobio::UNDEFINED), _t(_t_unknown) { _v.pd = NULL; }
+        variant(): _id(hobio::UID::UNDEFINED), _t(_t_unknown) { _v.pd = NULL; }
 
         // variant(const hobio::UID id): _t(_t_unknown) { _v.pd = NULL; _id = id; }
 
@@ -522,7 +522,7 @@ namespace hobio
 
         virtual bool decode(decoder_t &d, bool *changed = NULL)
         {
-            hobio::uid_t id_   = hobio::UNDEFINED;
+            hobio::uid_t id_   = hobio::UID::UNDEFINED;
             uint8_t      type_ = 0;
 
             M_LOG("{");

@@ -27,11 +27,6 @@
 #define HSEED                 65599llu
 // #define HSEED                 11400714819323198485llu
 
-#define HAS_DYNAMIC_FIELDS_FLAG_BIT_POS 1
-
-// #define DYNAMIC_MASK(v)  ((v) & ~(HAS_DYNAMIC_FIELDS_FLAG_BIT_POS << 1))
-#define DYNAMIC_MASK(v)  (v)
-
 using namespace std;
 using namespace nonstd;
 
@@ -42,12 +37,12 @@ namespace hobio
 
     typedef uint64_t uid_t;
 
-    static const uid_t UNDEFINED = ULLONG_MAX;
-
     class UID
     {
     public:
-        UID(): _id(hobio::UNDEFINED), _np(-1) {}
+        static const uid_t UNDEFINED = static_cast<uid_t>(-1); // ULLONG_MAX;
+
+        UID(): _id(UNDEFINED), _np(-1) {}
 
         UID(const hobio::uid_t & in): _id(0), _np(-1) { update(in); }
         UID(const char         * in): _id(0), _np(-1) { update(in); }
@@ -57,16 +52,39 @@ namespace hobio
 
         inline operator const hobio::uid_t &() const { return _id; }
 
-        inline hobio::uid_t with_variants(bool has_variants) const
+        static inline bool has_static_fields(hobio::uid_t id)
         {
-            (void)has_variants;
+            return ( ( id & SF_MASK ) != 0 );
+        }
 
-            return _id /* | (HAS_DYNAMIC_FIELDS_FLAG_BIT_POS << has_variants) */;
+        static inline bool has_dynamic_fields(hobio::uid_t id)
+        {
+            return ( ( id & DF_MASK ) != 0 );
+        }
+
+        static inline bool has_payload(hobio::uid_t id)
+        {
+            return ( ( id & ( SF_MASK | DF_MASK ) ) != 0 );
+        }
+
+        inline bool has_payload() const
+        {
+            return ( ( _id & SF_MASK ) != 0 );
+        }
+
+        inline hobio::uid_t with_dynamic_fields(bool has_dynamic_fields) const
+        {
+            (void)has_dynamic_fields;
+
+            return ( _id | ( DF_MASK * has_dynamic_fields ) );
         }
 
         inline UID & operator=(const uid_t & ref)
         {
-            _id = DYNAMIC_MASK(ref);
+            // preserve static fields flag bit, discard dynamic fields flag bit
+            //
+            _id = ref & ( ID_MASK | SF_MASK );
+
             _np = -1;
 
             return *this;
@@ -74,7 +92,7 @@ namespace hobio
 
         inline UID & operator=(const UID & ref)
         {
-            _id = DYNAMIC_MASK(ref._id);
+            _id = ref._id;
             _np = ref._np;
 
             return *this;
@@ -82,17 +100,17 @@ namespace hobio
 
         inline bool operator==(const UID & ref) const
         {
-            return DYNAMIC_MASK(_id) == DYNAMIC_MASK(ref._id);
+            return _id == ref._id;
         }
 
         inline bool operator!=(const UID & ref) const
         {
-            return DYNAMIC_MASK(_id) != DYNAMIC_MASK(ref._id);
+            return _id != ref._id;
         }
 
         inline bool operator<(const UID & ref) const
         {
-            return (DYNAMIC_MASK(_id) < DYNAMIC_MASK(ref._id));
+            return (_id < ref._id);
         }
 /*
         inline UID & operator<<=(const uid_t & ref)
@@ -104,7 +122,7 @@ namespace hobio
 
         inline UID & operator|=(const uid_t & ref)
         {
-            _id |= DYNAMIC_MASK(ref);
+            _id |= ref;
 
             return *this;
         }
@@ -113,7 +131,7 @@ namespace hobio
         {
             _np++;
 
-            _id = in;
+            _id = ( in << ID_POS );
         }
 
         inline void update(const string & in)
@@ -133,10 +151,14 @@ namespace hobio
                 //
                 _np++;
 
+                _id >>= ID_POS;
+
                 for (size_t i = 0; in[i]; ++i)
                 {
-                    _id = HSEED * _id + in[i];
+                    _id = ( HSEED * _id + in[i] );
                 }
+
+                _id <<= ID_POS;
             }
             else
             //
@@ -144,25 +166,10 @@ namespace hobio
             //
             if (_np >= 0)
             {
-                //===========================================================//
-                //                                                           //
-                //             +----------+---+---+                          //
-                // UID[64b] := | 63 ... 2 | 1 | 0 |                          //
-                //             +----------+---+---+                          //
-                //                   ^      ^   ^                            //
-                //                   |      |   |                            //
-                //                   |      |   `--- Has static  fields flag //
-                //                   |      `------- Has dynamic fields flag //
-                //                   `-------------- 62 bits HOB hash code   //
-                //                                                           //
-                //=============================================================
-
-                _id <<= 2;
-
-                // HOBs with    parameters have an odd  ID
-                // HOBs without parameters have an even ID
-                //
-                _id |= (_np > 0);
+                if (_np > 0)
+                {
+                    _id |= SF_MASK;
+                }
 
                 // Avoid parameters check multiple appliance
                 //
@@ -171,8 +178,41 @@ namespace hobio
         }
 
     private:
+        //======================================================//
+        //                                                      //
+        //             hobio::uid_t _id [64 bits]               //
+        //                                                      //
+        // +--------+---+---+                                   //
+        // | 63...2 | 1 | 0 |                                   //
+        // +--------+---+---+                                   //
+        //        ^   ^   ^                                     //
+        //        |   |   |                                     //
+        //        |   |   `---  1 bit : Has static  fields flag //
+        //        |   `-------  1 bit : Has dynamic fields flag //
+        //        `----------- 62 bits: HOB hash code           //
+        //                                                      //
+        //======================================================//
+
+        enum FieldsPos
+        {
+            SF_POS = 0, // static fields flag's bit position
+            DF_POS    , // dynamic fields flag's bit position
+            ID_POS      // HOB hash code's first bit position
+        };
+
+        enum FieldsMasks
+        {
+            SF_MASK = ( static_cast<uid_t>( 1) << SF_POS ),
+            DF_MASK = ( static_cast<uid_t>( 1) << DF_POS ),
+            ID_MASK = ( static_cast<uid_t>(-1) << ID_POS )
+        };
+
         hobio::uid_t _id;
         ssize_t      _np;
+
+        static const uid_t C_SF_MASK = SF_MASK;
+        static const uid_t C_DF_MASK = DF_MASK;
+        static const uid_t C_ID_MASK = ID_MASK;
     };
 
     class codec

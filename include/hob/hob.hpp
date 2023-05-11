@@ -183,12 +183,12 @@ public:
 
         return
         (
-            (hobio::UNDEFINED == _id)
+            (hobio::UID::UNDEFINED == _id)
             ||
             (
                 os.encode_header(static_cast<const char *>(NULL),
                                  static_cast<const char *>(NULL),
-                                 _id.with_variants(false),
+                                 _id.with_dynamic_fields(false),
                                  __payload(os))
                 &&
                 os.encode_footer()
@@ -242,7 +242,7 @@ public:
     {
         size_t sz = __payload(os);
 
-        return os.field_size(_id.with_variants(false))
+        return os.field_size(_id.with_dynamic_fields(false))
                +
                ((sz > 0) ? (os.field_size(sz) + sz) : 0);
     }
@@ -325,7 +325,7 @@ protected:
 
         size_t sz_ = 0;
 
-        if (__has_payload(id_) && !is.decode_field(sz_))
+        if (hobio::UID::has_static_fields(id_) && !is.decode_field(sz_))
         {
             M_LOG("} - false");
 
@@ -352,11 +352,6 @@ protected:
         (void)os;
 
         return 0;
-    }
-
-    inline bool __has_payload(const hobio::uid_t &id)
-    {
-        return ( id & 1 );
     }
 
     virtual void __reset_changes()
@@ -560,12 +555,12 @@ public:                                                                         
                                                                                   \
         return                                                                    \
         (                                                                         \
-            (hobio::UNDEFINED == _id)                                             \
+            (hobio::UID::UNDEFINED == _id)                                        \
             ||                                                                    \
             (                                                                     \
                 os.encode_header(PP_STR(name_),                                   \
                                  value_,                                          \
-                                 _id.with_variants(false),                        \
+                                 _id.with_dynamic_fields(false),                  \
                                  payload)                                         \
                 SCAN_FIELDS(ENCODE_FIELD, PP_FIRST(__VA_ARGS__))                  \
                 SCAN_FIELDS(ENCODE_FIELD, PP_REMAIN(__VA_ARGS__))                 \
