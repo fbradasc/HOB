@@ -72,6 +72,11 @@ namespace hobio
             return ( ( _id & SF_MASK ) != 0 );
         }
 
+        inline bool has_dynamic_fields()
+        {
+            return has_dynamic_fields(_id);
+        }
+
         inline hobio::uid_t with_dynamic_fields(bool has_dynamic_fields) const
         {
             (void)has_dynamic_fields;
@@ -81,9 +86,13 @@ namespace hobio
 
         inline UID & operator=(const uid_t & ref)
         {
+#if 0
             // preserve static fields flag bit, discard dynamic fields flag bit
             //
             _id = ref & ( ID_MASK | SF_MASK );
+#else
+            _id = ref;
+#endif
 
             _np = -1;
 

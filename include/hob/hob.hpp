@@ -188,8 +188,10 @@ public:
             (
                 os.encode_header(static_cast<const char *>(NULL),
                                  static_cast<const char *>(NULL),
-                                 _id.with_dynamic_fields(false),
-                                 __payload(os))
+                                 _id.with_dynamic_fields(__has_dynamic_fields()),
+                                 __get_payload_size(os))
+                &&
+                __encode_dynamic_fields(os)
                 &&
                 os.encode_footer()
             )
@@ -240,9 +242,9 @@ public:
     //
     virtual size_t size(hobio::encoder &os) const
     {
-        size_t sz = __payload(os);
+        size_t sz = __get_payload_size(os);
 
-        return os.field_size(_id.with_dynamic_fields(false))
+        return os.field_size(_id.with_dynamic_fields(__has_dynamic_fields()))
                +
                ((sz > 0) ? (os.field_size(sz) + sz) : 0);
     }
@@ -296,7 +298,7 @@ protected:
     {
         (void)ref;
 
-        return true;
+        return __decode_dynamic_fields();
     }
 
     virtual bool __decode(hobio::decoder &is, bool update=true)
@@ -325,7 +327,7 @@ protected:
 
         size_t sz_ = 0;
 
-        if (hobio::UID::has_static_fields(id_) && !is.decode_field(sz_))
+        if (hobio::UID::has_payload(id_) && !is.decode_field(sz_))
         {
             M_LOG("} - false");
 
@@ -347,7 +349,7 @@ protected:
         return true;
     }
 
-    virtual size_t __payload(hobio::encoder &os) const
+    virtual size_t __get_static_fields_size(hobio::encoder &os) const
     {
         (void)os;
 
@@ -386,6 +388,54 @@ protected:
             _is->skip(_ep - cp);
         }
     }
+
+    size_t __get_payload_size(hobio::encoder &os) const
+    {
+        (void)os;
+
+        return __get_static_fields_size(os) + __get_dynamic_fields_size(os);
+    }
+
+    // ----> dynamic fields implementation <----
+    //
+    size_t __get_dynamic_fields_size(hobio::encoder &os) const
+    {
+        (void)os;
+
+        // TODO
+
+        return 0;
+    }
+
+    inline bool __has_dynamic_fields() const
+    {
+        // TODO
+
+        return false;
+    }
+
+    inline bool __encode_dynamic_fields(hobio::encoder &os) const
+    {
+        (void)os;
+
+        // TODO
+
+        return true;
+    }
+
+    inline bool __decode_dynamic_fields()
+    {
+        if (!_id.has_dynamic_fields())
+        {
+            return true;
+        }
+
+        // TODO
+
+        return true;
+    }
+    //
+    // ----> dynamic fields implementation <----
 
 private:
     hobio::decoder *_is;
@@ -551,7 +601,7 @@ public:                                                                         
                                                                                   \
     virtual bool operator>>(hobio::encoder &os) const                             \
     {                                                                             \
-        size_t payload = __payload(os);                                           \
+        size_t payload_size = __get_payload_size(os);                             \
                                                                                   \
         return                                                                    \
         (                                                                         \
@@ -560,8 +610,10 @@ public:                                                                         
             (                                                                     \
                 os.encode_header(PP_STR(name_),                                   \
                                  value_,                                          \
-                                 _id.with_dynamic_fields(false),                  \
-                                 payload)                                         \
+                                 _id.with_dynamic_fields(__has_dynamic_fields()), \
+                                 payload_size)                                    \
+                &&                                                                \
+                __encode_dynamic_fields(os)                                       \
                 SCAN_FIELDS(ENCODE_FIELD, PP_FIRST(__VA_ARGS__))                  \
                 SCAN_FIELDS(ENCODE_FIELD, PP_REMAIN(__VA_ARGS__))                 \
                 &&                                                                \
@@ -637,9 +689,12 @@ protected:                                                                      
                                                                                   \
             if ((true SCAN_FIELDS(DECODE_FIELD, PP_REMAIN(__VA_ARGS__))) || true) \
             {                                                                     \
-                hob::__flush_pending();                                           \
+                if (__decode_dynamic_fields())                                    \
+                {                                                                 \
+                    hob::__flush_pending();                                       \
                                                                                   \
-                return true;                                                      \
+                    return true;                                                  \
+                }                                                                 \
             }                                                                     \
         }                                                                         \
                                                                                   \
@@ -665,7 +720,7 @@ protected:                                                                      
     {                                                                             \
     }                                                                             \
                                                                                   \
-    virtual size_t __payload(hobio::encoder &os) const                            \
+    virtual size_t __get_static_fields_size(hobio::encoder &os) const             \
     {                                                                             \
         (void)os;                                                                 \
                                                                                   \
