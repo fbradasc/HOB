@@ -37,12 +37,12 @@ namespace hobio
 
     typedef uint64_t uid_t;
 
+    static const uid_t UNDEFINED = static_cast<uid_t>(-1); // ULLONG_MAX;
+
     class UID
     {
     public:
-        static const uid_t UNDEFINED = static_cast<uid_t>(-1); // ULLONG_MAX;
-
-        UID(): _id(UNDEFINED), _np(-1) {}
+        UID(): _id(hobio::UNDEFINED), _np(-1) {}
 
         UID(const hobio::uid_t & in): _id(0), _np(-1) { update(in); }
         UID(const char         * in): _id(0), _np(-1) { update(in); }

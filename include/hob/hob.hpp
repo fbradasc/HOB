@@ -1,6 +1,6 @@
 #if !defined(__HOB_HPP__)
 #define __HOB_HPP__
-#include "hob/io/common.hpp"
+#include "hob/dynamhob.hpp"
 #include "hob/io/encoder.hpp"
 #include "hob/io/decoder.hpp"
 #include "hob/utils/cpp_magic.h"
@@ -94,7 +94,9 @@
 #define HUPDATE(s)   _id.update(s)
 #endif // !ENABLE_CPP_HASH
 
-class hob : public hobio::codec
+class hob
+    : public hobio::codec
+    , public dynamhob
 {
 public:
     ///////////////////////////////////////////////////////////////////////////
@@ -183,12 +185,12 @@ public:
 
         return
         (
-            (hobio::UID::UNDEFINED == _id)
+            (hobio::UNDEFINED == _id)
             ||
             (
                 os.encode_header(static_cast<const char *>(NULL),
                                  static_cast<const char *>(NULL),
-                                 _id.with_dynamic_fields(__has_dynamic_fields()),
+                                 _id.with_dynamic_fields(!empty()),
                                  __get_payload_size(os))
                 &&
                 __encode_dynamic_fields(os)
@@ -244,7 +246,7 @@ public:
     {
         size_t sz = __get_payload_size(os);
 
-        return os.field_size(_id.with_dynamic_fields(__has_dynamic_fields()))
+        return os.field_size(_id.with_dynamic_fields(!empty()))
                +
                ((sz > 0) ? (os.field_size(sz) + sz) : 0);
     }
@@ -298,7 +300,7 @@ protected:
     {
         (void)ref;
 
-        return __decode_dynamic_fields();
+        return __decode_dynamic_fields(ref);
     }
 
     virtual bool __decode(hobio::decoder &is, bool update=true)
@@ -402,37 +404,26 @@ protected:
     {
         (void)os;
 
-        // TODO
-
-        return 0;
-    }
-
-    inline bool __has_dynamic_fields() const
-    {
-        // TODO
-
-        return false;
+        return (empty()) ? 0 : os.field_size(_df);
     }
 
     inline bool __encode_dynamic_fields(hobio::encoder &os) const
     {
         (void)os;
 
-        // TODO
-
-        return true;
+        return ( empty() || os.encode_field(_df, "dynamhob") );
     }
 
-    inline bool __decode_dynamic_fields()
+    inline bool __decode_dynamic_fields(hob &ref)
     {
-        if (!_id.has_dynamic_fields())
+        if (!ref._id.has_dynamic_fields())
         {
             return true;
         }
 
-        // TODO
+        hobio::decoder *is = static_cast<hobio::decoder*>(ref);
 
-        return true;
+        return (NULL == is) || is->decode_field(_df);
     }
     //
     // ----> dynamic fields implementation <----
@@ -605,12 +596,12 @@ public:                                                                         
                                                                                   \
         return                                                                    \
         (                                                                         \
-            (hobio::UID::UNDEFINED == _id)                                        \
+            (hobio::UNDEFINED == _id)                                             \
             ||                                                                    \
             (                                                                     \
                 os.encode_header(PP_STR(name_),                                   \
                                  value_,                                          \
-                                 _id.with_dynamic_fields(__has_dynamic_fields()), \
+                                 _id.with_dynamic_fields(!empty()),               \
                                  payload_size)                                    \
                 &&                                                                \
                 __encode_dynamic_fields(os)                                       \
@@ -689,7 +680,7 @@ protected:                                                                      
                                                                                   \
             if ((true SCAN_FIELDS(DECODE_FIELD, PP_REMAIN(__VA_ARGS__))) || true) \
             {                                                                     \
-                if (__decode_dynamic_fields())                                    \
+                if (__decode_dynamic_fields(*this))                               \
                 {                                                                 \
                     hob::__flush_pending();                                       \
                                                                                   \

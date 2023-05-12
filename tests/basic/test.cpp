@@ -75,12 +75,9 @@ diff3 f.txt i.txt s.txt
 #include "hob/io/stream.hpp"
 
 #if defined(TEST_VARIANT_HOBS) || defined(TEST_LONG_DOUBLE)
-#include "hob/vhob.hpp"
-
-vhob vh("DYNAMIC_FIELDS");
-
+hob dh("DYNAMIC_FIELDS");
 #if !defined(TEST_LONG_DOUBLE)
-vhob vh1("DEEP_NESTED_DYNAMIC_FIELDS");
+hob dh1("DEEP_NESTED_DYNAMIC_FIELDS");
 #endif
 #endif // TEST_VARIANT_HOBS
 
@@ -289,15 +286,15 @@ bool handle_message(hob &m)
 #endif
 
 #if defined(TEST_VARIANT_HOBS) || defined(TEST_LONG_DOUBLE)
-    if (m >> vh)
+    if (m >> dh)
     {
-        LOG(vh);
+        LOG(dh);
     }
     else
 #if !defined(TEST_LONG_DOUBLE)
-    if (m >> vh1)
+    if (m >> dh1)
     {
-        LOG(vh1);
+        LOG(dh1);
     }
     else
 #endif // TEST_LONG_DOUBLE
@@ -709,8 +706,8 @@ int main(int argc, char *argv[])
 #endif
 #if defined(TEST_VARIANT_HOBS)
         {
-            vhob h("DYNAMIC_FIELDS");
-            vhob h1("DEEP_NESTED_DYNAMIC_FIELDS");
+            hob h("DYNAMIC_FIELDS");
+            hob h1("DEEP_NESTED_DYNAMIC_FIELDS");
 
             vector<uint8_t> v;
             v.push_back(42);
@@ -730,6 +727,7 @@ int main(int argc, char *argv[])
              .set< long double     >("quadle"         , 1.3131313131313131313)
 #endif
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
+/*
              .set<vhob>(
                 "vhob",
                 vhob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
@@ -738,10 +736,11 @@ int main(int argc, char *argv[])
                                                                          "deepest")
                                                           )
                                              )
+*/
             ;
 
             cout << "12 items expected:" << endl << endl;
-
+/*
             {
                 const vhob * nh = h.get<vhob>("vhob");
 
@@ -754,7 +753,7 @@ int main(int argc, char *argv[])
             }
 
             cout << endl << "0 items expected:" << endl << endl;
-
+*/
             h.has("uint8_t" ) && cout << *h.get<uint8_t    >("uint8_t" ) << endl;
             h.has("uint16_t") && cout << *h.get<uint16_t   >("uint16_t") << endl;
             h.has("uint32_t") && cout << *h.get<uint32_t   >("uint32_t") << endl;
@@ -768,14 +767,14 @@ int main(int argc, char *argv[])
             h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
 #endif
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
-
+/*
             if (h.has("vhob"))
             {
                 const vhob * nh = h.get<vhob>("vhob");
 
                 LOG((*nh));
             }
-
+*/
             cout << endl << "Using operator[]:" << endl << endl;
 
             h.erase("uint16_t");
@@ -796,7 +795,7 @@ int main(int argc, char *argv[])
             h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
 #endif
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
-
+/*
             vhob nh;
             string nested;
 
@@ -807,7 +806,7 @@ int main(int argc, char *argv[])
                     cout << "nested     : " << nested << endl;
                 }
             }
-
+*/
             LOG(h);
 
             h >> *ps;
