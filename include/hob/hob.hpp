@@ -1,8 +1,7 @@
 #if !defined(__HOB_HPP__)
 #define __HOB_HPP__
+#include "hob/types/hobject.hpp"
 #include "hob/dynamhob.hpp"
-#include "hob/io/encoder.hpp"
-#include "hob/io/decoder.hpp"
 #include "hob/utils/cpp_magic.h"
 
 //========================================================================
@@ -95,8 +94,7 @@
 #endif // !ENABLE_CPP_HASH
 
 class hob
-    : public hobio::codec
-    , public dynamhob
+    : public dynamhob
 {
 public:
     ///////////////////////////////////////////////////////////////////////////
@@ -105,78 +103,16 @@ public:
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
-    hob()
-        : _is(NULL)
-        , _sp(   0)
-        , _ep(   0)
-    { }
-
-    hob(const hobio::UID &id_)
-        : _id( id_)
-        , _is(NULL)
-        , _sp(   0)
-        , _ep(   0)
+    hob(): dynamhob()
     {
     }
 
-    hob(const hob &ref)
+    hob(const hobio::UID &id_): dynamhob(id_)
     {
-        *this = ref;
     }
 
     virtual ~hob()
     {
-    }
-
-    virtual hob * clone() const
-    {
-        return new hob(*this);
-    }
-
-    hob & operator=(const hob & ref)
-    {
-        _id = ref._id;
-        _is = ref._is;
-        _sp = ref._sp;
-        _ep = ref._ep;
-
-        return *this;
-    }
-
-    inline bool operator<<(hobio::decoder *is)
-    {
-        if (NULL == is)
-        {
-            return false;
-        }
-
-        return *this << *is;
-    }
-
-    inline bool operator<<(hobio::decoder &is)
-    {
-        __flush_pending();
-
-        M_LOG("{");
-
-        bool retval = __decode(is);
-
-        M_LOG("} - %s", retval ? "true" : "false");
-
-        return retval;
-    }
-
-    inline bool operator<<(hob & ref)
-    {
-        M_LOG("{");
-
-        bool retval = ((_id == ref._id)
-                       &&
-                       __decode(ref));
-
-        M_LOG("} - %s", retval ? "true" : "false");
-
-        return retval;
     }
 
     virtual bool operator>>(hobio::encoder &os) const
@@ -200,36 +136,6 @@ public:
         );
     }
 
-    inline /**/ bool operator==(const hob &ref) const
-    {
-        return (_id == ref._id);
-    }
-
-    inline /*virtual*/ bool operator!=(const hob &ref) const
-    {
-        return (_id != ref._id);
-    }
-
-    inline bool operator!=(const hobio::UID &id) const
-    {
-        return (_id != id);
-    }
-
-    inline bool operator<(const hobio::UID &id) const
-    {
-        return (_id < id);
-    }
-
-    inline bool operator<(const hob &ref) const
-    {
-        return (_id < ref._id);
-    }
-
-    inline operator hobio::decoder *()
-    {
-        return _is;
-    }
-
     inline operator bool()
     {
         return __is_changed();
@@ -240,8 +146,6 @@ public:
         __reset_changes();
     }
 
-    // ----> hobio::codec interface implementation <----
-    //
     virtual size_t size(hobio::encoder &os) const
     {
         size_t sz = __get_payload_size(os);
@@ -256,99 +160,22 @@ public:
         return (*this >> os);
     }
 
-    virtual bool decode(hobio::decoder &d, bool *changed = NULL)
-    {
-        hob h;
-
-        M_LOG("{");
-
-        if (h.__decode(d,false))
-        {
-            *this = h;
-
-            M_LOG("Decoded hob: %lu", _id);
-
-            if (*this << static_cast<hobio::decoder*>(h))
-            {
-                if (changed)
-                {
-                    *changed = static_cast<bool>(*this);
-                }
-
-                M_LOG("} - true");
-
-                return true;
-            }
-        }
-
-        M_LOG("} - false");
-
-        return false;
-    }
-    //
-    // ----> hobio::codec interface implementation <----
-
-    inline bool __rewind()
-    {
-        return (NULL != _is) && _is->seek(_sp,SEEK_SET);
-    }
-
 protected:
-    hobio::UID _id;
-
-    virtual bool __decode(hob &ref)
+    virtual bool __decode(hobio::hobject &ref)
     {
         (void)ref;
+
+        if (!this->hobio::hobject::__decode(ref))
+        {
+            return false;
+        }
 
         return __decode_dynamic_fields(ref);
     }
 
     virtual bool __decode(hobio::decoder &is, bool update=true)
     {
-        hobio::uid_t id_;
-
-        _is = NULL;
-        _sp = 0;
-        _ep = 0;
-
-        M_LOG("{");
-
-        if (!is.load(update))
-        {
-            M_LOG("} - false");
-
-            return false;
-        }
-
-        if (!is.decode_field(id_))
-        {
-            M_LOG("} - false");
-
-            return false;
-        }
-
-        size_t sz_ = 0;
-
-        if (hobio::UID::has_payload(id_) && !is.decode_field(sz_))
-        {
-            M_LOG("} - false");
-
-            return false;
-        }
-
-        if (update && !is.bufferize(sz_))
-        {
-            M_LOG("} - false");
-
-            return false;
-        }
-
-        _is = &is;
-        _sp = is.tell();
-        _ep = _sp + sz_;
-        _id = id_;
-
-        return true;
+        return this->hobio::hobject::__decode(is,update);
     }
 
     virtual size_t __get_static_fields_size(hobio::encoder &os) const
@@ -376,21 +203,6 @@ protected:
         return true;
     }
 
-    virtual void __flush_pending()
-    {
-        if (NULL == _is)
-        {
-            return;
-        }
-
-        ssize_t cp = _is->tell();
-
-        if ((cp >= 0) && (cp < _ep))
-        {
-            _is->skip(_ep - cp);
-        }
-    }
-
     size_t __get_payload_size(hobio::encoder &os) const
     {
         (void)os;
@@ -414,24 +226,24 @@ protected:
         return ( empty() || os.encode_field(_df, "dynamhob") );
     }
 
-    inline bool __decode_dynamic_fields(hob &ref)
+    inline bool __decode_dynamic_fields(hobio::hobject &ref)
     {
-        if (!ref._id.has_dynamic_fields())
+        if (!ref.__has_dynamic_fields())
         {
             return true;
         }
 
         hobio::decoder *is = static_cast<hobio::decoder*>(ref);
 
-        return (NULL == is) || is->decode_field(_df);
+        if (NULL == is)
+        {
+            return false;
+        }
+
+        return is->decode_field(_df);
     }
     //
     // ----> dynamic fields implementation <----
-
-private:
-    hobio::decoder *_is;
-    ssize_t         _sp;
-    ssize_t         _ep;
 };
 
 inline bool operator<<(hobio::encoder &e, hob &h) { return h >> e; }
@@ -556,7 +368,7 @@ public:                                                                         
     {                                                                             \
     }                                                                             \
                                                                                   \
-    name_ & operator=(const hob & ref)                                            \
+    name_ & operator=(const hobject & ref)                                        \
     {                                                                             \
         *static_cast<hob *>(this) = static_cast<const hob &>(ref);                \
                                                                                   \
@@ -640,7 +452,7 @@ protected:                                                                      
         return __is_changed(_FIELDS_COUNT_);                                      \
     }                                                                             \
                                                                                   \
-    bool __decode(hob &ref)                                                       \
+    virtual bool __decode(hobio::hobject &ref)                                    \
     {                                                                             \
         hobio::decoder *is = static_cast<hobio::decoder*>(ref);                   \
                                                                                   \
@@ -653,6 +465,11 @@ protected:                                                                      
                                                                                   \
         ref.__rewind();                                                           \
                                                                                   \
+        if (!__decode_dynamic_fields(ref))                                        \
+        {                                                                         \
+            return false;                                                         \
+        }                                                                         \
+                                                                                  \
         if (!__decode(*is))                                                       \
         {                                                                         \
             return false;                                                         \
@@ -663,7 +480,7 @@ protected:                                                                      
         return true;                                                              \
     }                                                                             \
                                                                                   \
-    bool __decode(hobio::decoder &is, bool update=true)                           \
+    virtual bool __decode(hobio::decoder &is, bool update=true)                   \
     {                                                                             \
         (void)is;                                                                 \
         (void)update;                                                             \
@@ -680,12 +497,9 @@ protected:                                                                      
                                                                                   \
             if ((true SCAN_FIELDS(DECODE_FIELD, PP_REMAIN(__VA_ARGS__))) || true) \
             {                                                                     \
-                if (__decode_dynamic_fields(*this))                               \
-                {                                                                 \
-                    hob::__flush_pending();                                       \
+                hob::__flush_pending();                                           \
                                                                                   \
-                    return true;                                                  \
-                }                                                                 \
+                return true;                                                      \
             }                                                                     \
         }                                                                         \
                                                                                   \

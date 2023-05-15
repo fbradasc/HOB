@@ -1,24 +1,13 @@
 #if !defined(__DYNAMHOB__)
 #define __DYNAMHOB__
 
-#include "hob/io/common.hpp"
-#if defined(EMBED_VARIANT)
-#include "hob/std/type_traits.hpp"
-#include <typeinfo>
-#define variant_t variant
-#else // EMBED_VARIANT
 #include "hob/types/variant.hpp"
-#define variant_t hobio::variant
-#endif // EMBED_VARIANT
 
 class dynamhob
+    : public hobio::hobject
 {
 public:
-#if defined(EMBED_VARIANT)
-#include "hob/types/variant.hpp"
-#endif // EMBED_VARIANT
-
-    typedef vector<variant_t> dynamic_fields_t;
+    typedef vector<hobio::variant> dynamic_fields_t;
 
     typedef dynamic_fields_t::iterator               iterator;
     typedef dynamic_fields_t::const_iterator         const_iterator;
@@ -77,25 +66,25 @@ public:
     inline void erase(iterator pos                 ) { _df.erase(pos       ); }
     inline void erase(iterator first, iterator last) { _df.erase(first,last); }
 
-    inline variant_t& operator[](const hobio::UID & id)
+    inline hobio::variant& operator[](const hobio::UID & id)
     {
         return get_or_create(id);
     }
 
     // avoid ambiguous overload to built-in operator[](long int, const char*)
     //
-    inline variant_t& operator[](const char *n)
+    inline hobio::variant& operator[](const char *n)
     {
         return get_or_create(n);
     }
 
-    inline variant_t& get_or_create(const hobio::UID & id)
+    inline hobio::variant& get_or_create(const hobio::UID & id)
     {
         iterator it = find(id);
 
         if (it == end())
         {
-            variant_t v(id);
+            hobio::variant v(id);
 
             it = _df.insert(end(),v);
         }
@@ -106,7 +95,7 @@ public:
     template<typename T>
     inline dynamhob & set(const hobio::UID & id, const T &v)
     {
-        variant_t & v_ = get_or_create(id);
+        hobio::variant & v_ = get_or_create(id);
 
         v_ = v;
 
@@ -156,7 +145,13 @@ public:
 protected:
     dynamic_fields_t _df;
 
-    dynamhob() {}
+    dynamhob(): hobio::hobject()
+    {
+    }
+
+    dynamhob(const hobio::UID &id_): hobio::hobject(id_)
+    {
+    }
 };
 
 #endif // __DYNAMHOB__

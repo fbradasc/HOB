@@ -693,7 +693,7 @@ int main(int argc, char *argv[])
 
 #if defined(TEST_LONG_DOUBLE)
         {
-            vhob h("DYNAMIC_FIELDS");
+            hob h("DYNAMIC_FIELDS");
 
             h.set<long double>("ld", 1.3131313131313131313);
 
@@ -727,22 +727,23 @@ int main(int argc, char *argv[])
              .set< long double     >("quadle"         , 1.3131313131313131313)
 #endif
              .set< string          >("string"         , "1Po'DiMaiuscoleMinuscole&Numeri")
-/*
-             .set<vhob>(
-                "vhob",
-                vhob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
-                                             .set<vhob  >("MyHob",
-                                                          h1.set<string>("nested2",
-                                                                         "deepest")
-                                                          )
-                                             )
-*/
+#if defined(TEST_NESTED_VARIANT_HOBS)
+             .set<hobio::hobject>(
+                "hob",
+                hob("NESTED_DYNAMIC_FIELDS").set<string>("nested"  ,"deep")
+                                            .set<hobio::hobject>("MyHob",
+                                                         h1.set<string>("nested2",
+                                                                        "deepest")
+                                                         )
+                                            )
+#endif // TEST_NESTED_VARIANT_HOBS
             ;
 
             cout << "12 items expected:" << endl << endl;
-/*
+
+#if defined(TEST_NESTED_VARIANT_HOBS)
             {
-                const vhob * nh = h.get<vhob>("vhob");
+                const hob * nh = h.get<hob>("hob");
 
                 if (NULL != nh)
                 {
@@ -751,9 +752,9 @@ int main(int argc, char *argv[])
                     (NULL != n) && cout << (*n) << endl;
                 }
             }
+#endif // TEST_NESTED_VARIANT_HOBS
 
             cout << endl << "0 items expected:" << endl << endl;
-*/
             h.has("uint8_t" ) && cout << *h.get<uint8_t    >("uint8_t" ) << endl;
             h.has("uint16_t") && cout << *h.get<uint16_t   >("uint16_t") << endl;
             h.has("uint32_t") && cout << *h.get<uint32_t   >("uint32_t") << endl;
@@ -767,14 +768,14 @@ int main(int argc, char *argv[])
             h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
 #endif
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
-/*
-            if (h.has("vhob"))
+#if defined(TEST_NESTED_VARIANT_HOBS)
+            if (h.has("hob"))
             {
-                const vhob * nh = h.get<vhob>("vhob");
+                const hob * nh = h.get<hob>("hob");
 
                 LOG((*nh));
             }
-*/
+#endif // TEST_NESTED_VARIANT_HOBS
             cout << endl << "Using operator[]:" << endl << endl;
 
             h.erase("uint16_t");
@@ -795,18 +796,20 @@ int main(int argc, char *argv[])
             h.has("quadle"  ) && cout << *h.get<long double>("quadle"  ) << endl;
 #endif
             h.has("string"  ) && cout << *h.get<string     >("string"  ) << endl;
-/*
-            vhob nh;
+
+#if defined(TEST_NESTED_VARIANT_HOBS)
+            hob nh;
             string nested;
 
-            if (h.get("vhob",nh))
+            if (h.get("hob",nh))
             {
                 if (nh.get("nested",nested))
                 {
                     cout << "nested     : " << nested << endl;
                 }
             }
-*/
+#endif // TEST_NESTED_VARIANT_HOBS
+
             LOG(h);
 
             h >> *ps;

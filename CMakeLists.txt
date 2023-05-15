@@ -8,7 +8,8 @@ project(Message VERSION 0.1.0)
 # set(DEBUG_WRITE DEBUG_WRITE)
 # set(EMBED_VARIANT EMBED_VARIANT)
 # set(HOB_DEBUG HOB_DEBUG)
-# set(TEST_VARIANT_HOBS TEST_VARIANT_HOBS)
+set(TEST_VARIANT_HOBS TEST_VARIANT_HOBS)
+# set(TEST_NESTED_VARIANT_HOBS TEST_NESTED_VARIANT_HOBS)
 # set(TEST_LONG_DOUBLE TEST_LONG_DOUBLE)
 set(TEST_FIXED_HOBS TEST_FIXED_HOBS)
 
@@ -67,6 +68,7 @@ target_compile_definitions(test_hob
                            ${EMBED_VARIANT}
                            ${TEST_LONG_DOUBLE}
                            ${TEST_VARIANT_HOBS}
+                           ${TEST_NESTED_VARIANT_HOBS}
                            ${TEST_FIXED_HOBS}
                            ${DEBUG_WRITE})
 

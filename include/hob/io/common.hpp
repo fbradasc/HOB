@@ -109,17 +109,17 @@ namespace hobio
 
         inline bool operator==(const UID & ref) const
         {
-            return _id == ref._id;
+            return ( ( _id & ~DF_MASK ) == ( ref._id & ~DF_MASK ) );
         }
 
         inline bool operator!=(const UID & ref) const
         {
-            return _id != ref._id;
+            return ( ( _id & ~DF_MASK ) != ( ref._id & ~DF_MASK ) );
         }
 
         inline bool operator<(const UID & ref) const
         {
-            return (_id < ref._id);
+            return ( ( _id & ~DF_MASK ) < ( ref._id & ~DF_MASK ) );
         }
 /*
         inline UID & operator<<=(const uid_t & ref)
