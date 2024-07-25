@@ -382,7 +382,41 @@ namespace hobio
                 _os << noshowpos
                     << "{\"" << F128_TAG << "\":\"";
 
-                encode(&v, sizeof(v));
+                // -------[ LONG DOUBLE UNINITIALIZED MEMORY HACK START ]-------
+                //
+                // According to:
+                //
+                // https://github.com/USCiLab/cereal/issues/625#issuecomment-594633901
+                //
+                // long double is an 80-bit (10-byte) format on most x86
+                // platforms, but it is either 4- or 8-byte aligned, which means
+                // that it has 2 or 6 padding bytes.
+                //
+                // The compiler does not need to write to those padding bytes,
+                // and accessing their contents is unspecified (*), even if you
+                // have written to them.
+                //
+                // (*) it's at least unspecified.
+                //     C2x says that accessing padding of integers, unions and
+                //     structures is unspecified, but doesn't say anything about
+                //     floating-point values, so it may be formally UNDEFINED.
+                //
+
+                // allocate and inititialize with 0s a sufficiently large
+                // memory area to store all the long double significative bytes
+                // plus the eventual padding bytes
+
+                uint8_t c[sizeof(v)] = "";
+
+                // in this assignment the compiler will write only the long
+                // double significative bytes leaving untouched the padding
+                // bytes, which are 0'ed in the previous declaration.
+
+                *reinterpret_cast<long double*>(c) = v;
+
+                // --------[ LONG DOUBLE UNINITIALIZED MEMORY HACK END ]--------
+
+                encode(c, sizeof(c));
 
                 if (_format == VERBOSE)
                 {
