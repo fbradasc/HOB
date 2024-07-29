@@ -115,27 +115,6 @@ public:
     {
     }
 
-    virtual bool operator>>(hobio::encoder &os) const
-    {
-        M_LOG("-");
-
-        return
-        (
-            (hobio::UNDEFINED == _id)
-            ||
-            (
-                os.encode_header(static_cast<const char *>(NULL),
-                                 static_cast<const char *>(NULL),
-                                 _id.with_dynamic_fields(!empty()),
-                                 __get_payload_size(os))
-                &&
-                __encode_dynamic_fields(os)
-                &&
-                os.encode_footer()
-            )
-        );
-    }
-
     inline operator bool()
     {
         return __is_changed();
@@ -153,11 +132,6 @@ public:
         return os.field_size(_id.with_dynamic_fields(!empty()))
                +
                ((sz > 0) ? (os.field_size(sz) + sz) : 0);
-    }
-
-    virtual bool encode(hobio::encoder &os) const
-    {
-        return (*this >> os);
     }
 
 protected:
@@ -217,13 +191,6 @@ protected:
         (void)os;
 
         return (empty()) ? 0 : os.field_size(_df);
-    }
-
-    inline bool __encode_dynamic_fields(hobio::encoder &os) const
-    {
-        (void)os;
-
-        return ( empty() || os.encode_field(_df, "dynamhob") );
     }
 
     inline bool __decode_dynamic_fields(hobio::hobject &ref)

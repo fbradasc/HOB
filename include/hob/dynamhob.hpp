@@ -142,6 +142,49 @@ public:
         return true;
     }
 
+    virtual hobject * clone() const
+    {
+        return new dynamhob(*this);
+    }
+
+    hobject & operator=(const dynamhob & ref)
+    {
+        *static_cast<hobio::hobject*>(this) = ref;
+
+        _df = ref._df;
+
+        return *this;
+    }
+
+    dynamhob(const dynamhob &ref): hobio::hobject(ref)
+    {
+        _df = ref._df;
+    }
+
+    virtual bool operator>>(hobio::encoder &os) const
+    {
+        return
+        (
+            (hobio::UNDEFINED == _id)
+            ||
+            (
+                os.encode_header(static_cast<const char *>(NULL),
+                                 static_cast<const char *>(NULL),
+                                 _id.with_dynamic_fields(!empty()),
+                                 __get_payload_size(os))
+                &&
+                __encode_dynamic_fields(os)
+                &&
+                os.encode_footer()
+            )
+        );
+    }
+
+    virtual bool encode(hobio::encoder &os) const
+    {
+        return (*this >> os);
+    }
+
 protected:
     dynamic_fields_t _df;
 
@@ -151,6 +194,44 @@ protected:
 
     dynamhob(const hobio::UID &id_): hobio::hobject(id_)
     {
+    }
+
+    inline bool __encode_dynamic_fields(hobio::encoder &os) const
+    {
+        (void)os;
+
+        return ( empty() || os.encode_field(_df, "dynamhob") );
+    }
+
+    virtual size_t __get_payload_size(hobio::encoder &os) const
+    {
+        (void)os;
+
+        return __get_dynamic_fields_size(os);
+    }
+
+    size_t __get_dynamic_fields_size(hobio::encoder &os) const
+    {
+        (void)os;
+
+        return (empty()) ? 0 : os.field_size(_df);
+    }
+
+    inline bool __decode_dynamic_fields(hobio::hobject &ref)
+    {
+        if (!ref.__has_dynamic_fields())
+        {
+            return true;
+        }
+
+        hobio::decoder *is = static_cast<hobio::decoder*>(ref);
+
+        if (NULL == is)
+        {
+            return false;
+        }
+
+        return is->decode_field(_df);
     }
 };
 
