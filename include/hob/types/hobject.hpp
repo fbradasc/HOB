@@ -12,16 +12,16 @@ namespace hobio
     {
     public:
         hobject()
-            : _is(NULL)
-            , _sp(   0)
-            , _ep(   0)
+            : _is( NULL)
+            , _sp(    0)
+            , _ep(    0)
         { }
 
         hobject(const hobio::UID &id_)
-            : _id( id_)
-            , _is(NULL)
-            , _sp(   0)
-            , _ep(   0)
+            : _id(  id_)
+            , _is( NULL)
+            , _sp(    0)
+            , _ep(    0)
         {
         }
 
@@ -42,21 +42,29 @@ namespace hobio
 
         inline bool operator<<(hobio::decoder *is)
         {
+            M_LOG("{");
+
             if (NULL == is)
             {
+                M_LOG("} - false");
+
                 return false;
             }
 
-            return *this << *is;
+            bool retval = *this << *is;
+
+            M_LOG("} - %s", retval ? "true" : "false");
+
+            return retval;
         }
 
         inline bool operator<<(hobio::decoder &is)
         {
-            __flush_pending();
-
             M_LOG("{");
 
-            bool retval = __decode(is);
+            __flush_pending();
+
+            bool retval = __decode(is, !__decoding());
 
             M_LOG("} - %s", retval ? "true" : "false");
 
@@ -135,7 +143,7 @@ namespace hobio
             {
                 *this = h;
 
-                M_LOG("Decoded hob: %lu", _id);
+                M_LOG("Decoded hob: %lu", static_cast<uid_t>(_id));
 
                 if (*this << static_cast<hobio::decoder*>(h))
                 {
@@ -157,8 +165,19 @@ namespace hobio
 
         virtual void __flush_pending()
         {
+            M_LOG("{");
+
+            if (__decoding())
+            {
+                M_LOG("}");
+
+                return;
+            }
+
             if (NULL == _is)
             {
+                M_LOG("}");
+
                 return;
             }
 
@@ -168,11 +187,19 @@ namespace hobio
             {
                 _is->skip(_ep - cp);
             }
+
+            M_LOG("}");
         }
 
         inline bool __rewind()
         {
-            return (NULL != _is) && _is->seek(_sp,SEEK_SET);
+            M_LOG("{");
+
+            bool retval = (NULL != _is) && _is->seek(_sp,SEEK_SET);
+
+            M_LOG("} - %s", retval ? "true" : "false");
+
+            return retval;
         }
 
         bool __has_dynamic_fields()
@@ -187,7 +214,11 @@ namespace hobio
         {
             (void)ref;
 
+            M_LOG("{");
+
             ref.__rewind();
+
+            M_LOG("} - true");
 
             return true;
         }
@@ -237,7 +268,29 @@ namespace hobio
             _ep = _sp + sz_;
             _id = id_;
 
+            M_LOG("} - true");
+
             return true;
+        }
+
+        bool __decoding(bool set = false, bool decoding = false)
+        {
+            static size_t _dh = 0;
+
+            if (set)
+            {
+                if (decoding)
+                {
+                    _dh++;
+                }
+                else
+                if (0 < _dh)
+                {
+                    _dh--;
+                }
+            }
+
+            return ( _dh > 0 );
         }
 
     private:

@@ -17,6 +17,7 @@
 #define LOG(hob_)
 #endif
 
+#if defined(TEST_FIXED_HOBS)
 HOBSTRUCT(Hello, hobio::uid_t(0), (uint32_t, my_id))
 HOBSTRUCT(Put  , hobio::uid_t(1), (uint32_t, my_id) (string, data))
 HOBSTRUCT(Get  , hobio::uid_t(2), (uint32_t, my_id) (string, data))
@@ -132,5 +133,7 @@ HOBSTRUCT(NumericExtraParameters, hobio::uid_t(43),
 )
 
 #endif // MINIMAL
+
+#endif // TEST_FIXED_HOBS
 
 #endif // __HOBS_H__

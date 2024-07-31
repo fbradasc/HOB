@@ -440,7 +440,7 @@ namespace hobio
                 *this = m;
             }
 
-            M_LOG("} - %d", decoded);
+            M_LOG("} - %s", decoded ? "true" : "false");
 
             return decoded;
         }
@@ -470,12 +470,14 @@ namespace hobio
                 case _t_hob   : decoded = decode_map<K, hobject    >(d, changed); break;
                 default:
                     {
-                        M_LOG("Unknown map value type ID=%lu - type=%d", id(), v_type());
+                        M_LOG("Unknown map value type ID=%lu - type=%d",
+                              static_cast<uid_t>(id()),
+                              v_type());
                     }
                     break;
             }
 
-            M_LOG("} - %d", decoded);
+            M_LOG("} - %s", decoded ? "true" : "false");
 
             return decoded;
         }
@@ -494,7 +496,7 @@ namespace hobio
                 *this = v;
             }
 
-            M_LOG("} - %d", decoded);
+            M_LOG("} - %s", decoded ? "true" : "false");
 
             return decoded;
         }
@@ -513,7 +515,7 @@ namespace hobio
                 *this = o;
             }
 
-            M_LOG("} - %d", decoded);
+            M_LOG("} - %s", decoded ? "true" : "false");
 
             return decoded;
         }

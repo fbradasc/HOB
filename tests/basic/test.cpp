@@ -74,7 +74,7 @@ diff3 f.txt i.txt s.txt
 #include "hob/io/buffer.hpp"
 #include "hob/io/stream.hpp"
 
-#if defined(TEST_VARIANT_HOBS) || defined(TEST_LONG_DOUBLE)
+#if defined(TEST_VARIANT_HOBS) || defined(TEST_LONG_DOUBLE) || defined(TEST_NESTED_VARIANT_HOBS)
 hob dh("DYNAMIC_FIELDS");
 #if !defined(TEST_LONG_DOUBLE)
 hob dh1("DEEP_NESTED_DYNAMIC_FIELDS");
@@ -285,7 +285,7 @@ bool handle_message(hob &m)
 #endif
 #endif
 
-#if defined(TEST_VARIANT_HOBS) || defined(TEST_LONG_DOUBLE)
+#if defined(TEST_VARIANT_HOBS) || defined(TEST_LONG_DOUBLE) || defined(TEST_NESTED_VARIANT_HOBS)
     if (m >> dh)
     {
         LOG(dh);
@@ -704,7 +704,7 @@ int main(int argc, char *argv[])
             cout << "-----------------------------------------------" << endl;
         }
 #endif
-#if defined(TEST_VARIANT_HOBS)
+#if defined(TEST_VARIANT_HOBS) || defined(TEST_NESTED_VARIANT_HOBS)
         {
             hob h("DYNAMIC_FIELDS");
 
