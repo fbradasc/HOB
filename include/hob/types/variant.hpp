@@ -1,12 +1,13 @@
 #if !defined(__HOB_VARIANT_HPP__)
 #define __HOB_VARIANT_HPP__
 
-#include "hob/types/hobject.hpp"
 #include "hob/std/type_traits.hpp"
 #include <typeinfo>
 
 namespace hobio
 {
+    typedef vector<hobio::variant> fields;
+
     class variant : public codec
     {
     public:
@@ -26,7 +27,7 @@ namespace hobio
             _t_f64            , // 00001011b
             _t_f128           , // 00001100b
             _t_string         , // 00001101b
-            _t_hob            , // 00001110b
+            _t_fields         , // 00001110b
             _t_special  = 0x0f, // 00001111b
         };
 
@@ -147,15 +148,15 @@ namespace hobio
             return *this;
         }
 
-        inline variant & operator=(const hobject & v)
+        inline variant & operator=(const fields & v)
         {
             __clear();
 
-            _t = __type(_t_unknown, __whois<hobject>());
+            _t = __type(_t_unknown, __whois<fields>());
 
             if (v_type() != _t_unknown)
             {
-                _v.pd = new Hob(v);
+                _v.pd = new Fileds(v);
             }
 
             return *this;
@@ -307,7 +308,7 @@ namespace hobio
                 return NULL;
             }
 
-            if ((v_type() == _t_string) || (v_type() == _t_hob))
+            if ((v_type() == _t_string) || (v_type() == _t_fields))
             {
                 if (NULL == _v.pd)
                 {
@@ -339,7 +340,7 @@ namespace hobio
                 ||
                 (v_type() == _t_string)
                 ||
-                (v_type() == _t_hob))
+                (v_type() == _t_fields))
             {
                 if (NULL == _v.pd)
                 {
@@ -396,7 +397,7 @@ namespace hobio
                 ||
                 (v_type() == _t_string)
                 ||
-                (v_type() == _t_hob))
+                (v_type() == _t_fields))
             {
                 if (NULL != _v.pd)
                 {
@@ -467,7 +468,7 @@ namespace hobio
                 case _t_f64   : decoded = decode_map<K, double     >(d, changed); break;
                 case _t_f128  : decoded = decode_map<K, long double>(d, changed); break;
                 case _t_string: decoded = decode_map<K, string     >(d, changed); break;
-                case _t_hob   : decoded = decode_map<K, hobject    >(d, changed); break;
+                case _t_fields: decoded = decode_map<K, fields     >(d, changed); break;
                 default:
                     {
                         M_LOG("Unknown map value type ID=%lu - type=%d",
@@ -560,7 +561,7 @@ namespace hobio
                     case _t_f64   : decoded = decode_vector<double     >(d, changed); break;
                     case _t_f128  : decoded = decode_vector<long double>(d, changed); break;
                     case _t_string: decoded = decode_vector<string     >(d, changed); break;
-                    case _t_hob   : decoded = decode_vector<hobject    >(d, changed); break;
+                    case _t_fields: decoded = decode_vector<fields     >(d, changed); break;
                     default:
                         {
                             M_LOG("Unknown vector type: ID=%lu - type=%d", id_, type_);
@@ -585,7 +586,7 @@ namespace hobio
                     case _t_f64   : decoded = decode_optional<double     >(d, changed); break;
                     case _t_f128  : decoded = decode_optional<long double>(d, changed); break;
                     case _t_string: decoded = decode_optional<string     >(d, changed); break;
-                    case _t_hob   : decoded = decode_optional<hobject    >(d, changed); break;
+                    case _t_fields: decoded = decode_optional<fields     >(d, changed); break;
                     default:
                         {
                             M_LOG("Unknown optional type: ID=%lu - type=%d", id_, type_);
@@ -610,7 +611,7 @@ namespace hobio
                     case _t_f64   : decoded = decode_map<double     >(d, changed); break;
                     case _t_f128  : decoded = decode_map<long double>(d, changed); break;
                     case _t_string: decoded = decode_map<string     >(d, changed); break;
-                    case _t_hob   : decoded = decode_map<hobject    >(d, changed); break;
+                    case _t_fields: decoded = decode_map<fields     >(d, changed); break;
                     default:
                         {
                             M_LOG("Unknown map key type: ID=%lu - type=%d", id_, k_type());
@@ -629,17 +630,17 @@ namespace hobio
                     *this = s;
                 }
             }
-            else if (v_type() == _t_hob)
+            else if (v_type() == _t_fields)
             {
-                M_LOG("Decoding variant hob");
+                M_LOG("Decoding variant pool");
 
-                hobject h;
+                fields p;
 
-                decoded = h.decode(d, changed);
+                decoded = d.decode_field(p, changed);
 
                 if (decoded)
                 {
-                    *this = h;
+                    *this = p;
                 }
             }
             else
@@ -685,15 +686,15 @@ namespace hobio
             virtual const void *data() = 0;
         };
 
-        class Hob : public IPointer
+        class Fileds : public IPointer
         {
         public:
-            Hob(const hobject & v): _d(v.clone()) {}
-            virtual size_t field_size(encoder &e) { return (NULL != _d) ? _d->size  (e) : 0    ; }
-            virtual bool   encode    (encoder &e) { return (NULL != _d) ? _d->encode(e) : false; }
+            Fileds(const fields & p): _d(new fields(p)) {}
+            virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
+            virtual bool   encode    (encoder &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
         private:
-            hobject *_d;
+            fields *_d;
         };
 
         class String : public IPointer
@@ -784,8 +785,8 @@ namespace hobio
                    (tref == typeid( double      )) ? _t_f64    :
                    (tref == typeid( long double )) ? _t_f128   :
                    (tref == typeid( string      )) ? _t_string :
-                   (tref == typeid( hobject     )) ? _t_hob    :
-                   (is_base_of<hobject, T>::value) ? _t_hob    :
+                   (tref == typeid( fields      )) ? _t_fields :
+                   (is_base_of<fields, T>::value)  ? _t_fields :
                                                      _t_unknown;
         }
 

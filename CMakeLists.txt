@@ -4,14 +4,14 @@ set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL TRUE)
 
 project(Message VERSION 0.1.0)
 
-# set(DUMP_ALL DUMP_ALL)
-# set(DEBUG_WRITE DEBUG_WRITE)
-set(HOB_DEBUG HOB_DEBUG)
+#set(DUMP_ALL DUMP_ALL)
+#set(DEBUG_WRITE DEBUG_WRITE)
+#set(HOB_DEBUG HOB_DEBUG)
 # set(EMBED_VARIANT EMBED_VARIANT)
-#set(TEST_VARIANT_HOBS TEST_VARIANT_HOBS)
+set(TEST_VARIANT_HOBS TEST_VARIANT_HOBS)
 set(TEST_NESTED_VARIANT_HOBS TEST_NESTED_VARIANT_HOBS)
-#set(TEST_LONG_DOUBLE TEST_LONG_DOUBLE)
-#set(TEST_FIXED_HOBS TEST_FIXED_HOBS)
+set(TEST_LONG_DOUBLE TEST_LONG_DOUBLE)
+set(TEST_FIXED_HOBS TEST_FIXED_HOBS)
 
 set(BASIC_TEST_SRC
     tests/basic/test.cpp)
@@ -79,10 +79,12 @@ target_compile_definitions(test_hob
 if (TEST_FIXED_HOBS)
     target_compile_definitions(test_server
                                PUBLIC
+                               ${TEST_FIXED_HOBS}
                                ${EMBED_VARIANT})
 
     target_compile_definitions(test_client
                                PUBLIC
+                               ${TEST_FIXED_HOBS}
                                ${EMBED_VARIANT})
 endif()
 

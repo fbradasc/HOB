@@ -249,6 +249,7 @@ int main(int argc, char *argv[])
 
 bool handle_message(hob &m)
 {
+    M_LOG("{");
 
     bool handled = true;
 
@@ -464,6 +465,8 @@ bool handle_message(hob &m)
 
         handled = false;
     }
+
+    M_LOG("} - %shandled", handled ? "" : "NOT ");
 
     return handled;
 }
@@ -711,7 +714,12 @@ int main(int argc, char *argv[])
 #if defined(TEST_NESTED_VARIANT_HOBS)
             hob h1("DEEP_NESTED_DYNAMIC_FIELDS");
 
-            h.set<hobio::hobject>
+            h.set<string>
+            (
+                "text",
+                "text"
+            )
+            .set<hobio::fields>
             (
                 "hob",
                 hob("NESTED_DYNAMIC_FIELDS").set<string>
@@ -719,7 +727,7 @@ int main(int argc, char *argv[])
                                                 "nested",
                                                 "deep"
                                             )
-                                            .set<hobio::hobject>
+                                            .set<hobio::fields>
                                             (
                                                 "MyHob",
                                                 h1.set<string>
