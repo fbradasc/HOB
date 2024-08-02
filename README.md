@@ -628,11 +628,25 @@ The *Payload Size* is the count of bytes used to serialize the *Payload*.
 The *Payload* is the serialization of the *Dynamically Defined Fields* followed
 by the *Core Parameters* followed by the *Extra Parameters*.
 
+*(UID & 0x3)* == **0**
 ```
-(UID & 0x3) == 0: |VARINT(UID)|VARINT(Payload size)|
-(UID & 0x3) == 1: |VARINT(UID)|VARINT(Payload size)|char[static  payload size]|
-(UID & 0x3) == 2: |VARINT(UID)|VARINT(Payload size)|char[dynamic payload size]|
-(UID & 0x3) == 3: |VARINT(UID)|VARINT(Payload size)|char[dynamic payload size]|char[static payload size]|
+|VARINT(UID)|VARINT(Payload size)|
+```
+
+*(UID & 0x3)* == **1**
+
+```
+|VARINT(UID)|VARINT(Payload size)|char[static  payload size]|
+```
+*(UID & 0x3)* == **2**
+
+```
+|VARINT(UID)|VARINT(Payload size)|char[dynamic payload size]|
+```
+*(UID & 0x3)* == **3**
+
+```
+|VARINT(UID)|VARINT(Payload size)|char[dynamic payload size]|char[static payload size]|
 ```
 
 ##### Collections
