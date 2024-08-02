@@ -110,7 +110,7 @@ public:
     {
     }
 
-    virtual ~hob()
+    ~hob()
     {
     }
 
@@ -140,7 +140,6 @@ public:
 
     hob(const hob &ref): hobio::hobject(ref)
     {
-        _df = ref._df;
     }
 
     virtual bool encode(hobio::encoder &os) const

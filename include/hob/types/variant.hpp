@@ -39,6 +39,8 @@ namespace hobio
 
         variant(const variant & ref) { *this = ref; }
 
+        ~variant() { __clear(); }
+
         inline variant & operator=(const variant &ref)
         {
             _id = ref._id;
@@ -690,6 +692,7 @@ namespace hobio
         {
         public:
             Fileds(const fields & p): _d(new fields(p)) {}
+            virtual ~Fileds() { delete _d; }
             virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
             virtual bool   encode    (encoder &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
@@ -701,6 +704,7 @@ namespace hobio
         {
         public:
             String(const string & v): _d(new string(v)) {}
+            virtual ~String() { delete _d; }
             virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
             virtual bool   encode    (encoder &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
@@ -713,6 +717,7 @@ namespace hobio
         {
         public:
             Optional(const optional<T> & v): _d(new optional<T>(v)) {}
+            virtual ~Optional() { delete _d; }
             virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
             virtual bool   encode    (encoder &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
@@ -725,6 +730,7 @@ namespace hobio
         {
         public:
             Vector(const vector<T> & v): _d(new vector<T>(v)) {}
+            virtual ~Vector() { delete _d; }
             virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
             virtual bool   encode    (encoder &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }
@@ -737,6 +743,7 @@ namespace hobio
         {
         public:
             Map(const map<K,V> & v): _d(new map<K,V>(v)) {}
+            virtual ~Map() { delete _d; }
             virtual size_t field_size(encoder &e) { return e.field_size(*_d); }
             virtual bool   encode    (encoder &e) { return e.encode    (*_d); }
             virtual const void *data() { return static_cast<const void *>(_d); }

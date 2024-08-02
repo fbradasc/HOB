@@ -83,11 +83,6 @@ namespace hobio
 
         // avoid ambiguous overload to built-in operator[](long int, const char*)
         //
-        operator hobio::fields &()
-        {
-            return _df;
-        }
-
         inline hobio::variant& operator[](const char *n)
         {
             return get_or_create(n);
@@ -209,6 +204,10 @@ namespace hobio
             return *this;
         }
 
+        ~hobject()
+        {
+        }
+
         inline bool operator<<(hobio::decoder *is)
         {
             M_LOG("{");
@@ -281,6 +280,11 @@ namespace hobio
         inline operator hobio::decoder *()
         {
             return _is;
+        }
+
+        inline operator hobio::fields &()
+        {
+            return _df;
         }
 
         virtual hobject * clone() const
@@ -389,9 +393,7 @@ namespace hobio
         }
 
     protected:
-        hobio::UID    _id;
-        hobio::fields _df;
-
+        hobio::UID _id;
 
         virtual bool __decode(hobio::hobject &ref)
         {
@@ -550,6 +552,7 @@ namespace hobio
         hobio::decoder *_is;
         ssize_t         _sp;
         ssize_t         _ep;
+        hobio::fields   _df;
     };
 };
 

@@ -4,19 +4,20 @@
 preprocessor macro to define C++ structured buffers classes which can be binary
 and text/JSON serialize-able over a memory area, a file or a stream.
   
-The **HOB** object has a statically defined structure which defines a type by
-itself, a C++ class.
+The **HOB** object can have a statically defined structure which defines a type
+by itself, a C++ class.
   
 An **HOB** object could have no structure at all as well.
   
-A special kind of **HOB** object, the **VHOB** object, can be used to store data
-dynamically, programmatically, on run time.
+**HOB** objects, can also be used to store data dynamically, programmatically,
+on run time.
 
 ## Static structure definition
 
 ### The HOBSTRUCT macro
 
-An **HOB** type needs to be defined by using the HOBSTRUCT() macro.
+An **HOB** type which shall have a static structure needs to be defined by Using
+the HOBSTRUCT() macro.
 
 #### Identification
 
@@ -164,17 +165,15 @@ HOBSTRUCT(MyMessageT, ...)
 MyMessageT myMessage;
 ```
 
-## Dynamic collections - the **VHOB** objects
-
-**VHOB**s objects are simple instances of the **vhob** class.
+## Dynamic collections - **hobio::fields**
 
 Fields and data can then be attached, enquired and modified by mean of a simple
 API emulating the _std::vector_.
 
-The data types that can be stored in a **vhob** object are the same used in the
-**HOB** structures, **HOB** type excluded, plus the **vhob** themselves.
+The data types that can be dynamically stored in a **HOB** object are the same
+used in the **HOB** structures, **HOB** type excluded, plus the **hobio::fields** themselves.
 
-The values are stored in a **vhob** object as ``variant_t`` objects.
+The values are stored in a **hobio::fields** object as ``hobio::variant`` objects.
 
 The stored values are identified by a ``${FIELD_ID}`` which can be...
 
@@ -233,15 +232,15 @@ And can be...
 
 ##### read / created as in an array:
 
-    variant_t & operator[](${FIELD_ID});
+    hobio::variant & operator[](${FIELD_ID});
 
 ##### read / created with an explicit API:
 
-    variant_t & get_or_create(${FIELD_ID});
+    hobio::variant & get_or_create(${FIELD_ID});
 
 ##### added / modified in place (_the builder design pattern_):
 
-    vhob & set<T>(${FIELD_ID}, const T & v);
+    hobio::fields & set<T>(${FIELD_ID}, const T & v);
 
 ##### checked for existence regardless of their type:
 
@@ -621,28 +620,20 @@ HOB
 the number of bytes required to serialize the **HOB** parameters, followed by
 the **HOB** parameters serialization.
 
-The *UID* of an **HOB** without parameters is an even integer numeric value.
-
-| UID (even value) |
-|     :---:        |
-|     VARINT       |
-
-The *UID* of an **HOB** with parameters is an odd integer numeric value.
-
-| UID (odd value) | Payload Size |      Payload       |
-|     :---:       |    :---:     |       :---:        |
-|     VARINT      |    VARINT    | char[Payload Size] |
-
 The *UID* and *Payload Size* fields are **uint64_t** variables, thus they are
 encoded in a VARINT format.
 
 The *Payload Size* is the count of bytes used to serialize the *Payload*.
 
-The *Payload* is the serialization of the *Core Parameters* followed by the
-*Extra Parameters*, if any.
+The *Payload* is the serialization of the *Dynamically Defined Fields* followed
+by the *Core Parameters* followed by the *Extra Parameters*.
 
-The *Payload Size* and *Payload* sections are present only when the *UID* is an
-odd integer numeric value.
+| (UID & 0x3) | \| |  UID   | \| | Payload Size | \| |          Payload           |    |                           |    |
+|    :---:    |:--:| :---:  |:--:|    :---:     |:--:|           :---:            |:--:| :--:                      |:--:|
+|      0      | \| | VARINT | \| |              |    |                            |    |                           |    |
+|      1      | \| | VARINT | \| | VARINT       | \| | char[static payload size]  | \| |                           |    |
+|      2      | \| | VARINT | \| | VARINT       | \| | char[dynamic payload size] | \| |                           |    |
+|      3      | \| | VARINT | \| | VARINT       | \| | char[dynamic payload size] | \| | char[static payload size] | \| |
 
 ##### Collections
 
