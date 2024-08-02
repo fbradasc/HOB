@@ -636,17 +636,17 @@ by the *Core Parameters* followed by the *Extra Parameters*.
 *(UID & 0x3)* == **1**
 
 ```
-|VARINT(UID)|VARINT(Payload size)|char[static  payload size]|
+| VARINT(UID) | VARINT(Payload size) | char[static payload size] |
 ```
 *(UID & 0x3)* == **2**
 
 ```
-|VARINT(UID)|VARINT(Payload size)|char[dynamic payload size]|
+| VARINT(UID) | VARINT(Payload size) | char[dynamic payload size] |
 ```
 *(UID & 0x3)* == **3**
 
 ```
-|VARINT(UID)|VARINT(Payload size)|char[dynamic payload size]|char[static payload size]|
+| VARINT(UID) | VARINT(Payload size) | char[dynamic payload size] | char[static payload size] |
 ```
 
 ##### Collections
